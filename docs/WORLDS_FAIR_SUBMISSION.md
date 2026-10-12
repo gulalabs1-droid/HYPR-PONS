@@ -1,7 +1,20 @@
 # HYPR — Crypto World's Fair submission package
 
 Prepared October 12, 2026. This replaces the older Singapore/Open House package
-for the current contest, but does not claim a completed submission.
+for the current contest. Final submission is confirmed below.
+
+## Confirmed contest submission
+
+- Project ID 17723: [submission receipt](https://colosseum.com/arena/projects/17723/submission).
+- Portal status: **Submitted** — **Your project is entered for judging.**
+- Portal timestamp: October 12, 2026 at 4:26 p.m. PDT / 7:26 p.m. EDT.
+- The founder explicitly confirmed eligibility and accepted the official rules
+  before the final submission action.
+- Most project fields are now locked. The portal permits changes only to the
+  live product link, optional access instructions, and additional judge context
+  until the deadline. No post-submission project edits were made.
+- This confirms contest entry, not mainnet readiness or resolution of the
+  separately disclosed technical release gates.
 
 ## Authoritative deadline and actual portal requirements
 
@@ -103,6 +116,5 @@ confirmation, not placeholders or invented information.
 - Both video URLs are saved in Colosseum and its materials checklist reports
   ready to submit. Both Unlisted publications, successful YouTube checks, and
   watch-page playback are confirmed.
-- Final survey is prepared from founder answers and stated product goals.
-  Contest rules acceptance and the final submission remain unconfirmed;
-  a saved draft or "ready to submit" status is not a submitted entry.
+- Final survey and submission are complete. The portal visibly confirms entry
+  for judging after founder-approved rules acceptance. See the receipt above.

@@ -9,6 +9,7 @@ import { Header } from "./header";
 import { LiveLaunchSurface } from "./live-launch-surface";
 import { NativeTradePanel } from "./native-trade-panel";
 import { getEthereum, isRobinhoodChainId, shortAddress } from "@/lib/wallet";
+import { formatCurveProgress } from "@/lib/curve-progress";
 
 function formatUsd(value: number) { return value >= 1_000_000 ? `$${(value / 1_000_000).toFixed(1)}m` : `$${(value / 1_000).toFixed(0)}k`; }
 function formatNativeAmount(value?: string) {
@@ -36,7 +37,7 @@ export function RoomClient({ token, source }: { token: Launch; source: CombinedL
   const hasVerifiedMarketMetrics = token.dataStatus === "verified";
   const [following, setFollowing] = useState(false);
   const [chat, setChat] = useState("");
-  const [messages, setMessages] = useState(["gm everyone — this room is early", "the signal is getting louder", "who found this one first?"]);
+  const [messages, setMessages] = useState(isDemo ? ["gm everyone — this room is early", "the signal is getting louder", "who found this one first?"] : []);
   const [notice, setNotice] = useState("");
 
   async function claimRoom() {
@@ -105,16 +106,16 @@ export function RoomClient({ token, source }: { token: Launch; source: CombinedL
             <button className="primary-button" onClick={claimRoom}>Claim room</button>
           </div>
         </section>
-        {isUnverified && <div className="data-notice" role="status">{isDemo ? "Demo" : "Partial"} data — wallet claims, chat, follows, and HYPE persistence are not production-connected yet.</div>}
+        {isUnverified && <div className="data-notice" role="status">{isDemo ? "Demo sample" : "Partial market/social data"} — chat and follows are local previews; shared chat, follows, and HYPE persistence are not connected.</div>}
         <LiveLaunchSurface token={token} />
         {isNative && <NativeTradePanel curveAddress={token.pool} tokenAddress={token.address} tokenSymbol={token.symbol} />}
         {isNative && (
           <section className="activity-panel accounting-panel">
             <div className="panel-heading"><div><span className="eyebrow">PROTOCOL ACCOUNTING</span><h2>Transparent testnet flow</h2></div><span className="live-chip">onchain</span></div>
-            <p className="accounting-copy">These are raw curve ledger values, not USD earnings. Testnet ETH has no economic value.</p>
+            <p className="accounting-copy">These are unclaimed curve fee balances, not lifetime earnings. Claimed fees return to zero. Testnet ETH has no economic value.</p>
             <div className="accounting-grid">
-              <div><span>CREATOR ACCRUAL</span><strong>{formatNativeAmount(token.nativeCreatorFees)}</strong></div>
-              <div><span>HYPR ACCRUAL</span><strong>{formatNativeAmount(token.nativeProtocolFees)}</strong></div>
+              <div><span>CREATOR UNCLAIMED</span><strong>{formatNativeAmount(token.nativeCreatorFees)}</strong></div>
+              <div><span>HYPR UNCLAIMED</span><strong>{formatNativeAmount(token.nativeProtocolFees)}</strong></div>
               <div><span>CURVE RESERVE</span><strong>{formatNativeAmount(token.nativeRealQuoteReserve)}</strong></div>
               <div><span>FEE SPLIT</span><strong>{formatFeeBps(token.nativeTotalFeeBps)} total</strong><small>{formatFeeBps(token.nativeCreatorFeeBps)} creator · {formatFeeBps(token.nativeProtocolFeeBps)} HYPR</small></div>
             </div>
@@ -128,10 +129,10 @@ export function RoomClient({ token, source }: { token: Launch; source: CombinedL
               <div className="hype-ring" style={{ "--hype": `${isNative || !hasVerifiedMarketMetrics ? 0 : token.hype * 3.6}deg` } as React.CSSProperties}><span>{isNative || !hasVerifiedMarketMetrics ? "—" : token.hype}</span></div>
             </div>
             <div className="activity-panel">
-              <div className="panel-heading"><div><span className="eyebrow">ROOM ACTIVITY</span><h2>Community pulse</h2></div><span className="live-chip"><span className="pulse" /> {isNative ? token.curvePhase || "onchain" : hasVerifiedMarketMetrics ? `${token.activeNow} here now` : "activity unverified"}</span></div>
-              <div className="activity-chart"><div className="chart-line" /><div className="chart-labels"><span>12h ago</span><span>6h ago</span><span>now</span></div></div>
+              <div className="panel-heading"><div><span className="eyebrow">{isNative ? "ONCHAIN CURVE STATE" : "ROOM ACTIVITY"}</span><h2>{isNative ? "Curve snapshot" : "Community pulse"}</h2></div><span className="live-chip">{isNative ? `Curve ${token.curvePhase || "state unavailable"}` : hasVerifiedMarketMetrics ? `${token.activeNow} here now` : "activity unverified"}</span></div>
+              {isDemo ? <div className="activity-chart"><div className="chart-line" /><div className="chart-labels"><span>Illustrative sample</span><span>not live history</span></div></div> : <p className="accounting-copy">Historical activity chart not available. Only the indexed state below is shown.</p>}
               <div className="stats-grid">
-                <div><span>{isNative ? "CURVE PROGRESS" : token.origin === "pons" ? "POOL PRICE" : "PRICE"}</span><strong>{isNative ? (token.curveProgressBps === undefined ? "—" : `${(token.curveProgressBps / 100).toFixed(1)}%`) : token.origin === "pons" ? token.poolPriceQuote === undefined ? "—" : `${token.poolPriceQuote.toPrecision(4)} WETH` : hasVerifiedMarketMetrics ? `$${token.priceUsd.toFixed(4)}` : "—"}</strong></div>
+                <div><span>{isNative ? "CURVE PROGRESS" : token.origin === "pons" ? "POOL PRICE" : "PRICE"}</span><strong>{isNative ? formatCurveProgress(token.nativeRealQuoteReserve, token.nativeGraduationThreshold, token.curveProgressBps, token.curvePhase) : token.origin === "pons" ? token.poolPriceQuote === undefined ? "—" : `${token.poolPriceQuote.toPrecision(4)} WETH` : hasVerifiedMarketMetrics ? `$${token.priceUsd.toFixed(4)}` : "—"}</strong></div>
                 <div><span>{token.origin === "pons" ? "LIQUIDITY UNITS" : "MARKET CAP"}</span><strong>{token.origin === "pons" ? token.poolLiquidity || "—" : isNative || !hasVerifiedMarketMetrics ? "—" : formatUsd(token.marketCapUsd)}</strong></div>
                 <div><span>24H CHANGE</span><strong>{isNative || !hasVerifiedMarketMetrics ? "—" : <span className={token.change24h >= 0 ? "positive" : "negative"}>{token.change24h >= 0 ? "+" : ""}{token.change24h}%</span>}</strong></div>
                 <div><span>{isNative ? "TRADES / LOOKBACK" : "SWAPS / LOOKBACK"}</span><strong>{isNative ? (token.nativeTradeCount === undefined ? "—" : token.nativeTradeCount.toLocaleString()) : (token.ponsTradeCount === undefined ? "—" : token.ponsTradeCount.toLocaleString())}</strong></div>
@@ -148,9 +149,9 @@ export function RoomClient({ token, source }: { token: Launch; source: CombinedL
               <div className="panel-heading"><div><span className="eyebrow">ROOM CHAT · {isDemo ? "DEMO SAMPLE" : "LOCAL PREVIEW"}</span><h2>Say what you see</h2></div><span className="chat-count">{messages.length} local</span></div>
               <div className="chat-messages">{messages.map((message, index) => <div className="message" key={`${message}-${index}`}><span className="avatar">{["✦", "◐", "⌁"][index % 3]}</span><div><strong>{["earlysignal", "mariah", "anon_4663"][index % 3]}</strong><p>{message}</p><time>just now</time></div></div>)}</div>
               <form className="chat-form" onSubmit={sendMessage}><input value={chat} onChange={(event) => setChat(event.target.value)} placeholder="Connect wallet to chat" /><button aria-label="Send message">↑</button></form>
-              <span className="chat-footnote">Wallet identity + basic rate limits keep chat human.</span>
+              <span className="chat-footnote">Local browser preview only. Messages are not shared with other viewers.</span>
             </div>
-            <div className="creator-panel"><span className="eyebrow">ROOM CREATOR</span><div className="creator-row"><span className="creator-avatar">{token.logo}</span><div><strong>Unclaimed room</strong><span>Is this your community?</span></div></div><button className="claim-link" onClick={claimRoom}>Prove ownership to claim →</button></div>
+            <div className="creator-panel"><span className="eyebrow">ROOM CREATOR</span><div className="creator-row"><span className="creator-avatar">{token.logo}</span><div><strong>{isDemo ? "Demo creator" : isNative ? "Onchain creator" : "Indexed creator"}</strong><span>{shortAddress(token.deployer)}</span></div></div><button className="claim-link" onClick={claimRoom}>Verify room ownership →</button></div>
           </aside>
         </section>
       </div>

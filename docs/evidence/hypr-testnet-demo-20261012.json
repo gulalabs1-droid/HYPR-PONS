@@ -1,0 +1,228 @@
+{
+  "chainId": 46630,
+  "label": "Controlled testnet demo, not a real-money coin",
+  "creator": "0xE698beD535d853f002b1f448549D38ba8343Afa0",
+  "factory": "0x6461786C6a62e2b7E40917312Cc35bb3Df127d14",
+  "approvedCapTestEth": "0.003",
+  "buyTestEth": "0.001",
+  "transactions": [
+    {
+      "step": "create",
+      "address": "0x6461786C6a62e2b7E40917312Cc35bb3Df127d14",
+      "functionName": "createLaunch",
+      "nonce": 2,
+      "value": "0",
+      "gasLimit": "2259616",
+      "maximumFeePerGas": "20000001",
+      "status": "success",
+      "hash": "0x0bbb0501048fb8cb2c12bc7eb10b62a391bf5876eb3a7f1338b25728319d19dc",
+      "blockNumber": "133756231",
+      "gasUsed": "1713293",
+      "effectiveGasPrice": "10000000",
+      "events": [
+        {
+          "name": "LaunchCreated",
+          "args": {
+            "token": "0xeA3b5d2Cf6EAcD3dd6241736082b7698E519a675",
+            "curve": "0x706b4b7F544762Fe609B648450b5F92bA1028b34",
+            "creator": "0xE698beD535d853f002b1f448549D38ba8343Afa0",
+            "totalSupply": "1000000000000000000000000",
+            "tradableSupply": "800000000000000000000000",
+            "virtualQuoteReserve": "100000000000000000000",
+            "graduationThreshold": "10000000000000000000",
+            "totalFeeBps": "125",
+            "creatorFeeBps": "30",
+            "protocolFeeBps": "95",
+            "name": "HYPR Testnet Demo",
+            "symbol": "HYPRTEST"
+          }
+        }
+      ]
+    },
+    {
+      "step": "buy",
+      "address": "0x706b4b7F544762Fe609B648450b5F92bA1028b34",
+      "functionName": "buy",
+      "nonce": 3,
+      "value": "1000000000000000",
+      "gasLimit": "183689",
+      "maximumFeePerGas": "20000001",
+      "status": "success",
+      "hash": "0x9247c02a966cf85d21962d723eeda47f20dd1ac887098a40a5b86d53a68e6032",
+      "blockNumber": "133756269",
+      "gasUsed": "135798",
+      "effectiveGasPrice": "10000000",
+      "events": [
+        {
+          "name": "TradeExecuted",
+          "args": {
+            "trader": "0xE698beD535d853f002b1f448549D38ba8343Afa0",
+            "isBuy": true,
+            "grossQuoteAmount": "1000000000000000",
+            "tokenAmount": "15799843976540731661",
+            "fee": "12500000000000",
+            "creatorFee": "3000000000000",
+            "protocolFee": "9500000000000",
+            "realQuoteReserve": "987500000000000",
+            "realTokenReserve": "799984200156023459268339"
+          }
+        }
+      ]
+    },
+    {
+      "step": "approve-exact-sell",
+      "address": "0xeA3b5d2Cf6EAcD3dd6241736082b7698E519a675",
+      "functionName": "approve",
+      "nonce": 4,
+      "value": "0",
+      "gasLimit": "60240",
+      "maximumFeePerGas": "20000001",
+      "status": "success",
+      "hash": "0x696e6c8910fa76c5b0de183c8707eb8fc1853483d377eec1136cdcb98dbd840d",
+      "blockNumber": "133756296",
+      "gasUsed": "45956",
+      "effectiveGasPrice": "10000000",
+      "events": [
+        {
+          "name": "Approval",
+          "args": {
+            "owner": "0xE698beD535d853f002b1f448549D38ba8343Afa0",
+            "spender": "0x706b4b7F544762Fe609B648450b5F92bA1028b34",
+            "value": "7899921988270365830"
+          }
+        }
+      ]
+    },
+    {
+      "step": "sell-half",
+      "address": "0x706b4b7F544762Fe609B648450b5F92bA1028b34",
+      "functionName": "sell",
+      "nonce": 5,
+      "value": "0",
+      "gasLimit": "113216",
+      "maximumFeePerGas": "20000001",
+      "status": "success",
+      "hash": "0x6c5f10a89511fd69940107c2328551811dae972781934ab5b98513de90fbd41a",
+      "blockNumber": "133756323",
+      "gasUsed": "77218",
+      "effectiveGasPrice": "10000000",
+      "events": [
+        {
+          "name": "TradeExecuted",
+          "args": {
+            "trader": "0xE698beD535d853f002b1f448549D38ba8343Afa0",
+            "isBuy": false,
+            "grossQuoteAmount": "493752437878588",
+            "tokenAmount": "7899921988270365830",
+            "fee": "6171905473482",
+            "creatorFee": "1481257313635",
+            "protocolFee": "4690648159847",
+            "realQuoteReserve": "493747562121412",
+            "realTokenReserve": "799992100078011729634169"
+          }
+        }
+      ]
+    },
+    {
+      "step": "claim-creator-fees",
+      "address": "0x706b4b7F544762Fe609B648450b5F92bA1028b34",
+      "functionName": "claimCreatorFees",
+      "nonce": 6,
+      "value": "0",
+      "gasLimit": "55396",
+      "maximumFeePerGas": "20000001",
+      "status": "success",
+      "hash": "0xfecf87462cd891cada02f6278f6444fd883c13fa2b08e5380eaeeba6428e6cdd",
+      "blockNumber": "133756349",
+      "gasUsed": "32698",
+      "effectiveGasPrice": "10000000",
+      "events": [
+        {
+          "name": "FeesClaimed",
+          "args": {
+            "recipient": "0xE698beD535d853f002b1f448549D38ba8343Afa0",
+            "kind": 1,
+            "amount": "4481257313635"
+          }
+        }
+      ]
+    },
+    {
+      "step": "claim-protocol-fees",
+      "address": "0x706b4b7F544762Fe609B648450b5F92bA1028b34",
+      "functionName": "claimProtocolFees",
+      "nonce": 7,
+      "value": "0",
+      "gasLimit": "55453",
+      "maximumFeePerGas": "20000001",
+      "status": "success",
+      "hash": "0x8c2c5383afcaea16afa8b57b4ba786d9bf426b4bf1eeaa91f2375b885938e08a",
+      "blockNumber": "133756372",
+      "gasUsed": "32742",
+      "effectiveGasPrice": "10000000",
+      "events": [
+        {
+          "name": "FeesClaimed",
+          "args": {
+            "recipient": "0xE698beD535d853f002b1f448549D38ba8343Afa0",
+            "kind": 2,
+            "amount": "14190648159847"
+          }
+        }
+      ]
+    }
+  ],
+  "snapshots": {
+    "created": {
+      "reserve": "0",
+      "inventory": "800000000000000000000000",
+      "creatorFees": "0",
+      "protocolFees": "0",
+      "phase": 0,
+      "creatorTokenBalance": "0",
+      "curveEthBalance": "0"
+    },
+    "afterBuy": {
+      "reserve": "987500000000000",
+      "inventory": "799984200156023459268339",
+      "creatorFees": "3000000000000",
+      "protocolFees": "9500000000000",
+      "phase": 0,
+      "creatorTokenBalance": "15799843976540731661",
+      "curveEthBalance": "1000000000000000"
+    },
+    "afterSell": {
+      "reserve": "493747562121412",
+      "inventory": "799992100078011729634169",
+      "creatorFees": "4481257313635",
+      "protocolFees": "14190648159847",
+      "phase": 0,
+      "creatorTokenBalance": "7899921988270365831",
+      "curveEthBalance": "512419467594894"
+    },
+    "afterCreatorClaim": {
+      "reserve": "493747562121412",
+      "inventory": "799992100078011729634169",
+      "creatorFees": "0",
+      "protocolFees": "14190648159847",
+      "phase": 0,
+      "creatorTokenBalance": "7899921988270365831",
+      "curveEthBalance": "507938210281259"
+    },
+    "afterProtocolClaim": {
+      "reserve": "493747562121412",
+      "inventory": "799992100078011729634169",
+      "creatorFees": "0",
+      "protocolFees": "0",
+      "phase": 0,
+      "creatorTokenBalance": "7899921988270365831",
+      "curveEthBalance": "493747562121412"
+    }
+  },
+  "maximumReservedTestEth": "0.00105455220272761",
+  "token": "0xeA3b5d2Cf6EAcD3dd6241736082b7698E519a675",
+  "curve": "0x706b4b7F544762Fe609B648450b5F92bA1028b34",
+  "executionGasCostWei": "20377050000000",
+  "walletBalanceAfterWei": "9439502737878588",
+  "completed": true
+}

@@ -1,16 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { createPublicClient, custom, decodeFunctionResult, encodeFunctionData, parseEther, parseUnits, formatEther } from "viem";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { createPublicClient, http, decodeFunctionResult, encodeFunctionData, parseEther, parseUnits, formatEther } from "viem";
 import { HYPR_CURVE_ABI, HYPR_ERC20_APPROVE_ABI } from "@/lib/integrations/hypr/curve-abi";
 import { getEthereum } from "@/lib/wallet";
 import { getHyprClientConfig } from "@/lib/hypr-client-config";
 import { waitForTransactionReceipt } from "@/lib/transaction";
+import { ROBINHOOD_TESTNET } from "@/lib/integrations/pons/constants";
+
+type CurveReadClient = { call(args: { to: `0x${string}`; data: `0x${string}` }): Promise<{ data?: `0x${string}` }> };
+const publicCurveReader = createPublicClient({ chain: ROBINHOOD_TESTNET, transport: http(ROBINHOOD_TESTNET.rpcUrl) });
 
 type Props = {
   curveAddress: `0x${string}`;
   tokenAddress: `0x${string}`;
   tokenSymbol: string;
+  readClient?: CurveReadClient;
 };
 
 type Quote = {
@@ -29,7 +34,7 @@ function hexValue(value: bigint) {
   return `0x${value.toString(16)}` as `0x${string}`;
 }
 
-export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol }: Props) {
+export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, readClient = publicCurveReader }: Props) {
   const [direction, setDirection] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState("");
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -46,29 +51,18 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol }: Pr
   }, [amount, direction]);
 
   const readQuote = useCallback(async () => {
-    const provider = getEthereum();
-    if (!provider || parsedAmount <= 0n) {
-      setQuote(null);
-      setPhase(null);
-      return;
-    }
+    if (!hyprClientConfig.enabled) return;
     try {
-      const chainId = Number(await provider.request({ method: "eth_chainId" }));
-      if (chainId !== EXPECTED_CHAIN_ID) {
-        setStatus(`Switch your wallet to ${EXPECTED_NETWORK_LABEL} first.`);
-        setQuote(null);
-        setPhase(null);
-        return;
-      }
-      const client = createPublicClient({ transport: custom(provider as never) });
-      const phaseData = await client.call({
+      // Read the curve independently of an amount or connected wallet, so an
+      // empty input can become editable. Signing still checks the wallet chain.
+      const phaseData = await readClient.call({
         to: curveAddress,
         data: encodeFunctionData({ abi: HYPR_CURVE_ABI, functionName: "phase" }),
       });
       if (!phaseData.data) throw new Error("empty phase response");
       const phaseValue = decodeFunctionResult({ abi: HYPR_CURVE_ABI, functionName: "phase", data: phaseData.data }) as number;
       setPhase(Number(phaseValue));
-      if (phaseValue !== 0) {
+      if (Number(phaseValue) !== 0 || parsedAmount <= 0n) {
         setQuote(null);
         return;
       }
@@ -77,20 +71,20 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol }: Pr
         functionName: direction === "buy" ? "quoteBuy" : "quoteSell",
         args: [parsedAmount],
       });
-      const result = await client.call({ to: curveAddress, data });
+      const result = await readClient.call({ to: curveAddress, data });
       if (!result.data) throw new Error("empty quote response");
       const values = decodeFunctionResult({
         abi: HYPR_CURVE_ABI,
         functionName: direction === "buy" ? "quoteBuy" : "quoteSell",
         data: result.data,
       }) as readonly [bigint, bigint, bigint];
-      setQuote({ output: values[0], fee: values[1] });
+      setQuote({ output: values[0], fee: direction === "buy" ? values[1] : values[2] });
     } catch {
       setQuote(null);
       setPhase(null);
       setStatus("No live quote available. Confirm the room is on the selected Robinhood network.");
     }
-  }, [curveAddress, direction, parsedAmount]);
+  }, [curveAddress, direction, parsedAmount, readClient]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void readQuote(), 250);

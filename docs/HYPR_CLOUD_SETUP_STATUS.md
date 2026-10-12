@@ -46,7 +46,7 @@ The prepared migration therefore prefixes every HYPR table reference.
 
 ## Verification
 
-- Application tests: 47 checks, including streaming provider, token-access
+- Application tests: 52 checks, including streaming provider, token-access
   boundaries, and migration-generation regressions.
 - GitHub verification passed on `74da0dcd22f35842a2b8697a0048fc8946074cbb`.
 - TypeScript, ESLint, production build and bundle-security check passed.
@@ -78,7 +78,10 @@ The prepared migration therefore prefixes every HYPR table reference.
 
 ## Pending execution
 
-1. Complete a real creator/viewer and create/trade/fee/graduation demo.
+1. Complete browser-wallet signing, a real creator/viewer media session, and
+   public-chain graduation. The controlled public-testnet create/buy/sell and
+   both fee claims passed; [evidence](HYPR_CONTROLLED_DEMO.md) distinguishes that
+   result from the still-unverified browser/media/graduation paths.
 2. Persistent chat/follows, production moderation, durable indexer scheduling,
    and professional review remain later rollout work; their schemas alone do
    not make these features operational.
@@ -91,5 +94,6 @@ was saved to Vercel production and preview after verification. The new hosted
 build is Ready, its smoke checks passed with `native-rpc`, and the browser
 displayed the verified launch settings. Exact compiler-input verification
 upgraded both explorer source matches to full matches. The actual launch/live
-journey still needs its own acceptance evidence; no real live media session is
-claimed.
+journey now has create/buy/sell/both-fee-claim evidence. A hosted durable room
+claim passed, replay was rejected, and creator-only live authorization passed.
+No real live media session is claimed.

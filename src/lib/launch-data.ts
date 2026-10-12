@@ -40,6 +40,7 @@ function nativeLaunchToRoom(
     curvePhase: launch.curvePhase,
     nativeRealQuoteReserve: launch.realQuoteReserve?.toString(),
     nativeRealTokenReserve: launch.realTokenReserve?.toString(),
+    nativeGraduationThreshold: launch.graduationThreshold.toString(),
     nativeCreatorFees: launch.creatorFees?.toString(),
     nativeProtocolFees: launch.protocolFees?.toString(),
     nativeGraduationPoolId: launch.graduationPoolId,

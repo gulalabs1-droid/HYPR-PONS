@@ -20,8 +20,8 @@ export default async function ProtocolPage() {
       <div className="protocol-card"><span>ACTIVE / GRADUATED</span><strong>{snapshot.activeLaunches === undefined ? "—" : `${snapshot.activeLaunches} / ${snapshot.graduatedLaunches}`}</strong><small>Derived from curve phase</small></div>
       <div className="protocol-card"><span>GROSS CURVE VOLUME</span><strong>{formatEth(snapshot.totalTradeVolume)}</strong><small>Confirmed TradeExecuted events</small></div>
       <div className="protocol-card"><span>INDEXED TRADES</span><strong>{snapshot.totalTradeCount === undefined ? "—" : snapshot.totalTradeCount.toLocaleString()}</strong><small>Same bounded window</small></div>
-      <div className="protocol-card"><span>CREATOR ACCRUAL</span><strong>{formatEth(snapshot.totalCreatorFees)}</strong><small>Onchain fee ledgers</small></div>
-      <div className="protocol-card"><span>HYPR ACCRUAL</span><strong>{formatEth(snapshot.totalProtocolFees)}</strong><small>Onchain fee ledgers</small></div>
+      <div className="protocol-card"><span>CREATOR UNCLAIMED</span><strong>{formatEth(snapshot.totalCreatorFees)}</strong><small>Current onchain fee balances, not lifetime earnings</small></div>
+      <div className="protocol-card"><span>HYPR UNCLAIMED</span><strong>{formatEth(snapshot.totalProtocolFees)}</strong><small>Current onchain fee balances, not lifetime earnings</small></div>
     </section>
     <section className="protocol-note"><div><span className="eyebrow">READ BOUNDARY</span><h2>No fake totals.</h2><p>Launches are read through a {snapshot.confirmationDepth.toString()}-block confirmation buffer and bounded RPC chunks. If a required state read is incomplete, the affected aggregate stays unavailable. This page has no claim, withdrawal, or configuration controls.</p></div>{snapshot.factoryAddress && <span className="address-line">Factory {shortAddress(snapshot.factoryAddress)} · chain {snapshot.network === "testnet" ? "46630" : "4663"}</span>}</section>
   </div></main>;

@@ -58,9 +58,9 @@ It intentionally rejects a nonzero sender nonce to prevent blind redeployment.
 ## Tests and honest remaining gates
 
 - `HYPR_TESTNET_RPC_URL=https://rpc.testnet.chain.robinhood.com forge test -vv`:
-  33 passed, zero failed, zero skipped. Includes four current-chain fork tests,
+  37 passed, zero failed, zero skipped. Includes four current-chain fork tests,
   two 256-run fuzz tests, and 256 invariant runs / 128,000 handler calls.
-- Web tests: 47 passed, including keystore and durable-native-record checks.
+- Web tests: 52 passed, including trade-input, sell-fee and precision regressions.
 - Typecheck, lint, production build, and client-bundle security scan passed.
 - GitHub Web and Foundry checks passed at `c0883658f1f99aac3e5a466f99b15ad638a644da`.
 - Vercel production deployment `hypr-pons-d3z13aojp-gulas-projects-212c0e1d.vercel.app`
@@ -71,8 +71,9 @@ It intentionally rejects a nonzero sender nonce to prevent blind redeployment.
 - Historical room discovery uses persisted factory/event provenance, then
   re-reads the canonical factory creation event and current curve state. It
   does not turn database metadata into trusted creator authority.
-- No create/buy/sell/claim transaction or real camera broadcast is claimed by
-  this deployment evidence alone. Those require their own runtime evidence.
+- The explicitly approved create/buy/sell/both-fee-claim testnet journey now
+  passed. See [controlled demo evidence](HYPR_CONTROLLED_DEMO.md). No real camera
+  broadcast or public-chain graduation is implied by this result.
 - The official faucet supplies 0.01 test ETH per 24 hours. A full graduation
   from zero reserves requires approximately 10.1266 gross test ETH plus gas,
   because the unchanged graduation threshold is 10 ETH net and fees are 1.25%.

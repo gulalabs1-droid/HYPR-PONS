@@ -25,6 +25,7 @@ export type Launch = {
   curvePhase?: "Live" | "Graduating" | "Graduated";
   nativeRealQuoteReserve?: string;
   nativeRealTokenReserve?: string;
+  nativeGraduationThreshold?: string;
   nativeCreatorFees?: string;
   nativeProtocolFees?: string;
   nativeGraduationPoolId?: `0x${string}`;

@@ -88,8 +88,13 @@ contract CheckHYPRLaunch is Script {
         uint256 recordedLiabilities =
             curveView.realQuoteReserve() + curveView.creatorFees() + curveView.protocolFees();
         require(address(curve).balance >= recordedLiabilities, "quote liabilities uncovered");
+        // Live curves hold both tradable inventory and the fixed allocation
+        // reserved for graduation. Graduation migrates the entire balance.
+        uint256 graduationAllocation =
+            phase == 2 ? 0 : factoryView.totalSupply() - factoryView.tradableSupply();
         require(
-            tokenView.balanceOf(curve) == curveView.realTokenReserve(), "token reserve mismatch"
+            tokenView.balanceOf(curve) == curveView.realTokenReserve() + graduationAllocation,
+            "token reserve mismatch"
         );
 
         console2.log("HYPR launch checks passed");

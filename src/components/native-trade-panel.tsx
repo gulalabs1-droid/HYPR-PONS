@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPublicClient, http, decodeFunctionResult, encodeFunctionData, parseEther, parseUnits, formatEther } from "viem";
 import { HYPR_CURVE_ABI, HYPR_ERC20_APPROVE_ABI } from "@/lib/integrations/hypr/curve-abi";
 import { getEthereum } from "@/lib/wallet";
@@ -21,6 +21,8 @@ type Props = {
 type Quote = {
   output: bigint;
   fee: bigint;
+  input: bigint;
+  direction: "buy" | "sell";
 };
 
 const TOKEN_DECIMALS = 18;
@@ -41,6 +43,8 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
   const [phase, setPhase] = useState<number | null>(null);
   const [status, setStatus] = useState("");
   const [pending, setPending] = useState(false);
+  const quoteVersion = useRef(0);
+  const invalidateQuote = useCallback(() => { quoteVersion.current++; }, []);
 
   const parsedAmount = useMemo(() => {
     try {
@@ -52,6 +56,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
 
   const readQuote = useCallback(async () => {
     if (!hyprClientConfig.enabled) return;
+    const version = ++quoteVersion.current;
     try {
       // Read the curve independently of an amount or connected wallet, so an
       // empty input can become editable. Signing still checks the wallet chain.
@@ -59,6 +64,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
         to: curveAddress,
         data: encodeFunctionData({ abi: HYPR_CURVE_ABI, functionName: "phase" }),
       });
+      if (version !== quoteVersion.current) return;
       if (!phaseData.data) throw new Error("empty phase response");
       const phaseValue = decodeFunctionResult({ abi: HYPR_CURVE_ABI, functionName: "phase", data: phaseData.data }) as number;
       setPhase(Number(phaseValue));
@@ -72,14 +78,16 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
         args: [parsedAmount],
       });
       const result = await readClient.call({ to: curveAddress, data });
+      if (version !== quoteVersion.current) return;
       if (!result.data) throw new Error("empty quote response");
       const values = decodeFunctionResult({
         abi: HYPR_CURVE_ABI,
         functionName: direction === "buy" ? "quoteBuy" : "quoteSell",
         data: result.data,
       }) as readonly [bigint, bigint, bigint];
-      setQuote({ output: values[0], fee: direction === "buy" ? values[1] : values[2] });
+      setQuote({ output: values[0], fee: direction === "buy" ? values[1] : values[2], input: parsedAmount, direction });
     } catch {
+      if (version !== quoteVersion.current) return;
       setQuote(null);
       setPhase(null);
       setStatus("No live quote available. Confirm the room is on the selected Robinhood network.");
@@ -87,14 +95,16 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
   }, [curveAddress, direction, parsedAmount, readClient]);
 
   useEffect(() => {
+    invalidateQuote();
+    setQuote(null);
     const timer = window.setTimeout(() => void readQuote(), 250);
-    return () => window.clearTimeout(timer);
-  }, [readQuote]);
+    return () => { invalidateQuote(); window.clearTimeout(timer); };
+  }, [readQuote, invalidateQuote]);
 
   async function trade(event: React.FormEvent) {
     event.preventDefault();
     const provider = getEthereum();
-    if (!provider || !quote || parsedAmount <= 0n) {
+    if (!provider || !quote || quote.input !== parsedAmount || quote.direction !== direction || parsedAmount <= 0n) {
       setStatus("Connect a wallet and enter a valid amount first.");
       return;
     }
@@ -148,11 +158,11 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
     <section className="activity-panel trade-panel">
       <div className="panel-heading"><div><span className="eyebrow">NATIVE CURVE</span><h2>Trade the launch</h2></div><span className="live-chip">{phaseLabel}</span></div>
       <p className="trade-copy">Wallet-signed testnet trade with a 2% minimum-output buffer and a five-minute deadline.</p>
-      <div className="trade-tabs"><button className={direction === "buy" ? "selected" : ""} onClick={() => { setDirection("buy"); setAmount(""); setStatus(""); }}>Buy</button><button className={direction === "sell" ? "selected" : ""} onClick={() => { setDirection("sell"); setAmount(""); setStatus(""); }}>Sell</button></div>
+      <div className="trade-tabs"><button className={direction === "buy" ? "selected" : ""} disabled={pending} onClick={() => { quoteVersion.current++; setQuote(null); setDirection("buy"); setAmount(""); setStatus(""); }}>Buy</button><button className={direction === "sell" ? "selected" : ""} disabled={pending} onClick={() => { quoteVersion.current++; setQuote(null); setDirection("sell"); setAmount(""); setStatus(""); }}>Sell</button></div>
       <form className="trade-form" onSubmit={trade}>
-        <label>{direction === "buy" ? "ETH input" : `${tokenSymbol} input`}<input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" placeholder={direction === "buy" ? "0.10" : "1000"} disabled={pending || phase !== 0} /></label>
+        <label>{direction === "buy" ? "ETH input" : `${tokenSymbol} input`}<input value={amount} onChange={(event) => { quoteVersion.current++; setQuote(null); setAmount(event.target.value); }} inputMode="decimal" placeholder={direction === "buy" ? "0.10" : "1000"} disabled={pending || phase !== 0} /></label>
         <div className="trade-quote"><span>ESTIMATED OUTPUT</span><strong>{quote ? outputLabel : "—"}</strong><small>{quote ? `Fee ${formatEther(quote.fee)} ${direction === "buy" ? "ETH" : "ETH"}` : "Enter an amount for an onchain quote."}</small></div>
-        <button className="primary-button" type="submit" disabled={pending || phase !== 0 || !quote}>{pending ? "Confirming…" : direction === "buy" ? "Buy with wallet ↗" : "Sell with wallet ↗"}</button>
+        <button className="primary-button" type="submit" disabled={pending || phase !== 0 || !quote || quote.input !== parsedAmount || quote.direction !== direction}>{pending ? "Confirming…" : direction === "buy" ? "Buy with wallet ↗" : "Sell with wallet ↗"}</button>
         {status && <span className="launch-status" role="status">{status}</span>}
       </form>
     </section>

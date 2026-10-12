@@ -46,7 +46,7 @@ The prepared migration therefore prefixes every HYPR table reference.
 
 ## Verification
 
-- Application tests: 52 checks, including streaming provider, token-access
+- Application tests: 53 checks, including streaming provider, token-access
   boundaries, and migration-generation regressions.
 - GitHub verification passed on `74da0dcd22f35842a2b8697a0048fc8946074cbb`.
 - TypeScript, ESLint, production build and bundle-security check passed.

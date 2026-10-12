@@ -60,7 +60,7 @@ It intentionally rejects a nonzero sender nonce to prevent blind redeployment.
 - `HYPR_TESTNET_RPC_URL=https://rpc.testnet.chain.robinhood.com forge test -vv`:
   37 passed, zero failed, zero skipped. Includes four current-chain fork tests,
   two 256-run fuzz tests, and 256 invariant runs / 128,000 handler calls.
-- Web tests: 52 passed, including trade-input, sell-fee and precision regressions.
+- Web tests: 53 checks, including trade-input, sell-fee, stale-quote and precision regressions.
 - Typecheck, lint, production build, and client-bundle security scan passed.
 - GitHub Web and Foundry checks passed at `c0883658f1f99aac3e5a466f99b15ad638a644da`.
 - Vercel production deployment `hypr-pons-d3z13aojp-gulas-projects-212c0e1d.vercel.app`

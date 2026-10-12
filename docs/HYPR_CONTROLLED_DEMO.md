@@ -70,6 +70,8 @@ graduated, and mismatched inventory. No deployed contract or economics changed.
 - Removed the trade input/phase circular dependency: a read-only public testnet
   phase lookup runs before any amount is entered or wallet is connected.
 - Sell fee preview now uses the returned fee field, not gross proceeds.
+- Amount/direction changes invalidate older quotes immediately; late responses
+  are discarded and submission requires a quote bound to the current input.
 - Curve progress preserves small real reserves rather than rounding every tiny
   testnet trade to zero: current progress is approximately 0.004937%.
 - Outstanding fee balances are labeled **unclaimed**, not lifetime earnings.

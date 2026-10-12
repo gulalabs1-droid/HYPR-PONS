@@ -76,3 +76,17 @@ test("graduated native curves remain input-locked even without an amount", async
     assert.ok(JSON.stringify(renderer.toJSON()).includes("Graduated"));
   });
 });
+
+test("editing a trade amount invalidates the old quote before another request completes", async () => {
+  await withPanel(0, async (renderer, _calls, flush) => {
+    const input = () => renderer.root.findByType("input");
+    const submit = () => renderer.root.findByProps({ type: "submit" });
+    await act(async () => input().props.onChange({ target: { value: "0.001" } }));
+    await flush();
+    assert.equal(submit().props.disabled, false);
+    await act(async () => input().props.onChange({ target: { value: "0.002" } }));
+    assert.equal(submit().props.disabled, true);
+    await flush();
+    assert.equal(submit().props.disabled, false);
+  });
+});

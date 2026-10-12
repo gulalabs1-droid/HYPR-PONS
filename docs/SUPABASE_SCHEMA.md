@@ -1,6 +1,6 @@
 # HYPR persistence baseline
 
-Status: migration prepared but not applied. The repository remains credential-free and defaults to fixture data until a specific Supabase project is configured.
+Status: migrations `0001` and `0002` were applied to the HYPR project on 2026-10-12. All 12 HYPR tables have RLS enabled and all seven privileged RPCs are server-only. The source repository remains credential-free.
 
 ## Migration
 
@@ -17,6 +17,13 @@ The `hypr_` prefix protects the earlier Solana application's existing tables in
 Supabase project `vxusuxsdjdsqgizilmrz`. Its unprefixed `profiles` table has a
 different identity model and must not be altered by this migration. The RPC
 names remain unchanged; their internal table references use the new prefix.
+
+Migration `0002_hypr_rpc_column_resolution.sql` fixes PostgreSQL ambiguity
+between return-field names and table columns. Its function-local resolution
+does not change grants. `supabase/tests/claims_and_indexing.sql` was executed
+against the configured project: indexing replay, checkpoints, durable claims,
+claim replay rejection, and the server-role guard passed. Every generated
+regression record was rolled back.
 
 The migration seeds only the two documented Robinhood Chain IDs (`4663` and `46630`). It does not insert tokens, users, claims, chat, HYPE, or traction data.
 

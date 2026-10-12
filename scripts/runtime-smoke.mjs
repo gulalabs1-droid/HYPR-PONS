@@ -1,6 +1,6 @@
 const baseUrl = (process.argv[2] || "http://127.0.0.1:3100").replace(/\/$/, "");
 const expectUnconfigured = process.env.HYPR_SMOKE_EXPECT_UNCONFIGURED === "1";
-const roomPath = "/room/0x8B7f0bC4B22fE4e3cA91E0C4b3fA1c7D5E6f8A90";
+const sampleRoomAddress = "0x8B7f0bC4B22fE4e3cA91E0C4b3fA1c7D5E6f8A90";
 
 async function request(pathname, init) {
   const response = await fetch(`${baseUrl}${pathname}`, init);
@@ -42,13 +42,19 @@ for (const pathname of [
   await request(pathname);
 }
 
-const roomHtml = await (await request(roomPath)).text();
-if (!roomHtml.includes("NATIVE HYPR LIVE") && !roomHtml.includes("LIVE LAUNCH EXPERIENCE")) throw new Error("room is missing the live launch surface");
-if (!roomHtml.includes("DEMO SAMPLE") && !roomHtml.includes("LOCAL PREVIEW")) {
-  throw new Error("room is missing the honest chat source label");
-}
-if (expectUnconfigured && roomHtml.includes("people are in the room right now")) {
-  throw new Error("demo room metadata is presenting sample activity as live");
+const launchData = await (await request("/api/launches")).json();
+if (!Array.isArray(launchData.launches) || typeof launchData.source !== "string") throw new Error("launch API has an invalid source contract");
+const roomAddress = launchData.launches[0]?.address || sampleRoomAddress;
+const roomResponse = await fetch(`${baseUrl}/room/${roomAddress}`);
+if (launchData.launches.length === 0) {
+  if (roomResponse.status !== 404) throw new Error("an empty launch source must not invent a sample room");
+  if (expectUnconfigured) throw new Error("fixture smoke expected a sample room");
+} else {
+  if (!roomResponse.ok) throw new Error(`indexed room returned HTTP ${roomResponse.status}`);
+  const roomHtml = await roomResponse.text();
+  if (!roomHtml.includes("NATIVE HYPR LIVE") && !roomHtml.includes("LIVE LAUNCH EXPERIENCE")) throw new Error("room is missing the live launch surface");
+  if (!roomHtml.includes("DEMO SAMPLE") && !roomHtml.includes("LOCAL PREVIEW")) throw new Error("room is missing the honest chat source label");
+  if (expectUnconfigured && roomHtml.includes("people are in the room right now")) throw new Error("demo room metadata is presenting sample activity as live");
 }
 
 const summary = await (await request("/api/protocol/summary")).json();
@@ -66,7 +72,7 @@ const malformedClaim = await fetch(`${baseUrl}/api/room-claims/challenge`, {
 });
 if (malformedClaim.status !== 400) throw new Error(`malformed claim returned HTTP ${malformedClaim.status}`);
 
-const liveStatus = await request(`/api/live/status?roomId=${roomPath.split("/").pop()}`);
+const liveStatus = await request(`/api/live/status?roomId=${roomAddress}`);
 const liveStatusBody = await liveStatus.json();
 if (typeof liveStatusBody.live !== "boolean" || typeof liveStatusBody.configured !== "boolean") {
   throw new Error("live status is missing its configured/live contract");
@@ -74,8 +80,8 @@ if (typeof liveStatusBody.live !== "boolean" || typeof liveStatusBody.configured
 const liveToken = await fetch(`${baseUrl}/api/live/token`, {
   method: "POST",
   headers: { "content-type": "application/json" },
-  body: JSON.stringify({ roomId: roomPath.split("/").pop(), role: "viewer" }),
+  body: JSON.stringify({ roomId: sampleRoomAddress, role: "viewer" }),
 });
-if (liveToken.status !== 200 && liveToken.status !== 503) throw new Error(`live token returned unexpected HTTP ${liveToken.status}`);
+if (![403, 404, 503].includes(liveToken.status)) throw new Error(`non-native smoke room must not receive a live token; returned HTTP ${liveToken.status}`);
 
 console.log(`runtime smoke passed at ${baseUrl} (${summary.source})`);

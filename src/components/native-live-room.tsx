@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { LiveKitRoom, RoomAudioRenderer, VideoConference, useRoomContext } from "@livekit/components-react";
 import type { Launch } from "@/lib/types";
 import { getEthereum, isRobinhoodChainId } from "@/lib/wallet";
@@ -18,10 +18,10 @@ function LeaveControl({ role, onLeave }: { role: "host" | "viewer"; onLeave: () 
   return <button className="live-control-button" onClick={() => { room.disconnect(); onLeave(); }}>{role === "host" ? "End live" : "Leave live"}</button>;
 }
 
-function ConnectedRoom({ session, onLeave, onError }: { session: Session; onLeave: () => void; onError: (message: string) => void }) {
+export function ConnectedRoom({ session, onLeave, onError, connect = true }: { session: Session; onLeave: () => void; onError: (message: string) => void; connect?: boolean }) {
   return <div className="native-live-connected" data-lk-theme="default">
-    <div className="native-live-toolbar"><span><span className="pulse" /> {session.role === "host" ? "YOU ARE LIVE ON HYPR" : "LIVE INSIDE HYPR"}</span><LeaveControl role={session.role} onLeave={onLeave} /></div>
-    <LiveKitRoom token={session.token} serverUrl={session.serverUrl} connect video={session.role === "host"} audio={session.role === "host"} onError={(error) => onError(error.message || "The live room could not connect.")} onDisconnected={onLeave}>
+    <LiveKitRoom token={session.token} serverUrl={session.serverUrl} connect={connect} video={session.role === "host"} audio={session.role === "host"} onError={(error) => onError(error.message || "The live room could not connect.")} onDisconnected={onLeave}>
+      <div className="native-live-toolbar"><span><span className="pulse" /> {session.role === "host" ? "YOU ARE LIVE ON HYPR" : "LIVE INSIDE HYPR"}</span><LeaveControl role={session.role} onLeave={onLeave} /></div>
       <VideoConference />
       <RoomAudioRenderer />
     </LiveKitRoom>

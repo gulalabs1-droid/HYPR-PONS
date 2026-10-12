@@ -30,9 +30,13 @@ used: adapter 1,976,639; factory 2,660,626; effective gas price 10,000,000 wei.
 Combined receipt execution cost: 0.00004637265 test ETH. The explicit approval
 cap was 0.001 test ETH. No ETH was transferred as contract constructor value.
 
-The source of both contracts was submitted to the official Blockscout explorer
-using Foundry and returned `Pass - Verified`. Compiler: Solidity 0.8.24,
-optimizer 200 runs, via IR. Source verification is not a security audit.
+The source of both contracts returned `Pass - Verified`. Initial Foundry
+submissions matched executable code but the explorer labeled them partial
+matches: the verifier had normalized the deployment's remapping metadata.
+`scripts/verify-exact-testnet.mjs` checks every source hash and submits the exact
+artifact compiler settings. The explorer subsequently reported both
+`is_fully_verified: true`, `is_partially_verified: false`. Compiler: Solidity
+0.8.24, optimizer 200 runs, via IR. Source verification is not a security audit.
 
 ## Independent deployment checks
 
@@ -56,7 +60,14 @@ It intentionally rejects a nonzero sender nonce to prevent blind redeployment.
 - `HYPR_TESTNET_RPC_URL=https://rpc.testnet.chain.robinhood.com forge test -vv`:
   33 passed, zero failed, zero skipped. Includes four current-chain fork tests,
   two 256-run fuzz tests, and 256 invariant runs / 128,000 handler calls.
-- Web tests include keystore and durable-native-record checks.
+- Web tests: 47 passed, including keystore and durable-native-record checks.
+- Typecheck, lint, production build, and client-bundle security scan passed.
+- GitHub Web and Foundry checks passed at `c0883658f1f99aac3e5a466f99b15ad638a644da`.
+- Vercel production deployment `hypr-pons-d3z13aojp-gulas-projects-212c0e1d.vercel.app`
+  is Ready. Hosted runtime smoke passed with source `native-rpc`, chain 46630,
+  factory `0x6461786C6a62e2b7E40917312Cc35bb3Df127d14`, and zero launches.
+- Public browser read and displayed the correct immutable supply, reserve,
+  threshold, 125/30/95 bps split and recipient, then enabled the create form.
 - Historical room discovery uses persisted factory/event provenance, then
   re-reads the canonical factory creation event and current curve state. It
   does not turn database metadata into trusted creator authority.

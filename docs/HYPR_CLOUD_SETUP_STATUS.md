@@ -87,6 +87,9 @@ The frontend is deployed and its external services are connected. The approved
 testnet adapter and factory are now deployed, source-verified, and independently
 checked; see [public-chain evidence](HYPR_TESTNET_EVIDENCE.md). The funded signer
 is encrypted locally with a Keychain-backed password. Factory/RPC configuration
-was saved to Vercel production and preview after verification. A new hosted build
-and the actual launch/live journey still need their own acceptance checks; no
-real live media session is claimed.
+was saved to Vercel production and preview after verification. The new hosted
+build is Ready, its smoke checks passed with `native-rpc`, and the browser
+displayed the verified launch settings. Exact compiler-input verification
+upgraded both explorer source matches to full matches. The actual launch/live
+journey still needs its own acceptance evidence; no real live media session is
+claimed.

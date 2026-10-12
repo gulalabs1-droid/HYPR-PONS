@@ -2,16 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createPublicClient, encodeFunctionData, formatEther, http, parseAbi } from "viem";
+import { createPublicClient, formatEther, http, parseAbi, toHex } from "viem";
 import { getEthereum, isRobinhoodChainId, shortAddress } from "@/lib/wallet";
 import { HYPR_NETWORKS } from "@/lib/integrations/hypr/constants";
 import { getHyprClientConfig } from "@/lib/hypr-client-config";
 import { isReviewedHyprV0Config } from "@/lib/hypr-launch-config";
 import { waitForTransactionReceipt } from "@/lib/transaction";
+import { LaunchPreflightError, launchErrorMessage, prepareNativeLaunch } from "@/lib/launch-preflight";
 
-const CREATE_LAUNCH_ABI = parseAbi([
-  "function createLaunch(string name, string symbol) returns (address tokenAddress, address curveAddress)",
-]);
 const FACTORY_CONFIG_ABI = parseAbi([
   "function totalSupply() view returns (uint256)",
   "function tradableSupply() view returns (uint256)",
@@ -51,6 +49,7 @@ export function LaunchpadPanel() {
   const [txHash, setTxHash] = useState("");
   const [pending, setPending] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [needsFunding, setNeedsFunding] = useState(false);
   const [config, setConfig] = useState<LaunchConfig | null>(null);
   const [configStatus, setConfigStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
@@ -111,6 +110,7 @@ export function LaunchpadPanel() {
     setStatus("");
     setTxHash("");
     setConfirmed(false);
+    setNeedsFunding(false);
     try {
       const accounts = (await ethereum.request({ method: "eth_requestAccounts" })) as string[];
       const chainId = Number(await ethereum.request({ method: "eth_chainId" }));
@@ -123,14 +123,20 @@ export function LaunchpadPanel() {
         setStatus("No wallet account was returned.");
         return;
       }
-      const data = encodeFunctionData({
-        abi: CREATE_LAUNCH_ABI,
-        functionName: "createLaunch",
-        args: [name.trim(), symbol.trim().replace(/^\$+/, "").toUpperCase()],
-      });
+      setStatus("Checking your testnet balance and simulating the launch; no transaction sent yet…");
+      const network = HYPR_NETWORKS.testnet;
+      const client = createPublicClient({ chain: network, transport: http(network.rpcUrl) });
+      const prepared = await prepareNativeLaunch(client, from as `0x${string}`, factoryAddress as `0x${string}`, name, symbol);
+      // Do not submit using an account/network that changed during the public-RPC checks.
+      const latestAccounts = await ethereum.request({ method: "eth_accounts" }) as string[];
+      const latestChainId = Number(await ethereum.request({ method: "eth_chainId" }));
+      if (latestAccounts[0]?.toLowerCase() !== from.toLowerCase() || latestChainId !== expectedChainId) {
+        throw new LaunchPreflightError("Your wallet account or network changed during the checks. Reconnect on Robinhood testnet and try again. No transaction was sent.");
+      }
+      setStatus("Balance and simulation passed. Review the testnet transaction in your wallet…");
       const hash = await ethereum.request({
         method: "eth_sendTransaction",
-        params: [{ from, to: factoryAddress, data }],
+        params: [{ from, to: factoryAddress, data: prepared.data, gas: toHex(prepared.gas), value: "0x0", chainId: toHex(expectedChainId) }],
       });
       setTxHash(String(hash));
       setStatus("Launch submitted; waiting for confirmation…");
@@ -143,7 +149,8 @@ export function LaunchpadPanel() {
       setName("");
       setSymbol("");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Launch cancelled or reverted. No HYPR state was assumed.");
+      setNeedsFunding(error instanceof LaunchPreflightError && error.needsFunding);
+      setStatus(launchErrorMessage(error));
     } finally {
       setPending(false);
     }
@@ -179,6 +186,7 @@ export function LaunchpadPanel() {
         <button className="primary-button" type="submit" disabled={!hasValidFactory || !config || pending}>{pending ? "Waiting for wallet…" : configStatus === "loading" ? "Reading config…" : "Create launch ↗"}</button>
         {status && <span className="launch-status" role="status">
           {status}
+          {needsFunding && <a href="https://faucet.testnet.chain.robinhood.com" target="_blank" rel="noreferrer"> Get free Robinhood test ETH ↗</a>}
           {txHash && <a href={`${explorerUrl}/tx/${txHash}`} target="_blank" rel="noreferrer"> View explorer ↗</a>}
           {confirmed && <Link href="/"> Refresh Discover ↗</Link>}
         </span>}

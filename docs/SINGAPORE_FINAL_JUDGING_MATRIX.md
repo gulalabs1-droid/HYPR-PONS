@@ -2,6 +2,14 @@
 
 Audit date: 2026-10-01
 
+Cloud execution update, 2026-10-12: the frontend is now published at
+`https://hypr-pons.vercel.app`, Supabase migrations and LiveKit credentials are
+configured and tested, and the source is backed up privately at
+`https://github.com/gulalabs1-droid/HYPR-PONS`. The original judging audit below
+records the earlier state; the current resource and acceptance evidence is in
+`docs/HYPR_CLOUD_SETUP_STATUS.md`. No HYPR contract was broadcast and the real
+creator/trade/graduation demo is still pending.
+
 This is an evidence audit of the current checkout, not a claim that HYPR is
 deployed or production-ready. The current HackQuest listing says a qualifying
 project must be deployed on an Arbitrum chain and lists Robinhood Chain as an

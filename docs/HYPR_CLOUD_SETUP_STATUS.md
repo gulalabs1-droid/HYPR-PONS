@@ -10,6 +10,7 @@ Verified on 2026-10-12.
 - Deployment client: authenticated with one-hour team-scoped access. No
   deployment token was written into the repository or application environment.
 - Source backup: private `https://github.com/gulalabs1-droid/HYPR-PONS`.
+- Repository is connected to Vercel for automatic deployments.
 - Git commits now use the authenticated owner's GitHub noreply identity;
   existing commit history is preserved. This resolves Vercel's Hobby author gate.
 - Supabase: existing healthy `hypr` project `vxusuxsdjdsqgizilmrz`, US East,
@@ -45,8 +46,9 @@ The prepared migration therefore prefixes every HYPR table reference.
 
 ## Verification
 
-- Application tests cover the existing 36 checks plus streaming provider,
-  token-access boundaries, and migration-generation regressions.
+- Application tests: 39 checks, including streaming provider, token-access
+  boundaries, and migration-generation regressions.
+- GitHub verification passed on `74da0dcd22f35842a2b8697a0048fc8946074cbb`.
 - TypeScript, ESLint, production build and bundle-security check passed.
 - Production runtime smoke passed on localhost in unconfigured mode.
 - Phone viewport: 390px viewport and 390px document width on both the launch
@@ -66,14 +68,20 @@ The prepared migration therefore prefixes every HYPR table reference.
   downgrades or weakened lint rules to hide this result.
 - Native room controls now sit inside the LiveKit provider. Token issuance
   rejects sample/unindexed rooms and invalid roles; viewers require a live host.
+- Hardened production deployment `dpl_GHCv59H8kFEmm8XnSAvLPQs7a9a6` is Ready.
+- Hosted runtime smoke passed at `https://hypr-pons.vercel.app`.
+- Hosted LiveKit status reports `configured: true`, `live: false`, zero viewers.
+  A viewer request for an unindexed sample address returns HTTP 404 without a token.
+- The hosted Pons source reports `rpc-empty`; protocol source reports
+  `unconfigured` because the HYPR factory has not been deployed.
+- Fresh Robinhood fork proof on 2026-10-12: all four tests passed.
 
 ## Pending execution
 
-1. Complete the final hardening deployment and hosted acceptance check.
-2. Deploy and verify the native contracts using an approved funded Robinhood
+1. Deploy and verify the native contracts using an approved funded Robinhood
    testnet signer. Configure factory addresses only after verification.
-3. Complete a real creator/viewer and create/trade/fee/graduation demo.
-4. Persistent chat/follows, production moderation, durable indexer scheduling,
+2. Complete a real creator/viewer and create/trade/fee/graduation demo.
+3. Persistent chat/follows, production moderation, durable indexer scheduling,
    and professional review remain later rollout work; their schemas alone do
    not make these features operational.
 

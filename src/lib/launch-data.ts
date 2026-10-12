@@ -3,7 +3,7 @@ import { getLaunchData, type LaunchDataSource } from "@/lib/integrations/pons/da
 import { getHyprFactoryAddress } from "@/lib/integrations/hypr/constants";
 import { readRecentNativeLaunches } from "@/lib/integrations/hypr/indexer";
 
-export type CombinedLaunchDataSource = LaunchDataSource | "mixed" | "native-empty" | "native-error";
+export type CombinedLaunchDataSource = LaunchDataSource | "mixed" | "native-rpc" | "native-empty" | "native-error";
 
 export type CombinedLaunchData = {
   launches: Launch[];
@@ -57,7 +57,7 @@ function nativeLaunchToRoom(
 async function getNativeLaunches() {
   try {
     if (!getHyprFactoryAddress()) return { launches: [], configured: false, source: "native-unconfigured" as const };
-    const indexed = await readRecentNativeLaunches();
+    const indexed = (await readRecentNativeLaunches()).sort((a, b) => a.blockNumber > b.blockNumber ? -1 : a.blockNumber < b.blockNumber ? 1 : 0);
     return {
       launches: indexed.map(nativeLaunchToRoom),
       configured: true,
@@ -79,7 +79,9 @@ export async function getCombinedLaunchData(): Promise<CombinedLaunchData> {
     launches,
     source: native.source === "native-error"
       ? "native-error"
-      : native.configured && (native.launches.length > 0 || pons.launches.length > 0)
+      : native.configured && native.launches.length > 0 && ponsLaunches.length === 0
+        ? "native-rpc"
+        : native.configured && (native.launches.length > 0 || pons.launches.length > 0)
         ? "mixed"
         : native.configured
           ? "native-empty"

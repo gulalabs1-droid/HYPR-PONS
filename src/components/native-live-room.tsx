@@ -3,7 +3,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { LiveKitRoom, RoomAudioRenderer, VideoConference, useRoomContext } from "@livekit/components-react";
 import type { Launch } from "@/lib/types";
-import { getEthereum, isRobinhoodChainId } from "@/lib/wallet";
+import { getEthereum } from "@/lib/wallet";
+import { creatorAccessProblem, streamingErrorMessage } from "@/lib/creator-access";
 
 type Session = { token: string; serverUrl: string; role: "host" | "viewer" };
 type Status = { configured: boolean; live: boolean; viewerCount: number };
@@ -19,9 +20,10 @@ function LeaveControl({ role, onLeave }: { role: "host" | "viewer"; onLeave: () 
 }
 
 export function ConnectedRoom({ session, onLeave, onError, connect = true }: { session: Session; onLeave: () => void; onError: (message: string) => void; connect?: boolean }) {
+  const [connected, setConnected] = useState(false);
   return <div className="native-live-connected" data-lk-theme="default">
-    <LiveKitRoom token={session.token} serverUrl={session.serverUrl} connect={connect} video={session.role === "host"} audio={session.role === "host"} onError={(error) => onError(error.message || "The live room could not connect.")} onDisconnected={onLeave}>
-      <div className="native-live-toolbar"><span><span className="pulse" /> {session.role === "host" ? "YOU ARE LIVE ON HYPR" : "LIVE INSIDE HYPR"}</span><LeaveControl role={session.role} onLeave={onLeave} /></div>
+    <LiveKitRoom token={session.token} serverUrl={session.serverUrl} connect={connect} video={session.role === "host"} audio={session.role === "host"} onConnected={() => setConnected(true)} onError={(error) => onError(streamingErrorMessage(error))} onMediaDeviceFailure={() => onError("Camera or microphone unavailable. Check your browser permissions and connected devices.")} onDisconnected={onLeave}>
+      <div className="native-live-toolbar"><span><span className={connected ? "pulse" : "status-dot inactive"} /> {connected ? session.role === "host" ? "CREATOR STUDIO CONNECTED" : "CONNECTED TO HYPR" : "CONNECTING TO YOUR ROOM…"}</span><LeaveControl role={session.role} onLeave={onLeave} /></div>
       <VideoConference />
       <RoomAudioRenderer />
     </LiveKitRoom>
@@ -70,8 +72,8 @@ export function NativeLiveRoom({ token }: { token: Launch }) {
       const accounts = await ethereum.request({ method: "eth_requestAccounts" }) as string[];
       const address = accounts[0];
       const chainId = Number(await ethereum.request({ method: "eth_chainId" }));
-      if (!address) throw new Error("No wallet account was returned.");
-      if (!isRobinhoodChainId(chainId)) throw new Error("Switch your wallet to Robinhood Chain or its testnet first.");
+      const accessProblem = creatorAccessProblem(address, chainId, token.deployer);
+      if (accessProblem) throw new Error(accessProblem);
       const timestamp = Date.now();
       const message = signedHostMessage(token.address, address, timestamp);
       const signature = await ethereum.request({ method: "personal_sign", params: [message, address] }) as `0x${string}`;
@@ -79,13 +81,13 @@ export function NativeLiveRoom({ token }: { token: Launch }) {
       const data = await response.json() as Session & { error?: string };
       if (!response.ok) throw new Error(data.error || "The creator wallet could not be authorized.");
       setSession(data); setStudioOpen(false); await refreshStatus();
-    } catch (error) { setNotice(error instanceof Error ? error.message : "Live start cancelled."); }
+    } catch (error) { setNotice(streamingErrorMessage(error)); }
     finally { setBusy(false); }
   }
 
   function leaveRoom() { setSession(null); setStudioOpen(false); void refreshStatus(); }
 
-  if (session) return <ConnectedRoom session={session} onLeave={leaveRoom} onError={setNotice} />;
+  if (session) return <section><ConnectedRoom session={session} onLeave={leaveRoom} onError={setNotice} />{notice && <div className="live-notice" role="alert">{notice}</div>}</section>;
 
   return <section className="native-live-surface">
     <div className="native-live-copy">
@@ -94,10 +96,10 @@ export function NativeLiveRoom({ token }: { token: Launch }) {
       <p>{status.live ? "Watch the creator, hear the room, and follow the curve without opening Twitch or YouTube." : "Creators use their camera and microphone here. Viewers stay in the HYPR room."}</p>
       <span className="live-state">{status.live ? `LIVE · ${status.viewerCount} viewer${status.viewerCount === 1 ? "" : "s"} inside HYPR` : status.configured ? "CREATOR ROOM OFFLINE" : "STREAMING ACCOUNT NOT CONNECTED"}</span>
       {status.live && <button className="primary-button live-action" onClick={joinViewer} disabled={busy}>{busy ? "Joining…" : "Watch live inside HYPR ↗"}</button>}
-      {!studioOpen && <button className="secondary-button live-action" onClick={() => setStudioOpen(true)}>{status.live ? "Creator controls" : "Creator? Start a room"}</button>}
-      {studioOpen && <div className="live-studio-card"><strong>Creator studio</strong><span>Connect the wallet that created this launch. HYPR will ask for one free authorization signature; it does not send a transaction.</span><button className="primary-button live-action" onClick={startHost} disabled={busy}>{busy ? "Authorizing…" : "Start camera & go live ↗"}</button><button className="claim-link" onClick={() => { setStudioOpen(false); setNotice(""); }}>Cancel</button></div>}
+      {!studioOpen && <button className="secondary-button live-action" onClick={() => setStudioOpen(true)}>{status.live ? "Creator controls" : "Open creator studio"}</button>}
+      {studioOpen && <div className="live-studio-card"><strong>Creator studio</strong><span>Use the wallet that created this coin. First approve a free wallet authorization; then allow camera and microphone access. Starting shares your video and audio with viewers through LiveKit. This does not send a coin transaction.</span><button className="primary-button live-action" onClick={startHost} disabled={busy}>{busy ? "Waiting for wallet authorization…" : "Authorize & start broadcast ↗"}</button><button className="claim-link" onClick={() => { setStudioOpen(false); setNotice(""); }}>Cancel</button></div>}
       {notice && <div className="live-notice" role="status">{notice}</div>}
     </div>
-    <div className="live-viewport native-live-placeholder"><div className="native-live-mark"><span>H</span><strong>{status.live ? "Live room ready" : "Native live"}</strong><small>{status.live ? "Join the broadcast without leaving HYPR." : status.configured ? "Your camera stays inside the room." : "One streaming account setting is still needed."}</small></div></div>
+    <div className="live-viewport native-live-placeholder"><div className="native-live-mark"><span>H</span><strong>{status.live ? "Live room ready" : "Stream directly from HYPR"}</strong><small>{status.live ? "Join the broadcast without leaving HYPR." : status.configured ? "Your camera stays off until you start a broadcast." : "One streaming account setting is still needed."}</small></div></div>
   </section>;
 }

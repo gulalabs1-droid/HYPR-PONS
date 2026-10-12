@@ -53,6 +53,24 @@ h1, h2, h3, p { margin: 0; }
 .accounting-copy { color: var(--muted); font-size: 11px; line-height: 1.6; margin-top: 12px; }.accounting-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 22px; }.accounting-grid div { display: flex; flex-direction: column; gap: 7px; }.accounting-grid span { color: var(--muted); font: 10px var(--mono); letter-spacing: .08em; }.accounting-grid strong { color: var(--text); font: 13px var(--mono); overflow-wrap: anywhere; }.accounting-grid small { color: var(--muted); font: 9px var(--mono); line-height: 1.5; }
 .launchpad-panel > *, .launchpad-form label { min-width: 0; }
 .launchpad-form input { min-width: 0; width: 100%; }
+.launchpad-panel { align-items: start; }
+.launch-testnet-note { font-size: 12px !important; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.launch-details { margin-top: 20px; color: var(--muted); font-size: 12px; }
+.launch-details summary { cursor: pointer; padding: 8px 0; }
+.launch-form-help { grid-column: 1 / -1; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.launch-result { border: 1px solid var(--line); border-radius: 12px; background: var(--bg); padding: 24px; min-width: 0; }
+.launch-result.is-ready { border-color: rgba(199,243,107,.45); background: radial-gradient(circle at 95% 0, rgba(199,243,107,.1), transparent 60%), var(--bg); }
+.launch-result h3 { font-size: 25px; letter-spacing: -.04em; margin: 12px 0; }
+.launch-result p { color: var(--muted); font-size: 13px; line-height: 1.7; }
+.launch-result small { display: block; color: var(--muted); font-size: 11px; line-height: 1.6; margin-top: 18px; }
+.launch-steps { padding-left: 20px; color: var(--muted); font-size: 12px; line-height: 2; }
+.launch-steps .done { color: var(--lime); }
+.launch-room-link { width: 100%; justify-content: center; margin: 18px 0 4px; }
+.launch-result-actions { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 18px; font-size: 12px; align-items: center; }
+.launch-result-actions a, .launch-result-actions button { color: var(--lime); }
+.launch-result-actions button { border: 0; padding: 0; background: transparent; cursor: pointer; font: inherit; }
+.launch-recovery-notice { color: #efcf86 !important; overflow-wrap: anywhere; }
+.launch-status { font: 12px var(--sans); overflow-wrap: anywhere; }
 @media (max-width: 760px) {
   .launchpad-panel { grid-template-columns: minmax(0, 1fr); padding: 24px; gap: 24px; }
   .launchpad-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }

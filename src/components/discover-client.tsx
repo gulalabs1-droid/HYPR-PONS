@@ -14,6 +14,7 @@ function networkEyebrow(source: CombinedLaunchDataSource) {
   if (source === "native-error") return "RPC UNAVAILABLE · ROBINHOOD CHAIN";
   if (source === "rpc-error") return "PONS CONFIGURATION ERROR · ROBINHOOD CHAIN";
   if (source === "native-empty") return "TESTNET READY · ROBINHOOD CHAIN";
+  if (source === "native-rpc") return "TESTNET PREVIEW · ROBINHOOD CHAIN";
   return "LIVE INDEXED · ROBINHOOD CHAIN";
 }
 
@@ -40,6 +41,7 @@ function sourceLabel(source: CombinedLaunchDataSource) {
   if (source === "rpc-empty") return "Live RPC returned no recent launches in the indexed window.";
   if (source === "rpc-partial") return "RPC launch discovery is live; metadata and social metrics are still partial.";
   if (source === "mixed") return "Combined view: native HYPR launches are onchain; Pons/demo enrichment remains clearly labeled.";
+  if (source === "native-rpc") return "Testnet preview — these coins exist on Robinhood testnet. Test assets have no real value; social features are still previews.";
   if (source === "native-empty") return "Native HYPR factory is configured, but no recent native launches were found.";
   if (source === "native-error") return "Native HYPR RPC read failed; no native launch state is being claimed.";
   if (source === "rpc-error") return "Pons version is unsupported or misconfigured; no Pons launch state is being claimed.";

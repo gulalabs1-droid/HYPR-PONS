@@ -34,7 +34,9 @@ assemble a launchpad, explorer, trading chart and external video destination.
 - [Live app](https://hypr-pons.vercel.app)
 - [Clean demonstration room](https://hypr-pons.vercel.app/room/0xeA3b5d2Cf6EAcD3dd6241736082b7698E519a675)
 - [Read-only protocol accounting](https://hypr-pons.vercel.app/protocol)
-- [Repository](https://github.com/gulalabs1-droid/HYPR-PONS) — private until authorized access is granted.
+- [Repository](https://github.com/gulalabs1-droid/HYPR-PONS) — public with founder approval; visibility confirmed October 12.
+- [Founder pitch](https://youtu.be/tYT1xgGFwh8) — approved Unlisted publication, original founder voice, 1:56.
+- [Product walkthrough](https://youtu.be/OlhpxJlsKdA) — approved Unlisted publication; actual site captures and system narration, approximately 1:48 on YouTube.
 - [Factory](https://explorer.testnet.chain.robinhood.com/address/0x6461786C6a62e2b7E40917312Cc35bb3Df127d14)
 - [Graduation adapter](https://explorer.testnet.chain.robinhood.com/address/0x77bc7Ed4B59F9D8B68104F7F4dB673D2777B19eE)
 - [Demo token](https://explorer.testnet.chain.robinhood.com/address/0xeA3b5d2Cf6EAcD3dd6241736082b7698E519a675)
@@ -87,3 +89,20 @@ Founder legal/contact/background fields, funding history, outside human work,
 eligibility declarations, video URLs, repository access acceptance, actual media
 test result, and final rules acceptance. Complete from founder input and visible
 confirmation, not placeholders or invented information.
+
+## Final preparation status
+
+- Colosseum founder submission profile and project details are saved.
+- Repository judge access is resolved through approved public visibility.
+- Founder pitch: 1:56, original founder voice with no camera.
+- Product walkthrough: 1:47, edited real public-site screens and historical
+  testnet receipt with disclosed system narration. It does not demonstrate a
+  new transaction or a creator-to-viewer camera/audio session.
+- Recordings and generated media remain excluded from Git. Original voice
+  recording is preserved locally.
+- Both video URLs are saved in Colosseum and its materials checklist reports
+  ready to submit. Both Unlisted publications, successful YouTube checks, and
+  watch-page playback are confirmed.
+- Final survey is prepared from founder answers and stated product goals.
+  Contest rules acceptance and the final submission remain unconfirmed;
+  a saved draft or "ready to submit" status is not a submitted entry.

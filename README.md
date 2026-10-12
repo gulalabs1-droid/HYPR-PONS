@@ -1,6 +1,6 @@
 # HYPR
 
-HYPR is the social discovery layer for Robinhood Chain communities. This bootstrap is the first V1 slice for pons launches: Discover, automatic community rooms, activity-first HYPE, wallet/network detection, sharing, and safe fixture/RPC data boundaries.
+HYPR is the live launchpad for Robinhood Chain: create, go live from the browser, trade, earn, progress on a bonding curve, graduate to Uniswap v4, and keep the community in a persistent room. This repository is the V1 web/bootstrap slice, with Pons discovery integration, activity-first HYPE, wallet/network detection, sharing, native LiveKit room plumbing, and safe fixture/RPC data boundaries preserved.
 
 ## Run locally
 
@@ -10,7 +10,15 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000`. Demo mode is the default and requires no credentials. Set `PONS_INDEXER_MODE=rpc` to read recent active-factory launch events from the public RPC; the app falls back to fixtures if the endpoint is unavailable.
+Open `http://localhost:3000`. Demo mode is the default and requires no credentials. Set `PONS_INDEXER_MODE=rpc` to read recent active-factory launch events from the public RPC. The UI labels empty, partial, and fallback states; fixture metrics are not production traction.
+
+Native browser live rooms use LiveKit. Set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` on the server only. The room token route grants viewers subscribe-only access and requires the verified native launch creator to sign a short-lived, transaction-free authorization before publishing camera and microphone tracks. Without those settings, the site stays in an honest offline/setup state.
+
+When a native HYPR factory is configured, `/protocol` provides a read-only testnet accounting view backed by the same bounded, confirmation-buffered RPC reads. It has no claim, withdrawal, or configuration controls. A reviewed Supabase persistence baseline and optional server-only claim adapter are in `supabase/migrations/0001_hypr_v1.sql` and `src/lib/supabase/server.ts`; demo mode remains credential-free until that project is explicitly configured.
+
+After applying the migration and configuring server-only Supabase credentials, the bounded persistence worker can be run once with `HYPR_INDEXER_SOURCE=pons npm run indexer:once` or `HYPR_INDEXER_SOURCE=hypr npm run indexer:once`. It performs RPC reads and database writes only; it never signs or broadcasts a blockchain transaction.
+
+To inspect the exact bounded batch without Supabase credentials or any database write, add `HYPR_INDEXER_DRY_RUN=1`; the worker prints its serialized payload and exits after the RPC read.
 
 Useful checks:
 
@@ -19,6 +27,9 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
+npm run security:smoke
+npm run smoke -- http://127.0.0.1:3100
 ```
 
-See `docs/HYPR_V1_AUDIT.md` for the repository audit and `docs/LAUNCH_CHECKLIST.md` for what remains before production.
+See `docs/HYPR_PROTOCOL_ARCHITECTURE.md` for the native protocol design, `docs/HYPR_PROTOCOL_TEST_PLAN.md` for the contract gate, `docs/HYPR_V1_AUDIT.md` for the repository audit, and `docs/LAUNCH_CHECKLIST.md` for what remains before production.
+See `docs/SUPABASE_SCHEMA.md` for the persistence boundary and rollout requirements.

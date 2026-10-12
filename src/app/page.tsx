@@ -1,7 +1,10 @@
 import { DiscoverClient } from "@/components/discover-client";
-import { getLaunches } from "@/lib/integrations/pons/data";
+import { LaunchpadPanel } from "@/components/launchpad-panel";
+import { getCombinedLaunchData } from "@/lib/launch-data";
+
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const launches = await getLaunches();
-  return <DiscoverClient initialLaunches={launches} />;
+  const result = await getCombinedLaunchData();
+  return <DiscoverClient initialLaunches={result.launches} source={result.source}><LaunchpadPanel /></DiscoverClient>;
 }

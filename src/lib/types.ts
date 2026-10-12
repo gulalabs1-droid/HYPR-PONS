@@ -17,6 +17,27 @@ export type Launch = {
   launchedAt: string;
   trades24h: number;
   officialLinks: { label: string; href: string }[];
+  streamUrl?: string;
+  streamLive?: boolean;
+  origin?: "pons" | "hypr";
+  dataStatus?: "demo" | "partial" | "verified";
+  curveProgressBps?: number;
+  curvePhase?: "Live" | "Graduating" | "Graduated";
+  nativeRealQuoteReserve?: string;
+  nativeRealTokenReserve?: string;
+  nativeCreatorFees?: string;
+  nativeProtocolFees?: string;
+  nativeGraduationPoolId?: `0x${string}`;
+  nativeTotalFeeBps?: string;
+  nativeCreatorFeeBps?: string;
+  nativeProtocolFeeBps?: string;
+  nativeTradeVolume?: string;
+  nativeTradeCount?: number;
+  launchTxHash?: `0x${string}`;
+  graduationTxHash?: `0x${string}`;
+  ponsTradeCount?: number;
+  poolPriceQuote?: number;
+  poolLiquidity?: string;
 };
 
 export type HypeSignals = {

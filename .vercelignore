@@ -1,0 +1,16 @@
+# Deploy only the web application and its build inputs.
+.git
+.github
+.env*
+.next
+.vercel
+node_modules
+/protocol/
+/supabase/
+/docs/
+/tests/
+/scripts/
+/output/
+*.log
+*.tsbuildinfo
+README.md

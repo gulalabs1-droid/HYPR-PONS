@@ -1,6 +1,6 @@
 # pons + Robinhood Chain integration
 
-Verified against the current official documentation on 2026-09-05:
+Verified against the current official documentation on 2026-09-06:
 
 - Robinhood Chain mainnet chain ID: `4663`.
 - Native gas asset: ETH.
@@ -11,6 +11,10 @@ Verified against the current official documentation on 2026-09-05:
 - Authoritative launch event: `TokenLaunched` on the factory.
 - Authoritative pool trade event: Uniswap V3 `Swap`.
 
+## Versioning warning
+
+The official documentation now exposes both the original active/legacy pons deployment and a separate pons v2 deployment. The original surface uses the active and legacy factories above; pons v2 uses a different factory and launch lifecycle with per-launch curves, graduation, and Uniswap v4. HYPR must select the target version explicitly and keep factory addresses, event ABIs, deployment blocks, and state readers versioned. It must not infer a launch's version from its name, symbol, or price.
+
 Sources: [pons integration docs](https://docs.ponsfamily.com/) and [Robinhood Chain connecting docs](https://docs.robinhood.com/chain/connecting/).
 
 ## Indexing plan
@@ -18,12 +22,12 @@ Sources: [pons integration docs](https://docs.ponsfamily.com/) and [Robinhood Ch
 1. Read factory logs in bounded block chunks; wide public-RPC `eth_getLogs` requests time out.
 2. Normalize each launch with token, deployer, pool, block number, transaction hash, and log index.
 3. Deduplicate on `transaction_hash + log_index`.
-4. Read token metadata (`name`, `symbol`, `decimals`, `logo`, `description`, `socials`, `liquidityPool`) from the token contract.
+4. Read bounded token metadata (`name`, `symbol`, `decimals`) from the token contract; treat logo, description, socials, and liquidity metadata as separate untrusted enrichment inputs.
 5. Register the pool and index bounded `Swap` events.
 6. Persist the latest successful block checkpoint and an error status. Re-run failed batches safely.
-7. Handle reorgs conservatively by waiting for confirmations before making a launch visible.
+7. Handle reorgs conservatively by reading only through a 12-block confirmation buffer, splitting recent reads into 500-block chunks, deduplicating stable `(transaction_hash, log_index)` identities, and keeping the backfill bounded.
 
-The current code implements steps 1–3 for recent active-factory launches and uses fixtures for the rest until persistence is configured.
+The current code implements a recent active-factory launch read and event normalization with a 2,500-block lookback, 500-block RPC chunks, 12-block confirmation buffer, duplicate rejection, bounded token name/symbol/decimals reads, bounded Uniswap V3 `Swap` counts, and validated WETH-denominated `slot0`/liquidity reads for each discovered pool. Native HYPR launch reads also aggregate `TradeExecuted` gross quote volume/count over the same bounded window. The opt-in `npm run indexer:once` worker feeds either bounded Pons v1 or native HYPR launch reads into the transactional persistence adapter. `PONS_VERSION` is explicit and unsupported v2 configuration fails closed instead of silently using the v1 ABI. It does not yet index legacy or v2 launches, read holders or graduation state, or run on a schedule. Fixture and partial-RPC states are labeled in the UI and API until persistence is configured.
 
 ## Missing production setup
 

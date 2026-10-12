@@ -103,7 +103,7 @@ export function RoomClient({ token, source }: { token: Launch; source: CombinedL
           <div className="room-actions">
             <button className={following ? "secondary-button following" : "secondary-button"} onClick={() => setFollowing(!following)}>{following ? "Following" : "Follow room"}</button>
             <button className="secondary-button" onClick={share}>Share ↗</button>
-            <button className="primary-button" onClick={claimRoom}>Claim room</button>
+            <button className="secondary-button" onClick={claimRoom}>Verify creator wallet</button>
           </div>
         </section>
         {isUnverified && <div className="data-notice" role="status">{isDemo ? "Demo sample" : "Partial market/social data"} — chat and follows are local previews; shared chat, follows, and HYPE persistence are not connected.</div>}
@@ -147,11 +147,11 @@ export function RoomClient({ token, source }: { token: Launch; source: CombinedL
           <aside className="room-sidebar">
             <div className="chat-panel">
               <div className="panel-heading"><div><span className="eyebrow">ROOM CHAT · {isDemo ? "DEMO SAMPLE" : "LOCAL PREVIEW"}</span><h2>Say what you see</h2></div><span className="chat-count">{messages.length} local</span></div>
-              <div className="chat-messages">{messages.map((message, index) => <div className="message" key={`${message}-${index}`}><span className="avatar">{["✦", "◐", "⌁"][index % 3]}</span><div><strong>{["earlysignal", "mariah", "anon_4663"][index % 3]}</strong><p>{message}</p><time>just now</time></div></div>)}</div>
-              <form className="chat-form" onSubmit={sendMessage}><input value={chat} onChange={(event) => setChat(event.target.value)} placeholder="Connect wallet to chat" /><button aria-label="Send message">↑</button></form>
+              <div className="chat-messages">{messages.map((message, index) => <div className="message" key={`${message}-${index}`}><span className="avatar">{["✦", "◐", "⌁"][index % 3]}</span><div><strong>{isDemo ? ["earlysignal", "mariah", "anon_4663"][index % 3] : "You · local preview"}</strong><p>{message}</p><time>just now</time></div></div>)}</div>
+              <form className="chat-form" onSubmit={sendMessage}><input aria-label="Local chat preview message" value={chat} onChange={(event) => setChat(event.target.value)} placeholder="Try a local preview message" /><button aria-label="Send preview message">↑</button></form>
               <span className="chat-footnote">Local browser preview only. Messages are not shared with other viewers.</span>
             </div>
-            <div className="creator-panel"><span className="eyebrow">ROOM CREATOR</span><div className="creator-row"><span className="creator-avatar">{token.logo}</span><div><strong>{isDemo ? "Demo creator" : isNative ? "Onchain creator" : "Indexed creator"}</strong><span>{shortAddress(token.deployer)}</span></div></div><button className="claim-link" onClick={claimRoom}>Verify room ownership →</button></div>
+            <div className="creator-panel"><span className="eyebrow">ROOM CREATOR</span><div className="creator-row"><span className="creator-avatar">{token.logo}</span><div><strong>{isDemo ? "Demo creator" : isNative ? "Onchain creator" : "Indexed creator"}</strong><span>{shortAddress(token.deployer)}</span></div></div><p className="accounting-copy">Only this creator wallet can authorize a native broadcast. Verification does not transfer tokens or withdraw fees.</p></div>
           </aside>
         </section>
       </div>

@@ -1,5 +1,22 @@
 # HYPR
 
+## Crypto World's Fair — current prototype
+
+- [Live testnet app](https://hypr-pons.vercel.app)
+- [Submission package](docs/WORLDS_FAIR_SUBMISSION.md)
+- [Public testnet evidence](docs/HYPR_CONTROLLED_DEMO.md)
+- [Readiness audit](docs/HYPR_READINESS_AUDIT_20261012.md)
+
+The deployed native protocol is on Robinhood Chain **testnet (46630)**. Creation,
+controlled buying/selling and fee claims have public receipts. Native broadcasting
+is implemented; actual creator-to-viewer media acceptance is a separate gate.
+Chat/follows are local previews. Uniswap v4 graduation is fork-tested, not a
+completed public graduation. No mainnet, traction or million-user readiness is
+claimed. Bootstrap work predates the competition and is disclosed in the package.
+
+The older Open House/Singapore drafts below are historical planning context,
+not the current contest checklist.
+
 HYPR is the live launchpad for Robinhood Chain: create, go live from the browser, trade, earn, progress on a bonding curve, graduate to Uniswap v4, and keep the community in a persistent room. This repository is the V1 web/bootstrap slice, with Pons discovery integration, activity-first HYPE, wallet/network detection, sharing, native LiveKit room plumbing, and safe fixture/RPC data boundaries preserved.
 
 ## Run locally

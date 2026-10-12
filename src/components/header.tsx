@@ -80,8 +80,8 @@ export function Header({ active = "discover" }: { active?: "discover" | "protoco
         <Link href="/" className="brand" aria-label="HYPR home"><span className="brand-mark">H</span><span>HYPR</span></Link>
         <nav className="main-nav" aria-label="Main navigation">
           <Link className={active === "discover" ? "active" : ""} href="/">Discover</Link>
-          <Link href="/#following">Following</Link>
-          <Link href="/#rooms">Rooms</Link>
+          <Link href="/#launch">Create</Link>
+          <Link href="/#discover">Rooms</Link>
           <Link className={active === "protocol" ? "active" : ""} href="/protocol">Protocol</Link>
         </nav>
         <div className="header-actions">

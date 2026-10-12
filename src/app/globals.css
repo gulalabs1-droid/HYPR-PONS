@@ -1,9 +1,12 @@
 :root { --bg: #0b0c0e; --surface: #111316; --surface-2: #17191d; --line: #282b31; --muted: #858a95; --text: #f1f2f4; --lime: #c7f36b; --purple: #a893ff; --mono: 'SFMono-Regular', 'Roboto Mono', Menlo, Consolas, monospace; --sans: 'Avenir Next', 'Helvetica Neue', Arial, sans-serif; }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; scroll-padding-top: 140px; }
 body { background: var(--bg); color: var(--text); margin: 0; font-family: var(--sans); }
 a { color: inherit; text-decoration: none; }
 button, input { color: inherit; font: inherit; }
+/* Comfortable controls and visible keyboard focus, including compact links. */
+:where(a, button, input, summary):focus-visible { outline: 2px solid var(--lime); outline-offset: 4px; }
+.search-wrap:focus-within, .chat-form:focus-within { outline: 2px solid var(--lime); outline-offset: 3px; }
 button { cursor: pointer; }
 .site-header { border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; background: rgba(11,12,14,.86); backdrop-filter: blur(18px); }
 .header-inner { width: min(1180px, calc(100% - 48px)); height: 76px; display: flex; align-items: center; margin: auto; gap: 54px; }
@@ -79,3 +82,23 @@ h1, h2, h3, p { margin: 0; }
 .launch-preview { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }.launch-preview div { display: flex; flex-direction: column; gap: 5px; }.launch-preview span, .launch-preview small { color: var(--muted); font: 9px var(--mono); line-height: 1.5; }.launch-preview strong { font: 11px var(--mono); overflow-wrap: anywhere; }
 .protocol-shell { padding-bottom: 100px; }.protocol-hero { padding: 92px 0 64px; max-width: 720px; }.protocol-hero h1 { font-size: clamp(48px, 8vw, 82px); line-height: .98; letter-spacing: -.065em; margin: 22px 0; }.protocol-hero h1 em { color: var(--lime); font-style: normal; }.protocol-hero p { color: var(--muted); max-width: 520px; line-height: 1.8; font-size: 14px; }.protocol-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }.protocol-card { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 22px; min-height: 128px; display: flex; flex-direction: column; gap: 9px; }.protocol-card span { color: var(--muted); font: 10px var(--mono); letter-spacing: .08em; }.protocol-card strong { font: 18px var(--mono); overflow-wrap: anywhere; }.protocol-card small { color: var(--muted); font: 9px var(--mono); line-height: 1.5; }.protocol-note { margin-top: 14px; border: 1px solid var(--line); border-radius: 14px; background: radial-gradient(circle at 85% 30%, rgba(168,147,255,.12), transparent 32%), var(--surface); padding: 30px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }.protocol-note h2 { font-size: 25px; letter-spacing: -.04em; margin: 11px 0 9px; }.protocol-note p { color: var(--muted); max-width: 650px; font-size: 12px; line-height: 1.7; }.protocol-note .address-line { white-space: nowrap; }
 @media (max-width: 760px) { .protocol-grid { grid-template-columns: 1fr 1fr; }.protocol-note { align-items: flex-start; flex-direction: column; }.protocol-note .address-line { white-space: normal; } }
+
+/* Contest usability polish: preserve the identity, improve readability and taps. */
+.main-nav a, .back-link, .panel-heading a { display: inline-flex; align-items: center; min-height: 44px; }
+.primary-button, .secondary-button, .wallet-button, .claim-link, .live-control-button { min-height: 44px; }
+.claim-link { padding: 10px 8px; font-size: 12px; }
+.address-line { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.eyebrow, .data-notice, .launch-config, .live-state, .live-studio-card span, .chat-footnote, .accounting-copy { font-size: 12px; line-height: 1.6; }
+.chat-form input { min-width: 0; font-size: 14px; }
+.chat-form button { width: 44px; height: 44px; flex-shrink: 0; }
+.trade-tabs button { min-width: 64px; min-height: 44px; }
+@media (max-width: 760px) {
+  .header-inner { height: auto; min-height: 66px; flex-wrap: wrap; padding: 10px 0; gap: 6px 12px; }
+  .main-nav { order: 3; width: 100%; justify-content: space-between; font-size: 13px; }
+  .header-actions { min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .token-card { transition: none; }
+  .token-card:hover { transform: none; }
+}

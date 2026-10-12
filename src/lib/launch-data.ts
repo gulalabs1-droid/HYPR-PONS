@@ -21,7 +21,7 @@ function nativeLaunchToRoom(
     name: launch.name,
     symbol: launch.symbol,
     logo: "✦",
-    description: "A native HYPR launch indexed from the protocol factory. Token metadata and trading state are still being read.",
+    description: "A native HYPR launch on Robinhood testnet. Explore its onchain curve, creator studio, and community-room preview.",
     deployer: launch.creator,
     priceUsd: 0,
     marketCapUsd: 0,

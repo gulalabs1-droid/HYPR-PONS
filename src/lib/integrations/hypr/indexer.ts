@@ -2,6 +2,7 @@ import { createPublicClient, http, parseAbi, parseAbiItem, type Log } from "viem
 import { HYPR_FACTORY_ABI } from "./abi";
 import { getHyprFactoryAddress, getHyprNetwork, HYPR_NETWORKS, type HyprNetwork } from "./constants";
 import { confirmedBlockRange, stableEventId, uniqueLogsByEventId } from "../indexer-utils";
+import { persistDiscoveredNativeLaunches, readPersistedNativeLaunches } from "@/lib/supabase/native-launches";
 
 const launchEvent = parseAbiItem(HYPR_FACTORY_ABI[0]);
 const tradeEvent = parseAbiItem(
@@ -106,6 +107,9 @@ export async function readRecentNativeLaunches(
   const client = createPublicClient({ chain: network, transport: http(rpcUrl) });
   const latest = await client.getBlockNumber();
   const { fromBlock, safeHead } = confirmedBlockRange(latest, CONFIRMATION_DEPTH, LOOKBACK_BLOCKS, 0n);
+  // Historical rooms must not disappear when their LaunchCreated log ages out
+  // of the recent RPC window. Persisted launches remain subject to chain checks.
+  const persisted = await readPersistedNativeLaunches(factoryAddress, network.id).catch(() => []);
   const logs: Log[] = [];
   for (let cursor = fromBlock; cursor <= safeHead; cursor += LOG_CHUNK_SIZE) {
     const toBlock = cursor + LOG_CHUNK_SIZE - 1n < safeHead ? cursor + LOG_CHUNK_SIZE - 1n : safeHead;
@@ -117,7 +121,26 @@ export async function readRecentNativeLaunches(
     }));
   }
   const uniqueLogs = uniqueLogsByEventId(logs);
-  const launches = uniqueLogs.map(normalizeLaunchLog).filter((item): item is NativeIndexedLaunch => Boolean(item));
+  const recent = uniqueLogs.map(normalizeLaunchLog).filter((item): item is NativeIndexedLaunch => Boolean(item));
+  // A confirmed launch viewed through HYPR is cached durably immediately; this
+  // does not depend on a manually executed worker or an unattended promise.
+  await persistDiscoveredNativeLaunches(recent, factoryAddress, network.id, fromBlock, safeHead).catch(() => undefined);
+  const launchesByToken = new Map(persisted.filter((launch) => launch.blockNumber <= safeHead).map((launch) => [launch.token.toLowerCase(), launch]));
+  for (const launch of recent) launchesByToken.set(launch.token.toLowerCase(), launch);
+  const launches: NativeIndexedLaunch[] = [];
+  for (const launch of launchesByToken.values()) {
+    if (!recent.some((item) => item.token.toLowerCase() === launch.token.toLowerCase())) {
+      try {
+        const originalLogs = await client.getLogs({ address: factoryAddress, event: launchEvent, fromBlock: launch.blockNumber, toBlock: launch.blockNumber });
+        const original = originalLogs.map(normalizeLaunchLog).find((item) => item?.eventId.toLowerCase() === launch.eventId.toLowerCase() && item.token.toLowerCase() === launch.token.toLowerCase());
+        if (!original) continue;
+        // Use the canonical factory event, not mutable database attribution.
+        launches.push(original);
+        continue;
+      } catch { continue; }
+    }
+    launches.push(launch);
+  }
   return Promise.all(launches.map(async (launch) => {
     const [quoteReserveResult, tokenReserveResult, creatorFeesResult, protocolFeesResult, poolIdResult, phaseResult] = await Promise.allSettled([
       client.readContract({ address: launch.curve, abi: curveStateAbi, functionName: "realQuoteReserve" }),
@@ -138,7 +161,7 @@ export async function readRecentNativeLaunches(
     if (phaseValue === 2) {
       try {
         const graduationLogs: Log[] = [];
-        for (let cursor = launch.blockNumber; cursor <= safeHead; cursor += LOG_CHUNK_SIZE) {
+        for (let cursor = launch.blockNumber > fromBlock ? launch.blockNumber : fromBlock; cursor <= safeHead; cursor += LOG_CHUNK_SIZE) {
           const toBlock = cursor + LOG_CHUNK_SIZE - 1n < safeHead ? cursor + LOG_CHUNK_SIZE - 1n : safeHead;
           graduationLogs.push(...await client.getLogs({
             address: launch.curve,
@@ -163,7 +186,7 @@ export async function readRecentNativeLaunches(
     let tradeCount: number | undefined;
     try {
       const tradeLogs: Log[] = [];
-      for (let cursor = launch.blockNumber; cursor <= safeHead; cursor += LOG_CHUNK_SIZE) {
+      for (let cursor = launch.blockNumber > fromBlock ? launch.blockNumber : fromBlock; cursor <= safeHead; cursor += LOG_CHUNK_SIZE) {
         const toBlock = cursor + LOG_CHUNK_SIZE - 1n < safeHead ? cursor + LOG_CHUNK_SIZE - 1n : safeHead;
         tradeLogs.push(...await client.getLogs({
           address: launch.curve,

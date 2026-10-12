@@ -46,7 +46,7 @@ The prepared migration therefore prefixes every HYPR table reference.
 
 ## Verification
 
-- Application tests: 39 checks, including streaming provider, token-access
+- Application tests: 47 checks, including streaming provider, token-access
   boundaries, and migration-generation regressions.
 - GitHub verification passed on `74da0dcd22f35842a2b8697a0048fc8946074cbb`.
 - TypeScript, ESLint, production build and bundle-security check passed.
@@ -78,13 +78,15 @@ The prepared migration therefore prefixes every HYPR table reference.
 
 ## Pending execution
 
-1. Deploy and verify the native contracts using an approved funded Robinhood
-   testnet signer. Configure factory addresses only after verification.
-2. Complete a real creator/viewer and create/trade/fee/graduation demo.
-3. Persistent chat/follows, production moderation, durable indexer scheduling,
+1. Complete a real creator/viewer and create/trade/fee/graduation demo.
+2. Persistent chat/follows, production moderation, durable indexer scheduling,
    and professional review remain later rollout work; their schemas alone do
    not make these features operational.
 
-The frontend is deployed and its external services are connected. Native token
-creation and broadcasting still await deployed HYPR contracts and a real
-creator wallet. No contract was broadcast and no live media session was claimed.
+The frontend is deployed and its external services are connected. The approved
+testnet adapter and factory are now deployed, source-verified, and independently
+checked; see [public-chain evidence](HYPR_TESTNET_EVIDENCE.md). The funded signer
+is encrypted locally with a Keychain-backed password. Factory/RPC configuration
+was saved to Vercel production and preview after verification. A new hosted build
+and the actual launch/live journey still need their own acceptance checks; no
+real live media session is claimed.

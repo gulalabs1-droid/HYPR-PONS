@@ -1,6 +1,10 @@
 # HYPR Robinhood Chain testnet deployment runbook
 
-Status: deployment-ready artifact only. No HYPR contract has been broadcast from this repository, and this runbook does not authorize spending, signing, or mainnet deployment.
+Status updated 2026-10-12: adapter and factory are deployed on Robinhood testnet,
+their source is verified, and the independent deployment checker passed. See
+[current public evidence](HYPR_TESTNET_EVIDENCE.md) for addresses and receipts.
+The instructions below remain a runbook, not authorization for another broadcast
+or any mainnet deployment.
 
 ## Preconditions
 
@@ -86,6 +90,16 @@ Record each item from an independent RPC or the official explorer:
 7. Independent pool state: initialized price, liquidity, position owner/locker, and no creator withdrawal path.
 
 The fork suite is supporting evidence for deployed v4 compatibility, not a substitute for this bundle. Do not call a launch “live,” a fee “earned,” or a room “indexed” until the corresponding transaction, state read, and confirmation-buffered indexer result exist.
+
+## Funding is different from graduation liquidity
+
+The official faucet currently supplies 0.01 test ETH every 24 hours. This funded
+the approved two-contract deployment and leaves funds for a small controlled
+trade demo. It is not enough to graduate a launch with the reviewed 10-ETH net
+reserve threshold. From zero reserves, `10 / 0.9875` is approximately 10.1266
+gross test ETH, plus gas. Do not buy real ETH or lower the protocol threshold to
+make the evidence appear complete. Arrange legitimate test-asset funding, or
+label graduation proof explicitly as a fork test until public evidence exists.
 
 ## Rollback and disclosure
 

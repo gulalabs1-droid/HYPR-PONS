@@ -1,6 +1,6 @@
 import { createPublicClient, http } from "viem";
 import { readRecentNativeLaunches } from "../src/lib/integrations/hypr/indexer";
-import { getHyprNetwork, HYPR_NETWORKS } from "../src/lib/integrations/hypr/constants";
+import { getHyprFactoryAddress, getHyprNetwork, HYPR_NETWORKS } from "../src/lib/integrations/hypr/constants";
 import { confirmedBlockRange } from "../src/lib/integrations/indexer-utils";
 import { getPonsRpcUrl, PONS, ROBINHOOD_CHAIN } from "../src/lib/integrations/pons/constants";
 import { readRecentLaunches } from "../src/lib/integrations/pons/indexer";
@@ -88,13 +88,22 @@ async function buildBatch(source: "pons" | "hypr"): Promise<IndexBatch> {
       symbol: launch.symbol,
       deployer: launch.creator,
       metadata: {
+        factory: getHyprFactoryAddress()?.toLowerCase(),
+        creator: launch.creator,
         curve: launch.curve,
+        transactionHash: launch.transactionHash,
+        blockNumber: launch.blockNumber.toString(),
+        logIndex: launch.eventId.split(":").pop(),
         totalSupply: launch.totalSupply.toString(),
         tradableSupply: launch.tradableSupply.toString(),
+        virtualQuoteReserve: launch.virtualQuoteReserve.toString(),
         graduationThreshold: launch.graduationThreshold.toString(),
+        totalFeeBps: launch.totalFeeBps.toString(),
+        creatorFeeBps: launch.creatorFeeBps.toString(),
+        protocolFeeBps: launch.protocolFeeBps.toString(),
       },
     })),
-    events: launches.map((launch) => ({
+    events: launches.filter((launch) => launch.blockNumber >= window.range.fromBlock && launch.blockNumber <= window.range.safeHead).map((launch) => ({
       transactionHash: launch.transactionHash,
       logIndex: BigInt(launch.eventId.split(":").pop() || "0"),
       blockNumber: launch.blockNumber,

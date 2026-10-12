@@ -32,7 +32,7 @@ type DurableFinalizedClaimRow = {
   verified_at: string;
 };
 
-function readConfig(): SupabaseConfig | null {
+export function readSupabaseConfig(): SupabaseConfig | null {
   const rawUrl = process.env.SUPABASE_URL?.trim() || "";
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || "";
   if (!rawUrl && !serviceRoleKey) return null;
@@ -76,7 +76,7 @@ export function createSupabaseAdminClient(
 }
 
 function getAdminClient() {
-  const config = readConfig();
+  const config = readSupabaseConfig();
   return config ? createSupabaseAdminClient(config) : null;
 }
 
@@ -175,5 +175,5 @@ export async function verifyDurableClaim(challengeId: string, signature: string)
 }
 
 export function isSupabasePersistenceConfigured() {
-  return readConfig() !== null;
+  return readSupabaseConfig() !== null;
 }

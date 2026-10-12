@@ -44,9 +44,12 @@ for (const pathname of [
 
 const launchData = await (await request("/api/launches")).json();
 if (!Array.isArray(launchData.launches) || typeof launchData.source !== "string") throw new Error("launch API has an invalid source contract");
-const roomAddress = launchData.launches[0]?.address || sampleRoomAddress;
+const nativeData = await (await request("/api/protocol/launches")).json();
+if (!Array.isArray(nativeData.launches) || typeof nativeData.source !== "string") throw new Error("native launch API has an invalid source contract");
+const roomAddress = nativeData.launches[0]?.token || launchData.launches[0]?.address || sampleRoomAddress;
+const hasIndexedRooms = nativeData.launches.length > 0 || launchData.launches.length > 0;
 const roomResponse = await fetch(`${baseUrl}/room/${roomAddress}`);
-if (launchData.launches.length === 0) {
+if (!hasIndexedRooms) {
   if (roomResponse.status !== 404) throw new Error("an empty launch source must not invent a sample room");
   if (expectUnconfigured) throw new Error("fixture smoke expected a sample room");
 } else {

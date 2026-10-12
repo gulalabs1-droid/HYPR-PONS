@@ -2,6 +2,13 @@
 
 Audit date: 2026-10-01
 
+2026-10-12 update: frontend hosting, cloud persistence/service setup, approved
+testnet adapter/factory deployment, source verification and the independent
+deployment checker are completed. See [current evidence](HYPR_TESTNET_EVIDENCE.md)
+and [cloud status](HYPR_CLOUD_SETUP_STATUS.md). The list below records the original
+audit gates; deployment does not close the actual live/launch/graduation or
+submission-eligibility gates.
+
 The freeze rule is simple: protect the smallest verifiable path and stop adding
 surface area. The target demo is:
 

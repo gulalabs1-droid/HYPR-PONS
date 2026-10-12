@@ -4,6 +4,16 @@ import { test } from "node:test";
 
 const migration = readFileSync(new URL("../supabase/migrations/0001_hypr_v1.sql", import.meta.url), "utf8");
 
+test("SQL migrations contain unique function declarations and intact dollar quotes", () => {
+  for (const filename of ["0001_hypr_v1.sql", "0002_hypr_rpc_column_resolution.sql"]) {
+    const sql = readFileSync(new URL(`../supabase/migrations/${filename}`, import.meta.url), "utf8");
+    const names = [...sql.matchAll(/^create or replace function public\.(\w+)/gm)].map(match => match[1]);
+    assert.equal(new Set(names).size, names.length, "functions must not be duplicated during generation");
+    assert.equal([...sql.matchAll(/^as \$\$$/gm)].length, names.length, "function openings must retain both dollar signs");
+    assert.equal([...sql.matchAll(/^\$\$;$/gm)].length, names.length, "function closures must retain both dollar signs");
+  }
+});
+
 test("Supabase migration preserves the HYPR persistence and RLS boundaries", () => {
   for (const table of ["chains", "wallets", "profiles", "tokens", "token_events", "rooms", "room_claims", "follows", "chat_messages", "hype_events", "hype_snapshots", "indexing_state"]) {
     assert.match(migration, new RegExp(`create table if not exists public\\.hypr_${table}\\s*\\(`));

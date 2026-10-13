@@ -30,20 +30,24 @@ export function NativeLiveRoom({ token }: { token: Launch }) {
   const [shareVideo, setShareVideo] = useState(true);
   const [shareAudio, setShareAudio] = useState(true);
   const mounted = useRef(true);
+  const statusPending = useRef(false);
 
   const refreshStatus = useCallback(async () => {
+    if (statusPending.current) return;
+    statusPending.current = true;
     try {
-      const response = await fetch(`/api/live/status?roomId=${encodeURIComponent(token.address)}`, { cache: "no-store" });
+      const response = await fetch(`/api/live/status?roomId=${encodeURIComponent(token.address)}`, { cache: "no-store", signal: AbortSignal.timeout(8000) });
       const next = await response.json() as Status;
       if (!response.ok) throw new Error("Live status unavailable");
       if (mounted.current) { setStatus(next); setStatusError(false); }
     } catch { if (mounted.current) { setStatus(null); setStatusError(true); } }
+    finally { statusPending.current = false; }
   }, [token.address]);
 
   useEffect(() => {
     mounted.current = true;
     void refreshStatus();
-    const timer = window.setInterval(() => void refreshStatus(), 5000);
+    const timer = window.setInterval(() => { if (document.visibilityState !== "hidden") void refreshStatus(); }, 5000);
     return () => { mounted.current = false; window.clearInterval(timer); };
   }, [refreshStatus]);
 

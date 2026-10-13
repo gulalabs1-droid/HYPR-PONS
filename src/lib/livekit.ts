@@ -69,6 +69,7 @@ export async function getLiveRoomStatus(roomName: string) {
 }
 
 export async function getLiveRoomStatuses(roomNames: string[]) {
+  if (!roomNames.length) return new Map<string, ReturnType<typeof statusFromParticipants> | null>();
   if (!isLiveKitConfigured()) return new Map(roomNames.map((name) => [name, { ...statusFromParticipants([]), configured: false }]));
   const service = getRoomService();
   const rooms = new Set((await service.listRooms(roomNames)).map((room) => room.name));

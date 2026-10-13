@@ -23,6 +23,36 @@ export function getEthereum(): EthereumProvider | null {
   return (window as Window & { ethereum?: EthereumProvider }).ethereum || null;
 }
 
+const TESTNET_PARAMS = {
+  chainId: `0x${ROBINHOOD_TESTNET_CHAIN_ID.toString(16)}`,
+  chainName: "Robinhood Chain testnet",
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: ["https://rpc.testnet.chain.robinhood.com"],
+  blockExplorerUrls: ["https://explorer.testnet.chain.robinhood.com"],
+};
+
+// Asks the wallet to switch (adding the network first if it is unknown). Returns
+// true only when the wallet reports the testnet chain afterwards.
+export async function switchToRobinhoodTestnet(ethereum: EthereumProvider) {
+  try {
+    await ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: TESTNET_PARAMS.chainId }] });
+  } catch (error) {
+    const code = (error as { code?: number; data?: { originalError?: { code?: number } } })?.code
+      ?? (error as { data?: { originalError?: { code?: number } } })?.data?.originalError?.code;
+    if (code !== 4902) return false;
+    try {
+      await ethereum.request({ method: "wallet_addEthereumChain", params: [TESTNET_PARAMS] });
+    } catch {
+      return false;
+    }
+  }
+  try {
+    return Number(await ethereum.request({ method: "eth_chainId" })) === ROBINHOOD_TESTNET_CHAIN_ID;
+  } catch {
+    return false;
+  }
+}
+
 export function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }

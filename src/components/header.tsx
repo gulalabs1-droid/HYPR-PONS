@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getEthereum, isRobinhoodChainId, robinhoodNetworkLabel, shortAddress } from "@/lib/wallet";
+import { getEthereum, isRobinhoodChainId, robinhoodNetworkLabel, shortAddress, switchToRobinhoodTestnet } from "@/lib/wallet";
 
-export function Header({ active = "discover" }: { active?: "discover" | "protocol" }) {
+export function Header({ active }: { active?: "discover" | "protocol" }) {
   const [wallet, setWallet] = useState<string | null>(null);
-  const [chainId, setChainId] = useState<number | null>(null);
+  const [wrongChain, setWrongChain] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [needsWallet, setNeedsWallet] = useState(false);
 
   async function syncWallet() {
     const ethereum = getEthereum();
@@ -15,17 +17,19 @@ export function Header({ active = "discover" }: { active?: "discover" | "protoco
     try {
       const accounts = (await ethereum.request({ method: "eth_accounts" })) as string[];
       const nextChainId = Number(await ethereum.request({ method: "eth_chainId" }));
-      setChainId(Number.isFinite(nextChainId) ? nextChainId : null);
       if (!accounts[0]) {
         setWallet(null);
+        setWrongChain(false);
         return;
       }
       if (!isRobinhoodChainId(nextChainId)) {
         setWallet(null);
-        setMessage(`Wallet connected on ${robinhoodNetworkLabel(nextChainId)}. Switch to Robinhood Chain (4663) or testnet (46630).`);
+        setWrongChain(true);
+        setMessage(`Your wallet is on ${robinhoodNetworkLabel(nextChainId)}. Switch to Robinhood Chain testnet (46630) to use HYPR.`);
         return;
       }
       setWallet(accounts[0]);
+      setWrongChain(false);
       setMessage("");
     } catch {
       setWallet(null);
@@ -49,46 +53,81 @@ export function Header({ active = "discover" }: { active?: "discover" | "protoco
   async function connect() {
     const ethereum = getEthereum();
     if (!ethereum) {
-      setMessage("Install an EVM wallet to connect.");
+      setNeedsWallet(true);
+      setMessage("No browser wallet found. Install an EVM wallet such as MetaMask or Rabby, then reload this page.");
       return;
     }
+    setBusy(true);
     try {
       const accounts = (await ethereum.request({ method: "eth_requestAccounts" })) as string[];
-      const chainId = Number(await ethereum.request({ method: "eth_chainId" }));
-      setChainId(chainId);
+      let chainId = Number(await ethereum.request({ method: "eth_chainId" }));
+      if (!isRobinhoodChainId(chainId) && await switchToRobinhoodTestnet(ethereum)) chainId = Number(await ethereum.request({ method: "eth_chainId" }));
       if (!isRobinhoodChainId(chainId)) {
         setWallet(null);
-        setMessage("Switch your wallet to Robinhood Chain (4663) or testnet (46630).");
+        setWrongChain(true);
+        setMessage("Switch your wallet to Robinhood Chain testnet (46630) to continue.");
         return;
       }
       setWallet(accounts[0] || null);
+      setWrongChain(false);
       setMessage("");
     } catch {
       setMessage("Wallet connection cancelled.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function switchNetwork() {
+    const ethereum = getEthereum();
+    if (!ethereum) return;
+    setBusy(true);
+    try {
+      if (await switchToRobinhoodTestnet(ethereum)) await syncWallet();
+      else setMessage("The network switch was cancelled. Choose Robinhood Chain testnet (46630) in your wallet.");
+    } finally {
+      setBusy(false);
     }
   }
 
   function disconnect() {
     setWallet(null);
-    setChainId(null);
     setMessage("Disconnected from HYPR. Wallet permissions remain managed by your wallet.");
   }
+
+  const buttonLabel = busy ? "Check your wallet…" : wallet ? shortAddress(wallet) : wrongChain ? "Switch network" : "Connect wallet";
 
   return (
     <header className="site-header">
       <div className="header-inner">
         <Link href="/" className="brand" aria-label="HYPR home"><span className="brand-mark">H</span><span>HYPR</span></Link>
         <nav className="main-nav" aria-label="Main navigation">
-          <Link className={active === "discover" ? "active" : ""} href="/">Discover</Link>
+          <Link className={active === "discover" ? "active" : ""} aria-current={active === "discover" ? "page" : undefined} href="/">Discover</Link>
           <Link href="/#launch">Create</Link>
           <Link href="/#discover">Rooms</Link>
-          <Link className={active === "protocol" ? "active" : ""} href="/protocol">Protocol</Link>
+          <Link className={active === "protocol" ? "active" : ""} aria-current={active === "protocol" ? "page" : undefined} href="/protocol">Protocol</Link>
         </nav>
         <div className="header-actions">
-          {message && <span className="wallet-message">{message}</span>}
-          <button className="wallet-button" onClick={wallet ? disconnect : connect}>{wallet ? shortAddress(wallet) : "Connect wallet"}<span className={wallet && chainId ? "status-dot" : "status-dot inactive"} /></button>
+          <button
+            className={`wallet-button${wrongChain && !wallet ? " is-warning" : ""}${wallet ? " is-connected" : ""}`}
+            onClick={wallet ? disconnect : wrongChain ? switchNetwork : connect}
+            disabled={busy}
+            title={wallet ? "Disconnect from HYPR" : undefined}
+          >
+            <span className={wallet ? "status-dot" : "status-dot inactive"} aria-hidden="true" />
+            {buttonLabel}
+          </button>
         </div>
       </div>
+      {message && (
+        <div className="wallet-banner" role="status">
+          <span>
+            {message}
+            {needsWallet && <> <a href="https://metamask.io/download" target="_blank" rel="noreferrer">Get MetaMask ↗</a></>}
+          </span>
+          <button type="button" onClick={() => { setMessage(""); setNeedsWallet(false); }} aria-label="Dismiss wallet message">×</button>
+        </div>
+      )}
     </header>
   );
 }

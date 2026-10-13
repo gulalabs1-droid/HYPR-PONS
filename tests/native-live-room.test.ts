@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createElement } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import { ConnectedRoom } from "../src/components/native-live-room";
+import { ConnectedRoom } from "../src/components/native-live-connected";
 
 test("connected host and viewer controls render inside the LiveKit room provider", async () => {
   for (const role of ["host", "viewer"] as const) {

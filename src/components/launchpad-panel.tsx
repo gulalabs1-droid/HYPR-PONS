@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPublicClient, formatEther, http, parseAbi, toHex } from "viem";
-import { getEthereum, isRobinhoodChainId, shortAddress } from "@/lib/wallet";
+import { getEthereum, isRobinhoodChainId, shortAddress, switchToRobinhoodTestnet } from "@/lib/wallet";
 import { HYPR_NETWORKS } from "@/lib/integrations/hypr/constants";
 import { getHyprClientConfig } from "@/lib/hypr-client-config";
 import { isReviewedHyprV0Config } from "@/lib/hypr-launch-config";
@@ -70,6 +70,7 @@ export function LaunchpadPanel() {
   const [progress, setProgress] = useState<LaunchProgress | null>(null);
   const [checkVersion, setCheckVersion] = useState(0);
   const [needsFunding, setNeedsFunding] = useState(false);
+  const [needsWallet, setNeedsWallet] = useState(false);
   const [config, setConfig] = useState<LaunchConfig | null>(null);
   const [configStatus, setConfigStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
@@ -185,7 +186,8 @@ export function LaunchpadPanel() {
     }
     const ethereum = getEthereum();
     if (!ethereum) {
-      setStatus("Install an EVM wallet to create a launch.");
+      setNeedsWallet(true);
+      setStatus("No browser wallet found. Install an EVM wallet to create a launch.");
       return;
     }
     setPending(true);
@@ -193,9 +195,14 @@ export function LaunchpadPanel() {
     setStage("checking");
     setStatus("");
     setNeedsFunding(false);
+    setNeedsWallet(false);
     try {
       const accounts = (await ethereum.request({ method: "eth_requestAccounts" })) as string[];
-      const chainId = Number(await ethereum.request({ method: "eth_chainId" }));
+      let chainId = Number(await ethereum.request({ method: "eth_chainId" }));
+      if (chainId !== expectedChainId) {
+        setStatus(`Asking your wallet to switch to ${expectedNetworkLabel}…`);
+        if (await switchToRobinhoodTestnet(ethereum)) chainId = Number(await ethereum.request({ method: "eth_chainId" }));
+      }
       if (!isRobinhoodChainId(chainId) || chainId !== expectedChainId) {
         setStatus(`Switch your wallet to ${expectedNetworkLabel} first.`);
         return;
@@ -263,13 +270,14 @@ export function LaunchpadPanel() {
         try { window.localStorage.removeItem(launchStorageKey(factoryAddress, submission.creator)); } catch { /* Storage is optional. */ }
         setSubmission(null); setProgress(null); setStatus(""); setName(""); setSymbol("");
       }} /> : <form className="launchpad-form" onSubmit={createLaunch}>
-        <label>Name<input value={name} onChange={(event) => setName(event.target.value)} maxLength={32} placeholder="Your community" disabled={!hasValidFactory || pending} /></label>
-        <label>Symbol<input value={symbol} onChange={(event) => setSymbol(event.target.value)} maxLength={10} placeholder="HYPR" disabled={!hasValidFactory || pending} /></label>
-        <span className="launch-form-help">Your symbol is the short ticker, like HYPR. Creation costs a small testnet gas fee.</span>
+        <label><span className="field-label">Name <small aria-hidden="true">{name.length}/32</small></span><input value={name} onChange={(event) => setName(event.target.value)} maxLength={32} placeholder="Your community" autoComplete="off" disabled={!hasValidFactory || pending} /></label>
+        <label><span className="field-label">Symbol <small aria-hidden="true">{symbol.length}/10</small></span><input value={symbol} onChange={(event) => setSymbol(event.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())} maxLength={10} placeholder="HYPR" autoComplete="off" autoCapitalize="characters" spellCheck={false} disabled={!hasValidFactory || pending} /></label>
+        <span className="launch-form-help">Your symbol is the short ticker, like HYPR. Creation costs a small testnet gas fee — <a href="https://faucet.testnet.chain.robinhood.com" target="_blank" rel="noreferrer">get free test ETH ↗</a></span>
         <button className="primary-button" type="submit" disabled={!hasValidFactory || !config || pending}>{pending ? stage === "checking" ? "Checking your launch…" : "Approve in your wallet…" : configStatus === "loading" ? "Getting ready…" : "Create coin & room →"}</button>
         {status && <span className="launch-status" role="status">
           {status}
           {needsFunding && <a href="https://faucet.testnet.chain.robinhood.com" target="_blank" rel="noreferrer"> Get free Robinhood test ETH ↗</a>}
+          {needsWallet && <a href="https://metamask.io/download" target="_blank" rel="noreferrer"> Get MetaMask ↗</a>}
         </span>}
       </form>}
     </section>

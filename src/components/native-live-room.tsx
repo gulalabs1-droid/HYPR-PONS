@@ -1,33 +1,23 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { LiveKitRoom, RoomAudioRenderer, VideoConference, useRoomContext } from "@livekit/components-react";
+import dynamic from "next/dynamic";
 import type { Launch } from "@/lib/types";
 import { getEthereum } from "@/lib/wallet";
 import { creatorAccessProblem, streamingErrorMessage } from "@/lib/creator-access";
+import type { Session } from "./native-live-connected";
 
-type Session = { token: string; serverUrl: string; role: "host" | "viewer" };
+// LiveKit is large; load it only once a viewer joins or a creator starts broadcasting.
+const ConnectedRoom = dynamic(() => import("./native-live-connected-styled"), {
+  ssr: false,
+  loading: () => <div className="native-live-connected"><div className="native-live-toolbar"><span><span className="status-dot inactive" /> CONNECTING TO YOUR ROOM…</span></div></div>,
+});
+
 type Status = { configured: boolean; live: boolean; viewerCount: number };
 
 function signedHostMessage(roomId: string, address: string, timestamp: number) {
   const roomName = `hypr-${roomId.toLowerCase()}`;
   return ["HYPR native live host authorization", `Room: ${roomName}`, `Wallet: ${address.toLowerCase()}`, `Timestamp: ${timestamp}`].join("\n");
-}
-
-function LeaveControl({ role, onLeave }: { role: "host" | "viewer"; onLeave: () => void }) {
-  const room = useRoomContext();
-  return <button className="live-control-button" onClick={() => { room.disconnect(); onLeave(); }}>{role === "host" ? "End live" : "Leave live"}</button>;
-}
-
-export function ConnectedRoom({ session, onLeave, onError, connect = true }: { session: Session; onLeave: () => void; onError: (message: string) => void; connect?: boolean }) {
-  const [connected, setConnected] = useState(false);
-  return <div className="native-live-connected" data-lk-theme="default">
-    <LiveKitRoom token={session.token} serverUrl={session.serverUrl} connect={connect} video={session.role === "host"} audio={session.role === "host"} onConnected={() => setConnected(true)} onError={(error) => onError(streamingErrorMessage(error))} onMediaDeviceFailure={() => onError("Camera or microphone unavailable. Check your browser permissions and connected devices.")} onDisconnected={onLeave}>
-      <div className="native-live-toolbar"><span><span className={connected ? "pulse" : "status-dot inactive"} /> {connected ? session.role === "host" ? "CREATOR STUDIO CONNECTED" : "CONNECTED TO HYPR" : "CONNECTING TO YOUR ROOM…"}</span><LeaveControl role={session.role} onLeave={onLeave} /></div>
-      <VideoConference />
-      <RoomAudioRenderer />
-    </LiveKitRoom>
-  </div>;
 }
 
 export function NativeLiveRoom({ token }: { token: Launch }) {

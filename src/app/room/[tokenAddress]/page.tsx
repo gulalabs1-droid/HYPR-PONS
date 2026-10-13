@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { RoomClient } from "@/components/room-client";
-import { getCombinedLaunchData } from "@/lib/launch-data";
+import { findRoomLaunch } from "@/lib/page-data";
 
 type Props = { params: Promise<{ tokenAddress: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { tokenAddress } = await params;
-  const token = (await getCombinedLaunchData()).launches.find((item) => item.address.toLowerCase() === tokenAddress.toLowerCase());
+  const token = (await findRoomLaunch(tokenAddress))?.token;
   if (!token) return { title: "Room not found" };
   const verified = token.dataStatus === "verified";
   const stateLabel = token.dataStatus === "demo" ? "demo" : token.dataStatus === "partial" ? "partial" : "verified";
@@ -26,8 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function RoomPage({ params }: Props) {
   const { tokenAddress } = await params;
-  const result = await getCombinedLaunchData();
-  const token = result.launches.find((item) => item.address.toLowerCase() === tokenAddress.toLowerCase());
-  if (!token) notFound();
-  return <RoomClient token={token} source={result.source} />;
+  const result = await findRoomLaunch(tokenAddress);
+  if (!result) notFound();
+  return <RoomClient token={result.token} source={result.source} />;
 }

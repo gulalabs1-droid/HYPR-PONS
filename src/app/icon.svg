@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="HYPR logo">
+  <rect width="1024" height="1024" rx="224" fill="#0b0c0e"/>
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="#111316" stroke="#c7f36b" stroke-width="12"/>
+  <path d="M290 282h116v166h212V282h116v460H618V562H406v180H290z" fill="#c7f36b"/>
+</svg>

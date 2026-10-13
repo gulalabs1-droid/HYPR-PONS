@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPublicClient, http, decodeFunctionResult, encodeFunctionData, parseEther, parseUnits, formatEther } from "viem";
 import { HYPR_CURVE_ABI, HYPR_ERC20_APPROVE_ABI } from "@/lib/integrations/hypr/curve-abi";
-import { getEthereum } from "@/lib/wallet";
+import { getEthereum, switchToRobinhoodTestnet } from "@/lib/wallet";
 import { getHyprClientConfig } from "@/lib/hypr-client-config";
 import { waitForTransactionReceipt } from "@/lib/transaction";
 import { ROBINHOOD_TESTNET } from "@/lib/integrations/pons/constants";
@@ -113,7 +113,8 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
     try {
       const accounts = await provider.request({ method: "eth_requestAccounts" }) as string[];
       const from = accounts[0];
-      const chainId = Number(await provider.request({ method: "eth_chainId" }));
+      let chainId = Number(await provider.request({ method: "eth_chainId" }));
+      if (from && chainId !== EXPECTED_CHAIN_ID && await switchToRobinhoodTestnet(provider)) chainId = Number(await provider.request({ method: "eth_chainId" }));
       if (!from || chainId !== EXPECTED_CHAIN_ID) throw new Error(`Switch your wallet to ${EXPECTED_NETWORK_LABEL} first.`);
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 300);
       const minimum = quote.output * (BPS - SLIPPAGE_BPS) / BPS || 1n;
@@ -160,8 +161,15 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
       <p className="trade-copy">Wallet-signed testnet trade with a 2% minimum-output buffer and a five-minute deadline.</p>
       <div className="trade-tabs"><button className={direction === "buy" ? "selected" : ""} disabled={pending} onClick={() => { quoteVersion.current++; setQuote(null); setDirection("buy"); setAmount(""); setStatus(""); }}>Buy</button><button className={direction === "sell" ? "selected" : ""} disabled={pending} onClick={() => { quoteVersion.current++; setQuote(null); setDirection("sell"); setAmount(""); setStatus(""); }}>Sell</button></div>
       <form className="trade-form" onSubmit={trade}>
-        <label>{direction === "buy" ? "ETH input" : `${tokenSymbol} input`}<input value={amount} onChange={(event) => { quoteVersion.current++; setQuote(null); setAmount(event.target.value); }} inputMode="decimal" placeholder={direction === "buy" ? "0.10" : "1000"} disabled={pending || phase !== 0} /></label>
+        <label>{direction === "buy" ? "ETH input" : `${tokenSymbol} input`}<input value={amount} onChange={(event) => { quoteVersion.current++; setQuote(null); setAmount(event.target.value.replace(",", ".")); }} inputMode="decimal" autoComplete="off" placeholder={direction === "buy" ? "0.10" : "1000"} aria-invalid={amount !== "" && parsedAmount <= 0n} disabled={pending || phase !== 0} /></label>
         <div className="trade-quote"><span>ESTIMATED OUTPUT</span><strong>{quote ? outputLabel : "—"}</strong><small>{quote ? `Fee ${formatEther(quote.fee)} ${direction === "buy" ? "ETH" : "ETH"}` : "Enter an amount for an onchain quote."}</small></div>
+        <div className="trade-presets" aria-label="Quick amounts">
+          {(direction === "buy" ? ["0.001", "0.01", "0.05"] : ["100", "1000", "10000"]).map((preset) => (
+            <button key={preset} type="button" className={amount === preset ? "selected" : ""} disabled={pending || phase !== 0} onClick={() => { quoteVersion.current++; setQuote(null); setAmount(preset); }}>
+              {preset} {direction === "buy" ? "ETH" : tokenSymbol}
+            </button>
+          ))}
+        </div>
         <button className="primary-button" type="submit" disabled={pending || phase !== 0 || !quote || quote.input !== parsedAmount || quote.direction !== direction}>{pending ? "Confirming…" : direction === "buy" ? "Buy with wallet ↗" : "Sell with wallet ↗"}</button>
         {status && <span className="launch-status" role="status">{status}</span>}
       </form>

@@ -56,3 +56,7 @@ export async function switchToRobinhoodTestnet(ethereum: EthereumProvider) {
 export function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
+
+export function personalSignHex(message: string) {
+  return `0x${Array.from(new TextEncoder().encode(message), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+}

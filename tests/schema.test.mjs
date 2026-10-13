@@ -5,7 +5,7 @@ import { test } from "node:test";
 const migration = readFileSync(new URL("../supabase/migrations/0001_hypr_v1.sql", import.meta.url), "utf8");
 
 test("SQL migrations contain unique function declarations and intact dollar quotes", () => {
-  for (const filename of ["0001_hypr_v1.sql", "0002_hypr_rpc_column_resolution.sql"]) {
+  for (const filename of ["0001_hypr_v1.sql", "0002_hypr_rpc_column_resolution.sql", "0003_hypr_live_community.sql"]) {
     const sql = readFileSync(new URL(`../supabase/migrations/${filename}`, import.meta.url), "utf8");
     const names = [...sql.matchAll(/^create or replace function public\.(\w+)/gm)].map(match => match[1]);
     assert.equal(new Set(names).size, names.length, "functions must not be duplicated during generation");

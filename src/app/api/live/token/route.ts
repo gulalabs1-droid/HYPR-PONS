@@ -14,7 +14,7 @@ function hostMessage(roomName: string, address: string, timestamp: number) {
 export async function POST(request: Request) {
   if (!isLiveKitConfigured()) return NextResponse.json({ error: "Native live streaming is not connected yet. Add the LiveKit server settings before going live." }, { status: 503 });
   let body: TokenRequest;
-  try { body = await request.json() as TokenRequest; } catch { return NextResponse.json({ error: "Invalid request." }, { status: 400 }); }
+  try { body = await request.json() as TokenRequest; if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("invalid body"); } catch { return NextResponse.json({ error: "Invalid request." }, { status: 400 }); }
   if (body.role !== "host" && body.role !== "viewer") return NextResponse.json({ error: "Choose a host or viewer role." }, { status: 400 });
   const roomId = body.roomId || "";
   if (!/^0x[a-fA-F0-9]{40}$/.test(roomId)) return NextResponse.json({ error: "A valid HYPR room address is required." }, { status: 400 });

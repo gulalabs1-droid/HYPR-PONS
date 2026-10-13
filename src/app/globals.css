@@ -507,3 +507,7 @@ kbd { font: 11px var(--mono); color: var(--muted); border: 1px solid var(--line-
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .token-card:hover { transform: none; }
 }
+.hypr-broadcast-stage { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; min-height: 320px; background: #080b0d; }
+.hypr-broadcast-stage .lk-participant-tile { min-height: 320px; aspect-ratio: 16 / 9; }
+.hypr-broadcast-stage .native-live-placeholder { min-height: 320px; }
+.native-live-connected .lk-control-bar { flex-wrap: wrap; }

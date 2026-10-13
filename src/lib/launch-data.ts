@@ -21,7 +21,7 @@ function nativeLaunchToRoom(
     name: launch.name,
     symbol: launch.symbol,
     logo: "✦",
-    description: "A native HYPR launch on Robinhood testnet. Explore its onchain curve, creator studio, and community-room preview.",
+    description: "A native HYPR launch on Robinhood testnet. Explore its onchain curve, creator studio, and shared community room.",
     deployer: launch.creator,
     priceUsd: 0,
     marketCapUsd: 0,
@@ -51,6 +51,7 @@ function nativeLaunchToRoom(
     nativeTradeCount: launch.tradeCount,
     launchTxHash: launch.transactionHash,
     graduationTxHash: launch.graduationTxHash,
+    chainCheckedAt: new Date().toISOString(),
   };
 }
 

@@ -51,12 +51,12 @@ const hasIndexedRooms = nativeData.launches.length > 0 || launchData.launches.le
 const roomResponse = await fetch(`${baseUrl}/room/${roomAddress}`);
 if (!hasIndexedRooms) {
   if (roomResponse.status !== 404) throw new Error("an empty launch source must not invent a sample room");
-  if (expectUnconfigured) throw new Error("fixture smoke expected a sample room");
 } else {
   if (!roomResponse.ok) throw new Error(`indexed room returned HTTP ${roomResponse.status}`);
   const roomHtml = await roomResponse.text();
   if (!roomHtml.includes("NATIVE HYPR LIVE") && !roomHtml.includes("LIVE LAUNCH EXPERIENCE")) throw new Error("room is missing the live launch surface");
-  if (!roomHtml.includes("DEMO SAMPLE") && !roomHtml.includes("LOCAL PREVIEW")) throw new Error("room is missing the honest chat source label");
+  if (!roomHtml.includes("SHARED ROOM CHAT")) throw new Error("room is missing shared community chat");
+  if (roomHtml.includes("LOCAL PREVIEW") || roomHtml.includes("Illustrative sample")) throw new Error("room is still presenting sample activity");
   if (expectUnconfigured && roomHtml.includes("people are in the room right now")) throw new Error("demo room metadata is presenting sample activity as live");
 }
 
@@ -80,6 +80,11 @@ const liveStatusBody = await liveStatus.json();
 if (typeof liveStatusBody.live !== "boolean" || typeof liveStatusBody.configured !== "boolean") {
   throw new Error("live status is missing its configured/live contract");
 }
+if (launchData.launches.some((launch) => launch.dataStatus === "demo")) throw new Error("public API must not return sample launches");
+const community = await fetch(`${baseUrl}/api/community?roomId=${roomAddress}`);
+if (hasIndexedRooms && !community.ok) throw new Error(`shared community returned HTTP ${community.status}`);
+const unsignedCommunityWrite = await fetch(`${baseUrl}/api/community`, { method: "POST", headers: { "Content-Type": "application/json", Origin: baseUrl }, body: JSON.stringify({ roomId: roomAddress, action: "message", body: "must not save" }) });
+if (unsignedCommunityWrite.status !== 401) throw new Error("community writes must require a verified wallet session");
 const liveToken = await fetch(`${baseUrl}/api/live/token`, {
   method: "POST",
   headers: { "content-type": "application/json" },

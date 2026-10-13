@@ -13,6 +13,7 @@ async function withPanel(phase: number, run: (renderer: ReactTestRenderer, calls
   Object.defineProperty(globalThis, "window", { configurable: true, value: {
     setTimeout(callback: () => void) { callbacks.set(++nextId, callback); return nextId; },
     clearTimeout(id: number) { callbacks.delete(id); },
+    setInterval() { return ++nextId; }, clearInterval() {},
   } });
   const calls: string[] = [];
   let renderer: ReactTestRenderer | undefined;

@@ -66,7 +66,7 @@ export function Ticker({ launches }: { launches: Launch[] }) {
   };
   return (
     <section className="ticker" aria-label="Rooms ticker">
-      <div className="ticker-label"><span className="pulse" /> LIVE FEED</div>
+      <div className="ticker-label"><span className="status-dot" /> ONCHAIN FEED</div>
       <div className="ticker-viewport">
         <div className="ticker-track">
           {loop.map((token, index) => item(token, index, index >= launches.length))}

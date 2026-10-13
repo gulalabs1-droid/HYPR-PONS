@@ -9,7 +9,7 @@ test("streaming tokens reject invalid roles, sample rooms, and unindexed address
   try {
     for (const [body, status] of [
       [{ roomId: "0x8B7f0bC4B22fE4e3cA91E0C4b3fA1c7D5E6f8A90", role: "admin" }, 400],
-      [{ roomId: "0x8B7f0bC4B22fE4e3cA91E0C4b3fA1c7D5E6f8A90", role: "viewer" }, 403],
+      [{ roomId: "0x8B7f0bC4B22fE4e3cA91E0C4b3fA1c7D5E6f8A90", role: "viewer" }, 404],
       [{ roomId: "0x0000000000000000000000000000000000000001", role: "viewer" }, 404],
     ] as const) {
       const response = await POST(new Request("https://hypr.test/api/live/token", {

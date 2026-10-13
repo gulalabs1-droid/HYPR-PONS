@@ -50,3 +50,7 @@ npm run smoke -- http://127.0.0.1:3100
 
 See `docs/HYPR_PROTOCOL_ARCHITECTURE.md` for the native protocol design, `docs/HYPR_PROTOCOL_TEST_PLAN.md` for the contract gate, `docs/HYPR_V1_AUDIT.md` for the repository audit, and `docs/LAUNCH_CHECKLIST.md` for what remains before production.
 See `docs/SUPABASE_SCHEMA.md` for the persistence boundary and rollout requirements.
+# Live data and native broadcasts
+
+The public product now uses real chain reads, actual media-publishing status, and shared wallet-authenticated chat/follows. No fixture launches or local social previews are shown. See [current source/freshness and release boundaries](docs/HYPR_LIVE_DATA.md). Earlier setup notes below describe prior prototype stages and may be historical.
+

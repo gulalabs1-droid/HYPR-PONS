@@ -14,11 +14,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${token.symbol} community room${verified ? "" : ` · ${stateLabel}`}`,
     description: verified
-      ? `Join the ${token.name} community on HYPR. HYPE ${token.hype}.`
+      ? `Join the ${token.name} community on HYPR.`
       : `Explore the ${token.name} room on HYPR. This is ${stateLabel} data; verify the token address and onchain state before relying on metrics.`,
     openGraph: {
-      title: verified ? `HYPR — $${token.symbol} is ${token.rank === 1 ? "#1" : `#${token.rank}`} Rising` : `HYPR — $${token.symbol} community room · ${stateLabel}`,
-      description: verified ? `${token.activeNow} people are in the room right now.` : `${stateLabel.toUpperCase()} DATA · Room activity and social metrics are not verified.`,
+      title: `HYPR — $${token.symbol} community room`,
+      description: "Onchain launch data, native broadcasts and shared room chat. Open the room for current status. Testnet assets have no real value.",
       type: "website",
     },
   };

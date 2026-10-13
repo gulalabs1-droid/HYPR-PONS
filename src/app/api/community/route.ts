@@ -1,0 +1,39 @@
+import { NextRequest, NextResponse } from "next/server";
+import { COMMUNITY_SESSION_COOKIE, decodeAuthorization, requestOrigin, sameOrigin } from "@/lib/community-auth";
+import { getSupabaseAdminClient } from "@/lib/supabase/server";
+import { getHyprNetwork, HYPR_NETWORKS } from "@/lib/integrations/hypr/constants";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+const headers = { "Cache-Control": "no-store" };
+const validAddress = (value: unknown): value is string => typeof value === "string" && /^0x[a-fA-F0-9]{40}$/.test(value);
+
+export async function GET(request: NextRequest) {
+  const roomId = request.nextUrl.searchParams.get("roomId");
+  if (!validAddress(roomId)) return NextResponse.json({ error: "A valid room address is required." }, { status: 400, headers });
+  const client = getSupabaseAdminClient();
+  if (!client) return NextResponse.json({ error: "Shared chat and follows are unavailable." }, { status: 503, headers });
+  const session = decodeAuthorization(request.cookies.get(COMMUNITY_SESSION_COOKIE)?.value, requestOrigin(request), "session");
+  try {
+    const state = await client.rpc<Record<string, unknown>>("hypr_read_community", { p_chain_id: HYPR_NETWORKS[getHyprNetwork()].id, p_token_address: roomId, p_wallet_address: session?.wallet || null });
+    return NextResponse.json({ ...state, wallet: session?.wallet || null, checkedAt: new Date().toISOString() }, { headers });
+  } catch { return NextResponse.json({ error: "Shared community data is temporarily unavailable. No local preview is being shown." }, { status: 503, headers }); }
+}
+
+export async function POST(request: NextRequest) {
+  if (!sameOrigin(request)) return NextResponse.json({ error: "Use HYPR to update this room." }, { status: 403, headers });
+  const session = decodeAuthorization(request.cookies.get(COMMUNITY_SESSION_COOKIE)?.value, requestOrigin(request), "session");
+  if (!session) return NextResponse.json({ error: "Sign in with your wallet to join the community." }, { status: 401, headers });
+  let body: { roomId?: string; action?: string; body?: string; following?: boolean; messageId?: string };
+  try { body = await request.json(); if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("invalid body"); } catch { return NextResponse.json({ error: "Invalid request." }, { status: 400, headers }); }
+  if (!validAddress(body.roomId) || !["message", "follow", "hide"].includes(body.action || "") ||
+    (body.action === "message" && (typeof body.body !== "string" || !body.body.trim() || body.body.length > 280)) ||
+    (body.action === "follow" && typeof body.following !== "boolean") ||
+    (body.action === "hide" && !/^[a-f0-9-]{36}$/.test(body.messageId || ""))) return NextResponse.json({ error: "Invalid community update." }, { status: 400, headers });
+  const client = getSupabaseAdminClient();
+  if (!client) return NextResponse.json({ error: "Shared community is unavailable." }, { status: 503, headers });
+  try {
+    await client.rpc("hypr_write_community", { p_chain_id: session.chainId, p_token_address: body.roomId, p_wallet_address: session.wallet, p_action: body.action, p_body: body.body?.trim() || null, p_follow: body.following ?? null, p_message_id: body.messageId || null });
+    return NextResponse.json({ saved: true }, { headers });
+  } catch { return NextResponse.json({ error: "Update not saved. Try again in a few seconds. Messages are limited to ten per minute; only you or the room creator can hide a message." }, { status: 503, headers }); }
+}

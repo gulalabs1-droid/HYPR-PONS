@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import type { Launch } from "@/lib/types";
 import type { CombinedLaunchDataSource } from "@/lib/launch-data";
 import { Header } from "./header";
@@ -9,10 +9,12 @@ import { LiveLaunchSurface } from "./live-launch-surface";
 import { NativeTradePanel } from "./native-trade-panel";
 import { SiteFooter } from "./site-footer";
 import { Toast } from "./toast";
-import { getEthereum, isRobinhoodChainId, shortAddress } from "@/lib/wallet";
+import { getEthereum, isRobinhoodChainId, personalSignHex, shortAddress } from "@/lib/wallet";
 import { formatCurveProgress } from "@/lib/curve-progress";
 import { formatEthExact, formatUsd } from "@/lib/format";
 import { roomHue } from "@/lib/room-display";
+import { useLiveLaunches } from "@/lib/use-live-launches";
+import { CommunityPanel } from "./community-panel";
 
 function formatFeeBps(value?: string) {
   if (!value) return "—";
@@ -28,37 +30,16 @@ function explorerBase(token: Launch) {
   return "https://robinhoodchain.blockscout.com";
 }
 
-export function RoomClient({ token }: { token: Launch; source?: CombinedLaunchDataSource }) {
+export function RoomClient({ token: initialToken, source }: { token: Launch; source?: CombinedLaunchDataSource }) {
+  const liveData = useLiveLaunches([initialToken], source);
+  const token = liveData.launches.find((launch) => launch.address.toLowerCase() === initialToken.address.toLowerCase()) || initialToken;
   const isDemo = token.dataStatus === "demo";
   const isUnverified = token.dataStatus !== "verified";
   const isNative = token.origin === "hypr";
   const hasVerifiedMarketMetrics = token.dataStatus === "verified";
-  const followKey = `hypr:follow:${token.address.toLowerCase()}`;
-  const [following, setFollowing] = useState(false);
-  const [chat, setChat] = useState("");
-  const [messages, setMessages] = useState(isDemo ? ["gm everyone — this room is early", "the signal is getting louder", "who found this one first?"] : []);
   const [notice, setNotice] = useState("");
   const [claiming, setClaiming] = useState(false);
-  const chatList = useRef<HTMLDivElement>(null);
   const dismissNotice = useCallback(() => setNotice(""), []);
-
-  useEffect(() => {
-    try { setFollowing(window.localStorage.getItem(followKey) === "1"); } catch { /* Storage is optional. */ }
-  }, [followKey]);
-
-  const initialMessageCount = useRef(messages.length);
-  useEffect(() => {
-    const list = chatList.current;
-    if (!list || messages.length <= initialMessageCount.current) return;
-    list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
-  }, [messages.length]);
-
-  function toggleFollow() {
-    const next = !following;
-    setFollowing(next);
-    try { if (next) window.localStorage.setItem(followKey, "1"); else window.localStorage.removeItem(followKey); } catch { /* Storage is optional. */ }
-    setNotice(next ? `Following ${token.name} on this device. Shared follows are not connected yet.` : `Unfollowed ${token.name}.`);
-  }
 
   async function claimRoom() {
     const ethereum = getEthereum();
@@ -77,7 +58,7 @@ export function RoomClient({ token }: { token: Launch; source?: CombinedLaunchDa
       });
       const challenge = await challengeResponse.json() as { challengeId?: string; message?: string; error?: string };
       if (!challengeResponse.ok || !challenge.challengeId || !challenge.message) throw new Error(challenge.error || "Unable to start the room claim");
-      const signature = await ethereum.request({ method: "personal_sign", params: [challenge.message, address] });
+      const signature = await ethereum.request({ method: "personal_sign", params: [personalSignHex(challenge.message), address] });
       const verifyResponse = await fetch("/api/room-claims/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -93,20 +74,6 @@ export function RoomClient({ token }: { token: Launch; source?: CombinedLaunchDa
     } finally {
       setClaiming(false);
     }
-  }
-
-  async function sendMessage(event: React.FormEvent) {
-    event.preventDefault();
-    if (!chat.trim()) return;
-    const ethereum = getEthereum();
-    const accounts = ethereum ? (await ethereum.request({ method: "eth_accounts" })) as string[] : [];
-    const chainId = ethereum ? Number(await ethereum.request({ method: "eth_chainId" })) : 0;
-    if (!accounts[0] || !isRobinhoodChainId(chainId)) {
-      setNotice("Connect a wallet on Robinhood Chain or its testnet before chatting.");
-      return;
-    }
-    setMessages((current) => [...current, chat.trim()]);
-    setChat("");
   }
 
   async function share() {
@@ -146,12 +113,12 @@ export function RoomClient({ token }: { token: Launch; source?: CombinedLaunchDa
             </div>
           </div>
           <div className="room-actions">
-            <button className={following ? "secondary-button following" : "secondary-button"} onClick={toggleFollow} aria-pressed={following}>{following ? "✓ Following" : "Follow room"}</button>
             <button className="secondary-button" onClick={share}>Share ↗</button>
             <button className="secondary-button" onClick={claimRoom} disabled={claiming}>{claiming ? "Check your wallet…" : "Verify creator wallet"}</button>
           </div>
         </section>
-        {isUnverified && <div className="data-notice" role="status">{isDemo ? "Demo sample" : "Partial market/social data"} — chat and follows are local previews; shared chat, follows, and HYPE persistence are not connected.</div>}
+        {isUnverified && <div className="data-notice" role="status">Onchain testnet data · broadcast status comes from published media · chat and follows are shared. Unavailable market metrics stay blank; no sample activity is shown.</div>}
+        <p className="accounting-copy" role="status">{liveData.error || (liveData.updatedAt ? `Auto-refreshing chain snapshots · last check ${new Date(liveData.updatedAt).toLocaleTimeString()}` : "Refreshing current onchain state…")}</p>
         <LiveLaunchSurface token={token} />
         {isNative && <NativeTradePanel curveAddress={token.pool} tokenAddress={token.address} tokenSymbol={token.symbol} />}
         {isNative && (
@@ -170,15 +137,15 @@ export function RoomClient({ token }: { token: Launch; source?: CombinedLaunchDa
           <div className="room-main">
             <div className="hype-panel">
               {isNative ? (
-                <div><span className="eyebrow">GRADUATION PROGRESS</span><h2>Curve <strong>{progressText}</strong></h2><p>Share of the {formatEthExact(token.nativeGraduationThreshold)} reserve needed to graduate to Uniswap v4. Phase: {token.curvePhase || "unavailable"}.</p></div>
+                <div><span className="eyebrow">GRADUATION PROGRESS</span><h2>Curve <strong>{progressText}</strong></h2><p>Share of the {formatEthExact(token.nativeGraduationThreshold)} reserve needed to graduate to Uniswap v4. Phase: {token.curvePhase === "Live" ? "Active trading curve" : token.curvePhase || "unavailable"}. This is not broadcast status.</p></div>
               ) : (
                 <div><span className="eyebrow">SOCIAL ACTIVITY SCORE</span><h2>HYPE <strong>{hasVerifiedMarketMetrics ? token.hype : "—"}</strong></h2><p>Social activity only — not market cap, token quality, or investment advice.</p></div>
               )}
               <div className="hype-ring" style={{ "--hype": `${ringDegrees}deg` } as React.CSSProperties} aria-hidden="true"><span>{isNative ? (token.curvePhase === "Graduated" ? "✓" : "↗") : hasVerifiedMarketMetrics ? token.hype : "—"}</span></div>
             </div>
             <div className="activity-panel">
-              <div className="panel-heading"><div><span className="eyebrow">{isNative ? "ONCHAIN CURVE STATE" : "ROOM ACTIVITY"}</span><h2>{isNative ? "Curve snapshot" : "Community pulse"}</h2></div><span className="live-chip">{isNative ? `Curve ${token.curvePhase || "state unavailable"}` : hasVerifiedMarketMetrics ? `${token.activeNow} here now` : "activity unverified"}</span></div>
-              {isDemo ? <div className="activity-chart"><div className="chart-line" /><div className="chart-labels"><span>Illustrative sample</span><span>not live history</span></div></div> : <p className="accounting-copy">Historical activity chart not available. Only the indexed state below is shown.</p>}
+              <div className="panel-heading"><div><span className="eyebrow">{isNative ? "ONCHAIN CURVE STATE" : "ROOM ACTIVITY"}</span><h2>{isNative ? "Curve snapshot" : "Community pulse"}</h2></div><span className="live-chip">{isNative ? token.curvePhase === "Live" ? "Active curve" : token.curvePhase || "State unavailable" : "Onchain"}</span></div>
+              <p className="accounting-copy">Live chain snapshot. Recent trade counts cover the confirmed 2,500-block scan, not lifetime trades or 24 hours. Historical charts and USD prices are unavailable.</p>
               <div className="stats-grid">
                 <div><span>{isNative ? "CURVE PROGRESS" : token.origin === "pons" ? "POOL PRICE" : "PRICE"}</span><strong>{isNative ? progressText : token.origin === "pons" ? token.poolPriceQuote === undefined ? "—" : `${token.poolPriceQuote.toPrecision(4)} WETH` : hasVerifiedMarketMetrics ? `$${token.priceUsd.toFixed(4)}` : "—"}</strong></div>
                 <div><span>{token.origin === "pons" ? "LIQUIDITY UNITS" : "MARKET CAP"}</span><strong>{token.origin === "pons" ? token.poolLiquidity || "—" : isNative || !hasVerifiedMarketMetrics ? "—" : formatUsd(token.marketCapUsd)}</strong></div>
@@ -193,15 +160,7 @@ export function RoomClient({ token }: { token: Launch; source?: CombinedLaunchDa
             </div>
           </div>
           <aside className="room-sidebar">
-            <div className="chat-panel">
-              <div className="panel-heading"><div><span className="eyebrow">ROOM CHAT · {isDemo ? "DEMO SAMPLE" : "LOCAL PREVIEW"}</span><h2>Say what you see</h2></div><span className="chat-count">{messages.length} local</span></div>
-              <div className="chat-messages" aria-live="polite" ref={chatList}>
-                {messages.length === 0 && <div className="chat-empty"><span aria-hidden="true">✦</span><strong>No messages yet</strong><span>Connect a Robinhood wallet and say gm. Messages stay in this browser.</span></div>}
-                {messages.map((message, index) => <div className="message" key={`${message}-${index}`}><span className="avatar">{["✦", "◐", "⌁"][index % 3]}</span><div><strong>{isDemo ? ["earlysignal", "mariah", "anon_4663"][index % 3] : "You · local preview"}</strong><p>{message}</p><time>just now</time></div></div>)}
-              </div>
-              <form className="chat-form" onSubmit={sendMessage}><input aria-label="Local chat preview message" value={chat} onChange={(event) => setChat(event.target.value)} maxLength={280} placeholder="Try a local preview message" /><button aria-label="Send preview message" disabled={!chat.trim()}>↑</button></form>
-              <span className="chat-footnote">Local browser preview only. Messages are not shared with other viewers.</span>
-            </div>
+            <CommunityPanel roomId={token.address} creator={token.deployer} />
             <div className="creator-panel"><span className="eyebrow">ROOM CREATOR</span><div className="creator-row"><span className="creator-avatar" aria-hidden="true">{token.logo}</span><div><strong>{isDemo ? "Demo creator" : isNative ? "Onchain creator" : "Indexed creator"}</strong><a href={`${explorerBase(token)}/address/${token.deployer}`} target="_blank" rel="noreferrer">{shortAddress(token.deployer)} ↗</a></div></div><p className="accounting-copy">Only this creator wallet can authorize a native broadcast. Verification does not transfer tokens or withdraw fees.</p></div>
           </aside>
         </section>

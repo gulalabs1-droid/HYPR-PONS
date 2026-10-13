@@ -19,6 +19,10 @@ export type Launch = {
   officialLinks: { label: string; href: string }[];
   streamUrl?: string;
   streamLive?: boolean;
+  broadcastStatus?: "checking" | "live" | "offline" | "unavailable";
+  viewerCount?: number;
+  liveCheckedAt?: string;
+  chainCheckedAt?: string;
   origin?: "pons" | "hypr";
   dataStatus?: "demo" | "partial" | "verified";
   curveProgressBps?: number;

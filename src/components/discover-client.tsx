@@ -5,12 +5,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Launch } from "@/lib/types";
 import type { CombinedLaunchDataSource } from "@/lib/launch-data";
 import { getDisplayNetwork } from "@/lib/network-display";
-import { roomBadge, roomHue, roomKind, roomMeter, roomMetrics, type RoomKind } from "@/lib/room-display";
+import { roomBadge, roomCurvePercent, roomHue, roomKind, roomMeter, roomMetrics, type RoomKind } from "@/lib/room-display";
 import { CommandPalette, Constellation, RoomAvatar, Ticker } from "./discover-visuals";
 import { Header } from "./header";
 import { SiteFooter } from "./site-footer";
+import { useLiveLaunches } from "@/lib/use-live-launches";
 
-const tabs = ["Trending", "Rising", "New", "Most HYPR"] as const;
+const tabs = ["Live first", "Recent activity", "New", "Curve progress"] as const;
 type Tab = (typeof tabs)[number];
 type Filter = "all" | RoomKind;
 type View = "grid" | "list";
@@ -32,8 +33,8 @@ function sourceLabel(source: CombinedLaunchDataSource) {
   if (source === "fixture-fallback") return "RPC unavailable — showing clearly labeled demo data.";
   if (source === "rpc-empty") return "Live RPC returned no recent launches in the indexed window.";
   if (source === "rpc-partial") return "RPC launch discovery is live; metadata and social metrics are still partial.";
-  if (source === "mixed") return "Combined view: native HYPR launches are onchain; Pons/demo enrichment remains clearly labeled.";
-  if (source === "native-rpc") return "Testnet preview — these coins exist on Robinhood testnet. Test assets have no real value; social features are still previews.";
+  if (source === "mixed") return "HYPR and Pons launches read from their configured chains. No sample data.";
+  if (source === "native-rpc") return "Live testnet data — coins and reserves are onchain. LIVE means the creator is publishing media. Test ETH has no real value.";
   if (source === "native-empty") return "Native HYPR factory is configured, but no recent native launches were found.";
   if (source === "native-error") return "Native HYPR RPC read failed; no native launch state is being claimed.";
   if (source === "rpc-error") return "Pons version is unsupported or misconfigured; no Pons launch state is being claimed.";
@@ -120,7 +121,7 @@ function FeaturedRoom({ token }: { token: Launch }) {
       </div>
       <div className="featured-copy">
         <div className="featured-tags">
-          <span className="featured-flag"><span className="pulse" /> SPOTLIGHT</span>
+          <span className="featured-flag"><span className="status-dot" /> ONCHAIN SPOTLIGHT</span>
           <span className={badgeClass(token)}>{roomBadge(token)}</span>
         </div>
         <h3>{token.name} <span className="token-symbol">${token.symbol}</span></h3>
@@ -135,8 +136,11 @@ function FeaturedRoom({ token }: { token: Launch }) {
   );
 }
 
-export function DiscoverClient({ initialLaunches, source, children }: { initialLaunches: Launch[]; source: CombinedLaunchDataSource; children?: React.ReactNode }) {
-  const [tab, setTab] = useState<Tab>("Trending");
+export function DiscoverClient({ initialLaunches: seed, source: initialSource, children }: { initialLaunches: Launch[]; source: CombinedLaunchDataSource; children?: React.ReactNode }) {
+  const liveData = useLiveLaunches(seed, initialSource);
+  const initialLaunches = liveData.launches;
+  const source = liveData.source || initialSource;
+  const [tab, setTab] = useState<Tab>("Live first");
   const [filter, setFilter] = useState<Filter>("all");
   const [view, setView] = useState<View>("grid");
   const [query, setQuery] = useState("");
@@ -178,9 +182,9 @@ export function DiscoverClient({ initialLaunches, source, children }: { initialL
       const stamp = (item: Launch) => item.launchedAt || (item.origin === "hypr" ? "9999" : "");
       return [...filtered].sort((a, b) => stamp(b).localeCompare(stamp(a)) || byRank(a, b));
     }
-    if (tab === "Most HYPR") return [...filtered].sort((a, b) => b.hype - a.hype || (b.curveProgressBps ?? 0) - (a.curveProgressBps ?? 0) || byRank(a, b));
-    if (tab === "Rising") return [...filtered].sort((a, b) => b.change24h - a.change24h || tradeCount(b) - tradeCount(a) || byRank(a, b));
-    return filtered;
+    if (tab === "Curve progress") return [...filtered].sort((a, b) => roomCurvePercent(b) - roomCurvePercent(a) || byRank(a, b));
+    if (tab === "Recent activity") return [...filtered].sort((a, b) => tradeCount(b) - tradeCount(a) || byRank(a, b));
+    return [...filtered].sort((a, b) => Number(b.broadcastStatus === "live") - Number(a.broadcastStatus === "live") || (b.viewerCount ?? 0) - (a.viewerCount ?? 0) || roomCurvePercent(b) - roomCurvePercent(a) || byRank(a, b));
   }, [filter, initialLaunches, query, tab]);
 
   const showFeatured = view === "grid" && !query.trim() && sorted.length > 2;
@@ -203,9 +207,11 @@ export function DiscoverClient({ initialLaunches, source, children }: { initialL
     card.style.setProperty("--my", `${event.clientY - rect.top}px`);
   }
 
-  const peopleExploring = initialLaunches.reduce((total, item) => total + item.activeNow, 0);
+  const peopleExploring = initialLaunches.every((item) => item.viewerCount !== undefined) ? initialLaunches.reduce((total, item) => total + (item.viewerCount || 0), 0) : undefined;
   const isDemoSource = source === "fixture" || source === "fixture-fallback";
   const network = getDisplayNetwork(source);
+  const broadcastsChecked = initialLaunches.every((launch) => launch.broadcastStatus === "live" || launch.broadcastStatus === "offline");
+  const broadcastCount = initialLaunches.filter((launch) => launch.broadcastStatus === "live").length;
 
   return <main className="discover-page"><Header active="discover" />
     <div className="aurora" aria-hidden="true"><span className="aurora-a" /><span className="aurora-b" /><span className="aurora-c" /></div>
@@ -226,7 +232,7 @@ export function DiscoverClient({ initialLaunches, source, children }: { initialL
           <ol className="hero-steps" aria-label="How HYPR works">
             <li><strong>01</strong> Name your coin</li>
             <li><strong>02</strong> Approve in your wallet</li>
-            <li><strong>03</strong> Open your live room</li>
+            <li><strong>03</strong> Start your broadcast</li>
           </ol>
         </div>
         {initialLaunches.length > 0 && <Constellation launches={initialLaunches} totalRooms={initialLaunches.length} />}
@@ -238,14 +244,16 @@ export function DiscoverClient({ initialLaunches, source, children }: { initialL
         <div><span className="signal-label">NETWORK</span><strong>{isDemoSource ? "Robinhood Chain · demo" : network.name}</strong></div>
         <div><span className="signal-label">CHAIN ID</span><strong>{isDemoSource ? "—" : network.id}</strong></div>
         <div><span className="signal-label">ROOMS INDEXED</span><strong>{initialLaunches.length.toLocaleString()}</strong></div>
-        <div><span className="signal-label">{isDemoSource ? "PEOPLE IN SAMPLE" : "PEOPLE IN ROOMS"}</span><strong>{isDemoSource ? <><span className="live-number" /> {peopleExploring.toLocaleString()}</> : "—"}</strong></div>
+        <div><span className="signal-label">CONNECTED VIEWERS</span><strong>{peopleExploring === undefined ? "—" : peopleExploring.toLocaleString()}</strong></div>
       </section>
       <div className="data-notice" role="status">{sourceLabel(source)}</div>
+      <p className="accounting-copy" role="status">{liveData.error || (liveData.updatedAt ? `Auto-refreshing every 15 seconds · checked ${new Date(liveData.updatedAt).toLocaleTimeString()}` : "Checking current broadcast status…")}</p>
+      {broadcastsChecked && <p className="accounting-copy">{broadcastCount ? `${broadcastCount} broadcast${broadcastCount === 1 ? "" : "s"} live now.` : "No creators are broadcasting right now. Open your room’s creator studio to start one."}</p>}
 
       <section id="discover" className="discover-section">
         <div className="section-heading">
           <div><span className="eyebrow">THE SIGNAL BOARD</span><h2>Discover rooms</h2></div>
-          <p className="section-sub">Every coin opens a live room. Dive into one, or press <kbd>⌘K</kbd> to jump anywhere.</p>
+          <p className="section-sub">Every coin gets a room. Creators go live separately. Press <kbd>⌘K</kbd> to jump anywhere.</p>
         </div>
 
         <div className="discover-controls">

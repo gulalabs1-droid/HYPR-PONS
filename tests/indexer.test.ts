@@ -63,7 +63,7 @@ test("Pons prefers an explicit RPC and supports the documented archive fallback"
   }
 });
 
-test("Pons RPC failure is labeled as fixture fallback instead of presented as live data", async () => {
+test("Pons RPC failure returns an error and never substitutes sample launches", async () => {
   const originalMode = process.env.PONS_INDEXER_MODE;
   const originalRpc = process.env.PONS_RPC_URL;
   const originalVersion = process.env.PONS_VERSION;
@@ -72,8 +72,8 @@ test("Pons RPC failure is labeled as fixture fallback instead of presented as li
   delete process.env.PONS_VERSION;
   try {
     const result = await getLaunchData();
-    assert.equal(result.source, "fixture-fallback");
-    assert.equal(result.launches.length > 0, true);
+    assert.equal(result.source, "rpc-error");
+    assert.equal(result.launches.length, 0);
   } finally {
     if (originalMode === undefined) delete process.env.PONS_INDEXER_MODE; else process.env.PONS_INDEXER_MODE = originalMode;
     if (originalRpc === undefined) delete process.env.PONS_RPC_URL; else process.env.PONS_RPC_URL = originalRpc;

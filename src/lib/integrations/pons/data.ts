@@ -1,5 +1,4 @@
 import type { Launch } from "@/lib/types";
-import { fixtureLaunches } from "./fixtures";
 import { readRecentLaunches, resolvePonsVersion } from "./indexer";
 
 export type LaunchDataSource = "fixture" | "fixture-fallback" | "rpc" | "rpc-partial" | "rpc-empty" | "rpc-error";
@@ -33,7 +32,8 @@ function unresolvedLaunch(indexed: Awaited<ReturnType<typeof readRecentLaunches>
 }
 
 export async function getLaunchData(): Promise<LaunchData> {
-  if (process.env.PONS_INDEXER_MODE !== "rpc") return { launches: fixtureLaunches, source: "fixture" };
+  // The public product never substitutes samples for a missing live source.
+  if (process.env.PONS_INDEXER_MODE !== "rpc") return { launches: [], source: "rpc-empty" };
   try {
     resolvePonsVersion();
     const indexed = await readRecentLaunches();
@@ -54,7 +54,7 @@ export async function getLaunchData(): Promise<LaunchData> {
     if (error instanceof Error && error.message.startsWith("Unsupported Pons version:")) {
       return { launches: [], source: "rpc-error" };
     }
-    return { launches: fixtureLaunches, source: "fixture-fallback" };
+    return { launches: [], source: "rpc-error" };
   }
 }
 

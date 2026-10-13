@@ -1,4 +1,4 @@
-import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
+import { AccessToken, RoomServiceClient, TrackSource } from "livekit-server-sdk";
 
 const ADDRESS = /^0x[a-fA-F0-9]{40}$/;
 
@@ -42,17 +42,43 @@ function getRoomService() {
   return new RoomServiceClient(host, process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET);
 }
 
-function participantRole(metadata?: string) {
+export function participantRole(metadata?: string) {
   if (!metadata) return "";
   try { return (JSON.parse(metadata) as { role?: string }).role || ""; } catch { return ""; }
 }
 
+type MediaParticipant = { metadata?: string; tracks?: { source: number; muted?: boolean }[] };
+
+export function statusFromParticipants(participants: MediaParticipant[]) {
+  const host = participants.filter((participant) => participantRole(participant.metadata) === "host");
+  const activeTracks = host.flatMap((participant) => participant.tracks || []).filter((track) => !track.muted);
+  const video = activeTracks.some((track) => track.source === TrackSource.CAMERA || track.source === TrackSource.SCREEN_SHARE);
+  const audio = activeTracks.some((track) => track.source === TrackSource.MICROPHONE || track.source === TrackSource.SCREEN_SHARE_AUDIO);
+  return { configured: true, live: video || audio, video, audio, hostConnected: host.length > 0,
+    viewerCount: participants.filter((participant) => participantRole(participant.metadata) === "viewer").length,
+    checkedAt: new Date().toISOString() };
+}
+
 export async function getLiveRoomStatus(roomName: string) {
-  if (!isLiveKitConfigured()) return { configured: false, live: false, viewerCount: 0 };
+  if (!isLiveKitConfigured()) return { ...statusFromParticipants([]), configured: false };
   const service = getRoomService();
   const rooms = await service.listRooms([roomName]);
-  if (!rooms[0]) return { configured: true, live: false, viewerCount: 0 };
+  if (!rooms[0]) return statusFromParticipants([]);
   const participants = await service.listParticipants(roomName);
-  const hostPresent = participants.some((participant) => participantRole(participant.metadata) === "host");
-  return { configured: true, live: hostPresent, viewerCount: Math.max(0, participants.filter((participant) => participantRole(participant.metadata) !== "host").length) };
+  return statusFromParticipants(participants);
+}
+
+export async function getLiveRoomStatuses(roomNames: string[]) {
+  if (!isLiveKitConfigured()) return new Map(roomNames.map((name) => [name, { ...statusFromParticipants([]), configured: false }]));
+  const service = getRoomService();
+  const rooms = new Set((await service.listRooms(roomNames)).map((room) => room.name));
+  const result = new Map<string, ReturnType<typeof statusFromParticipants> | null>();
+  // Bound parallel calls; absent rooms need no participant request.
+  for (let offset = 0; offset < roomNames.length; offset += 8) {
+    await Promise.all(roomNames.slice(offset, offset + 8).map(async (name) => {
+      try { result.set(name, rooms.has(name) ? statusFromParticipants(await service.listParticipants(name)) : statusFromParticipants([])); }
+      catch { result.set(name, null); }
+    }));
+  }
+  return result;
 }

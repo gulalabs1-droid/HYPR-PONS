@@ -101,6 +101,11 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
     return () => { invalidateQuote(); window.clearTimeout(timer); };
   }, [readQuote, invalidateQuote]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => { if (!pending && document.visibilityState !== "hidden") void readQuote(); }, 10000);
+    return () => window.clearInterval(timer);
+  }, [pending, readQuote]);
+
   async function trade(event: React.FormEvent) {
     event.preventDefault();
     const provider = getEthereum();
@@ -143,7 +148,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
     }
   }
 
-  const phaseLabel = phase === 2 ? "Graduated" : phase === 1 ? "Graduating" : phase === 0 ? "Live" : "Unknown";
+  const phaseLabel = phase === 2 ? "Graduated" : phase === 1 ? "Graduating" : phase === 0 ? "Active curve" : "Checking curve…";
   const outputLabel = direction === "buy" ? `${formatEther(quote?.output || 0n)} ${tokenSymbol}` : `${formatEther(quote?.output || 0n)} ETH`;
 
   if (!hyprClientConfig.enabled) {

@@ -108,7 +108,7 @@ test("review is explicit, names the token and fees, and sends no wallet transact
     assert.equal(renderer.root.findAllByType("dialog").length, 1);
     const text = JSON.stringify(renderer.toJSON());
     assert.ok(text.includes("Review your purchase"));
-    assert.ok(text.includes("Minimum you receive (2% limit)"));
+    assert.ok(text.includes("Minimum receive · about (2% limit)"));
     assert.ok(text.includes("Network fee · extra"));
     assert.ok(text.includes("test ETH"));
     assert.ok(text.includes("TEST"));

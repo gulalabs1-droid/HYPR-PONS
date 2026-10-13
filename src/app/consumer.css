@@ -72,6 +72,7 @@
 .hypr-broadcast-stage .lk-participant-tile { min-height: 0; }
 .wallet-account-panel { position: absolute; right: 0; top: calc(100% + 12px); width: min(340px, calc(100vw - 32px)); padding: 20px; display: grid; gap: 12px; background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: 0 16px 50px #0009; }
 .header-actions { position: relative; }
+.brand { min-height: 44px; }
 .wallet-full-address { overflow-wrap: anywhere; color: var(--text-soft); font-size: 13px; line-height: 1.6; }
 .wallet-network-warning { color: var(--amber); font-size: 14px; line-height: 1.5; }
 .wallet-banner .wallet-switch { width: auto; height: auto; min-height: 44px; font-size: 13px; font-weight: 700; line-height: 1.4; padding: 8px; border: 1px solid var(--amber-line); }
@@ -91,6 +92,9 @@
 .wallet-help button { white-space: normal; text-align: left; }
 .chat-form button { width: 44px; height: 44px; }
 .message time { color: var(--muted); }
+.review-exact { color: var(--text-soft); font-size: 13px; margin: 12px 0; }
+.review-exact summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
+.review-exact p { margin: 8px 0; line-height: 1.6; overflow-wrap: anywhere; }
 .discover-data-details { margin-top: 18px; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0 16px 16px; }
 .discover-data-details:not([open]) { padding-bottom: 0; }
 .discover-data-details > summary { cursor: pointer; min-height: 48px; padding: 14px 0; font-size: 14px; color: var(--text-soft); }

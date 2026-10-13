@@ -7,7 +7,7 @@ import { getEthereum, shortAddress, switchToRobinhoodTestnet } from "@/lib/walle
 import { getHyprClientConfig } from "@/lib/hypr-client-config";
 import { classifyTransactionReceipt, waitForTransactionReceipt } from "@/lib/transaction";
 import { ROBINHOOD_TESTNET } from "@/lib/integrations/pons/constants";
-import { minimumTradeOutput, reviewIsCurrent, pendingTradeKey, parsePendingTrade } from "@/lib/trade-review";
+import { minimumTradeOutput, reviewIsCurrent, pendingTradeKey, parsePendingTrade, readableTradeAmount } from "@/lib/trade-review";
 import { OPEN_WALLET_EVENT, walletErrorMessage, walletSessionDisconnected } from "@/lib/wallet-discovery";
 import { useWalletStatus } from "@/lib/use-wallet-status";
 import { Modal } from "./modal";
@@ -95,6 +95,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
         data: result.data,
       }) as readonly [bigint, bigint, bigint];
       const next = { output: values[0], fee: direction === "buy" ? values[1] : values[2], input: parsedAmount, direction };
+      if (next.output <= 0n) { setQuote(null); setStatus("This amount is too small to receive any output. Choose a larger amount before reviewing."); return null; }
       setQuote(next);
       return next;
     } catch {
@@ -165,6 +166,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
     pendingRef.current = true; setPending(true);
     setStatus("");
     let tradingAccount: string | null = null;
+    let approvalConfirmed = false;
     try {
       const accounts = await provider.request({ method: "eth_requestAccounts" }) as string[];
       const from = accounts[0];
@@ -201,6 +203,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
         setHashes([approvalHash]); savePending(approvalHash, from, "approval");
         setStatus("Step 1 of 2: exact token allowance submitted. Waiting for confirmation…");
         await waitForTransactionReceipt(provider, approvalHash);
+        approvalConfirmed = true;
         clearPending(from);
         const afterApproval = await readQuote();
         if (!afterApproval || afterApproval.output < minimum) throw new Error("Your token allowance is confirmed, but the price changed beyond your 2% limit. No sale was sent. Close this review and get a new quote.");
@@ -219,14 +222,14 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
       setReview(null); void wallet.refresh();
     } catch (error) {
       if (tradingAccount && /reverted/i.test(error instanceof Error ? error.message : "")) clearPending(tradingAccount);
-      setStatus(walletErrorMessage(error));
+      setStatus(`${approvalConfirmed ? "Token allowance confirmed; the sale is not confirmed. Check the transaction links. " : ""}${walletErrorMessage(error)}`);
     } finally {
       pendingRef.current = false; setPending(false);
     }
   }
 
   const phaseLabel = phase === 2 ? "Graduated" : phase === 1 ? "Moving to pool" : phase === 0 ? "Trading open" : "Checking price…";
-  const outputLabel = direction === "buy" ? `${formatEther(quote?.output || 0n)} ${tokenSymbol}` : `${formatEther(quote?.output || 0n)} ETH`;
+  const outputLabel = `${readableTradeAmount(quote?.output || 0n, direction === "buy" ? 6 : 8)} ${direction === "buy" ? tokenSymbol : "test ETH"}`;
 
   if (!hyprClientConfig.enabled) {
     return (
@@ -271,13 +274,14 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
         <p className="dialog-copy">This is a testnet transaction for ${tokenSymbol}. Test ETH and this test token have no real value.</p>
         <dl className="trade-review-rows">
           <div><dt>{direction === "buy" ? "You pay" : "You sell"}</dt><dd>{formatEther(review.input)} {direction === "buy" ? "test ETH" : tokenSymbol}</dd></div>
-          <div><dt>You receive (estimated)</dt><dd>{formatEther(review.output)} {direction === "buy" ? tokenSymbol : "test ETH"}</dd></div>
-          <div><dt>Minimum you receive (2% limit)</dt><dd>{formatEther(minimumTradeOutput(review.output))} {direction === "buy" ? tokenSymbol : "test ETH"}</dd></div>
+          <div><dt>You receive (estimated)</dt><dd>{readableTradeAmount(review.output, direction === "buy" ? 6 : 8)} {direction === "buy" ? tokenSymbol : "test ETH"}</dd></div>
+          <div><dt>Minimum receive · about (2% limit)</dt><dd>{readableTradeAmount(minimumTradeOutput(review.output), direction === "buy" ? 6 : 8)} {direction === "buy" ? tokenSymbol : "test ETH"}</dd></div>
           <div><dt>Trading fee (1.25%) · included</dt><dd>{formatEther(review.fee)} test ETH</dd></div>
           <div><dt>Network fee · extra</dt><dd>{gasEstimate !== null ? `About ${formatEther(gasEstimate)} test ETH; wallet confirms final fee` : "Your wallet shows the fee before approval"}</dd></div>
           <div><dt>Wallet</dt><dd>{wallet.account ? shortAddress(wallet.account) : "Not connected"}</dd></div>
           <div><dt>Network</dt><dd>Robinhood Chain testnet (46630)</dd></div>
         </dl>
+        <details className="review-exact"><summary>Exact quoted amounts</summary><p>Estimated receive: {formatEther(review.output)} {direction === "buy" ? tokenSymbol : "test ETH"}</p><p>Contract minimum: {formatEther(minimumTradeOutput(review.output))} {direction === "buy" ? tokenSymbol : "test ETH"}</p><p>The display above is shortened. These exact amounts determine the trade’s 2% minimum-output limit.</p></details>
         <p className="dialog-copy">Prices change when people buy and sell. No return is guaranteed. {direction === "sell" && "Selling needs two wallet confirmations: an exact token allowance, then the sale. Each can have a network fee."}</p>
         {status && <p className="live-notice" role="status">{status}</p>}
         {hashes.map((hash, index) => <a className="transaction-link" key={hash} href={`${hyprClientConfig.explorerUrl}/tx/${hash}`} target="_blank" rel="noreferrer">Transaction {index + 1} ↗</a>)}

@@ -1,5 +1,14 @@
 export const TRADE_BUFFER_BPS = 200n;
 export const QUOTE_REVIEW_TTL_MS = 30_000;
+// Truncate displayed estimates, not transaction values. Exact amounts remain
+// available in the review, and contract minima are always computed in wei.
+export function readableTradeAmount(value: bigint, places = 6) {
+  const scale = 10n ** 18n;
+  const whole = value / scale;
+  const fraction = (value % scale).toString().padStart(18, "0").slice(0, places).replace(/0+$/, "");
+  if (value > 0n && whole === 0n && !fraction) return `<0.${"0".repeat(places - 1)}1`;
+  return `${whole.toLocaleString("en-US")}${fraction ? `.${fraction}` : ""}`;
+}
 export function minimumTradeOutput(output: bigint) { return output * (10_000n - TRADE_BUFFER_BPS) / 10_000n || 1n; }
 export function reviewIsCurrent(review: { input: bigint; direction: string; reviewedAt: number }, input: bigint, direction: string, now = Date.now()) {
   return review.input === input && review.direction === direction && now >= review.reviewedAt && now - review.reviewedAt <= QUOTE_REVIEW_TTL_MS;

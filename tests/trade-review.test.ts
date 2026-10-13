@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { minimumTradeOutput, reviewIsCurrent, pendingTradeKey, parsePendingTrade } from "../src/lib/trade-review";
+import { minimumTradeOutput, reviewIsCurrent, pendingTradeKey, parsePendingTrade, readableTradeAmount } from "../src/lib/trade-review";
 
 test("review preserves an exact 2% minimum output and never accepts zero", () => {
   assert.equal(minimumTradeOutput(10000n), 9800n);
@@ -20,4 +20,10 @@ test("pending trade recovery is separated by account/curve and validates saved r
   assert.deepEqual(parsePendingTrade(JSON.stringify({ hash, kind: "approval" })), { hash, kind: "approval" });
   assert.equal(parsePendingTrade(JSON.stringify({ hash: "https://bad.test", kind: "trade" })), null);
   assert.equal(parsePendingTrade(JSON.stringify({ hash, kind: "made-up" })), null);
+});
+test("displayed estimates are readable without rounding up or changing exact transaction values", () => {
+  assert.equal(readableTradeAmount(15799687955777698083n), "15.799687");
+  assert.equal(readableTradeAmount(1000n * 10n ** 18n), "1,000");
+  assert.equal(readableTradeAmount(1n), "<0.000001");
+  assert.equal(readableTradeAmount(0n), "0");
 });

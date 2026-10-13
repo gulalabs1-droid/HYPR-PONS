@@ -2,6 +2,11 @@
 
 Audit date: 2026-10-01
 
+Historical online-buildathon audit. It is not the current Founder House
+screening checklist or deployment status. See the
+[October 13 review guide](HYPR_REVIEW_GUIDE_20261013.md) for completed deployment,
+current shared-community/UI work and remaining media/graduation release gates.
+
 Cloud execution update, 2026-10-12: the frontend is now published at
 `https://hypr-pons.vercel.app`, Supabase migrations and LiveKit credentials are
 configured and tested, and the source is backed up privately at

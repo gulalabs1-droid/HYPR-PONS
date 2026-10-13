@@ -3,6 +3,11 @@
 Executed and independently checked on 2026-10-12 after explicit user approval.
 This is not a real-money coin launch, a user-traction claim, or a professional audit.
 
+The transaction evidence below remains historical and unchanged. Shared
+chat/follows and consumer UX were subsequently updated on October 13; see the
+[dated review guide](HYPR_REVIEW_GUIDE_20261013.md). That later progress is not
+represented as part of the October 12 transaction demonstration.
+
 ## Actual room and contracts
 
 - [Public HYPR Testnet Demo room](https://hypr-pons.vercel.app/room/0xeA3b5d2Cf6EAcD3dd6241736082b7698E519a675)

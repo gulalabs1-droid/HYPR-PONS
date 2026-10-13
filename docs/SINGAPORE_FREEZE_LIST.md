@@ -2,6 +2,12 @@
 
 Audit date: 2026-10-01
 
+Historical online-buildathon freeze list. The current Singapore target is
+Founder House screening, not a reopened buildathon. The
+[October 13 review guide](HYPR_REVIEW_GUIDE_20261013.md) supersedes this file for
+current deployment, shared-community and consumer-UX status; actual media
+delivery and public graduation remain separate, uncompleted evidence gates.
+
 2026-10-12 update: frontend hosting, cloud persistence/service setup, approved
 testnet adapter/factory deployment, source verification and the independent
 deployment checker are completed. See [current evidence](HYPR_TESTNET_EVIDENCE.md)

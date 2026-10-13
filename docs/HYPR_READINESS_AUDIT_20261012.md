@@ -1,5 +1,11 @@
 # HYPR readiness audit — October 12, 2026
 
+Historical read-only audit of the October 12 release. Its chat, wallet-selection,
+layout, repository-visibility and test-count findings are not statements about
+the later release. See the [October 13 review guide](HYPR_REVIEW_GUIDE_20261013.md)
+for current progress; media, public graduation and real-money release gates are
+still separately disclosed.
+
 ## Verdict
 
 HYPR has a visually coherent, working public-testnet prototype. It is **not a

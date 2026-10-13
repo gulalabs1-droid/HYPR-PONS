@@ -1,5 +1,13 @@
 # HYPR
 
+## Current review materials — October 13, 2026
+
+Start with the [dated product review guide](docs/HYPR_REVIEW_GUIDE_20261013.md)
+for current access instructions, desktop/mobile captures, verified evidence and
+remaining release gates. This progress update is separate from the locked
+October 12 Crypto World's Fair submission; later changes are not represented
+as having been completed before its deadline.
+
 ## Live data and native broadcasts
 
 The public product uses real chain reads, actual media-publishing status, and shared wallet-authenticated chat/follows. No fixture launches or local social previews are shown. See [current source/freshness and release boundaries](docs/HYPR_LIVE_DATA.md). Older setup notes below describe prior prototype stages and may be historical.

@@ -17,10 +17,10 @@ Updated October 13, 2026.
 ## Creator/viewer workflow
 
 1. Open a native HYPR room. Anyone can watch an available broadcast without a wallet or media permissions.
-2. The creator opens the studio and selects camera and/or microphone. Audio-only is supported.
-3. The site requests the Robinhood testnet network when necessary, checks the exact creator wallet, and requests a canonical UTF-8-hex personal signature.
-4. The server independently verifies the indexed creator and signature. Only that creator receives media-publish permission.
-5. The browser requests permission for the selected devices after the explicit start action. Media publishing—not connection alone—determines broadcast status.
+2. The creator opens the studio. Camera and microphone both start OFF; opening it requests no device access. Audio-only is supported.
+3. After selecting devices, the creator explicitly requests a private preview. Only this action requests device permission. The preview is local, muted, unrecorded and not published; its tracks stop on close or when preferences change.
+4. A separate Authorize & start broadcast action checks the exact creator wallet and Robinhood testnet, and requests a canonical UTF-8-hex personal signature. The preview is stopped as broadcasting begins.
+5. The server independently verifies the indexed creator and signature. Only that creator receives media-publish permission. Selected-device publishing—not connection or private preview alone—determines broadcast status.
 6. Viewers see only creator tracks and can tap to enable blocked audio playback. They receive no camera/microphone controls or publish grant.
 7. The creator can mute, disable camera, share screen, and end the session. HYPR does not automatically record media.
 

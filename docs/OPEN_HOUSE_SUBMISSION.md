@@ -1,5 +1,10 @@
 # Open House submission draft
 
+Historical early planning draft, not a submitted application or a current
+readiness statement. Use the [October 13 review guide](HYPR_REVIEW_GUIDE_20261013.md)
+for the deployed product and honest evidence scope. Founder House Singapore
+screening is distinct from the already-ended online buildathon.
+
 ## Project name
 
 HYPR

@@ -3,6 +3,13 @@
 Prepared October 12, 2026. This replaces the older Singapore/Open House package
 for the current contest. Final submission is confirmed below.
 
+**Historical submission snapshot:** the narrative, test counts and local-social
+disclosures below describe the October 12 entry. The portal is now locked and
+was not edited after its deadline. October 13 shared-community and consumer-UX
+work is separately dated in the [current review guide](HYPR_REVIEW_GUIDE_20261013.md);
+it must not be represented as pre-deadline competition work. The organizers
+determine which later materials, if any, can be considered.
+
 ## Confirmed contest submission
 
 - Project ID 17723: [submission receipt](https://colosseum.com/arena/projects/17723/submission).

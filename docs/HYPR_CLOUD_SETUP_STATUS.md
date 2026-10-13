@@ -2,6 +2,11 @@
 
 Verified on 2026-10-12.
 
+Historical setup record. The repository subsequently became public with founder
+approval, and shared chat/follows are now deployed. Use the
+[October 13 review guide](HYPR_REVIEW_GUIDE_20261013.md) for current status rather
+than treating the original pending-work list as a current completion checklist.
+
 ## Accounts and resources
 
 - Vercel browser session: signed in to `gulas-projects-212c0e1d`.

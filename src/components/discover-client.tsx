@@ -5,13 +5,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Launch } from "@/lib/types";
 import type { CombinedLaunchDataSource } from "@/lib/launch-data";
 import { getDisplayNetwork } from "@/lib/network-display";
-import { formatCurveProgress } from "@/lib/curve-progress";
-import { formatEthCompact, formatUsd } from "@/lib/format";
+import { roomBadge, roomHue, roomKind, roomMeter, roomMetrics, type RoomKind } from "@/lib/room-display";
+import { CommandPalette, Constellation, RoomAvatar, Ticker } from "./discover-visuals";
 import { Header } from "./header";
 import { SiteFooter } from "./site-footer";
 
 const tabs = ["Trending", "Rising", "New", "Most HYPR"] as const;
 type Tab = (typeof tabs)[number];
+type Filter = "all" | RoomKind;
+type View = "grid" | "list";
+type HueStyle = React.CSSProperties & { "--hue"?: number; "--meter"?: string };
+
+const filterLabels: Record<Filter, string> = { all: "All rooms", native: "Native", pons: "Pons", sample: "Sample" };
+
 function networkEyebrow(source: CombinedLaunchDataSource) {
   if (source === "fixture" || source === "fixture-fallback") return "DEMO MODE · ROBINHOOD CHAIN";
   if (source === "native-error") return "RPC UNAVAILABLE · ROBINHOOD CHAIN";
@@ -19,62 +25,6 @@ function networkEyebrow(source: CombinedLaunchDataSource) {
   if (source === "native-empty") return "TESTNET READY · ROBINHOOD CHAIN";
   if (source === "native-rpc") return "TESTNET PREVIEW · ROBINHOOD CHAIN";
   return "LIVE INDEXED · ROBINHOOD CHAIN";
-}
-
-function tradeCount(token: Launch) {
-  return token.nativeTradeCount ?? token.ponsTradeCount ?? token.trades24h ?? 0;
-}
-
-function TokenCard({ token, index }: { token: Launch; index: number }) {
-  const native = token.origin === "hypr";
-  const partial = token.dataStatus === "partial";
-  const demo = token.dataStatus === "demo";
-  const progress = native ? formatCurveProgress(token.nativeRealQuoteReserve, token.nativeGraduationThreshold, token.curveProgressBps, token.curvePhase) : null;
-  const progressWidth = native && token.curveProgressBps !== undefined ? Math.min(100, token.curveProgressBps / 100) : 0;
-  const metrics: [string, string, string?][] = native
-    ? [
-      ["CURVE", progress || "—"],
-      ["RESERVE", formatEthCompact(token.nativeRealQuoteReserve)],
-      ["TRADES", token.nativeTradeCount === undefined ? "—" : token.nativeTradeCount.toLocaleString()],
-    ]
-    : partial
-      ? [
-        ["POOL PRICE", token.poolPriceQuote === undefined ? "—" : `${token.poolPriceQuote.toPrecision(3)} WETH`],
-        ["SWAPS", token.ponsTradeCount === undefined ? "—" : token.ponsTradeCount.toLocaleString()],
-        ["24H", "—"],
-      ]
-      : [
-        ["HYPE", String(token.hype)],
-        ["MARKET CAP", formatUsd(token.marketCapUsd)],
-        ["24H", `${token.change24h >= 0 ? "+" : ""}${token.change24h}%`, token.change24h >= 0 ? "positive" : "negative"],
-      ];
-  return (
-    <Link href={`/room/${token.address}`} className="token-card">
-      <div className="token-card-top">
-        <span className={`rank rank-${index + 1}`}>{String(index + 1).padStart(2, "0")}</span>
-        <span className={`token-badge${native ? " is-native" : demo ? " is-demo" : ""}`}>{native ? `Native · ${token.curvePhase || "testnet"}` : demo ? "Sample data" : partial ? "Indexed onchain" : `${token.activeNow} in room`}</span>
-      </div>
-      <div className="token-identity">
-        <span className="token-logo" aria-hidden="true">{token.logo}</span>
-        <div>
-          <h3>{token.name}</h3>
-          <span className="token-symbol">${token.symbol}{token.dataStatus === "verified" && <span className="verified"> ✓</span>}</span>
-        </div>
-      </div>
-      <div className="token-card-metrics">
-        {metrics.map(([label, value, tone]) => <div key={label}><span>{label}</span><strong className={tone}>{value}</strong></div>)}
-      </div>
-      {native && (
-        <div className="curve-bar" role="progressbar" aria-label="Graduation progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressWidth} aria-valuetext={progress || undefined}>
-          <span style={{ width: `${progressWidth}%` }} />
-        </div>
-      )}
-      <div className="card-footer">
-        <span>{native ? "to graduation" : partial ? "partial onchain data" : `${token.holders.toLocaleString()} holders`}</span>
-        <span className="enter-room">Enter room <span aria-hidden="true">→</span></span>
-      </div>
-    </Link>
-  );
 }
 
 function sourceLabel(source: CombinedLaunchDataSource) {
@@ -90,14 +40,118 @@ function sourceLabel(source: CombinedLaunchDataSource) {
   return "Live indexed data.";
 }
 
+function tradeCount(token: Launch) {
+  return token.nativeTradeCount ?? token.ponsTradeCount ?? token.trades24h ?? 0;
+}
+
+function cardFooter(token: Launch) {
+  const kind = roomKind(token);
+  if (kind === "native") return "to graduation";
+  if (kind === "pons") return "partial onchain data";
+  return `${token.holders.toLocaleString()} holders`;
+}
+
+function Meter({ token }: { token: Launch }) {
+  const meter = roomMeter(token);
+  if (!meter) return <div className="room-meter is-empty"><span>Signal</span><em>Indexing…</em></div>;
+  return (
+    <div className="room-meter" role="progressbar" aria-label={meter.label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(meter.percent)} aria-valuetext={meter.text}>
+      <div className="room-meter-head"><span>{meter.label}</span><strong>{meter.text}</strong></div>
+      <div className="room-meter-track"><span style={{ width: `${meter.percent}%` }} /></div>
+    </div>
+  );
+}
+
+function badgeClass(token: Launch) {
+  const kind = roomKind(token);
+  return `token-badge${kind === "native" ? " is-native" : kind === "sample" ? " is-demo" : ""}`;
+}
+
+function RoomCard({ token, index }: { token: Launch; index: number }) {
+  return (
+    <Link href={`/room/${token.address}`} className="room-card" style={{ "--hue": roomHue(token.address) } as HueStyle}>
+      <span className="room-card-glow" aria-hidden="true" />
+      <div className="room-card-top">
+        <span className="rank">{String(index + 1).padStart(2, "0")}</span>
+        <span className={badgeClass(token)}>{roomBadge(token)}</span>
+      </div>
+      <div className="room-card-identity">
+        <RoomAvatar token={token} size="lg" />
+        <div>
+          <h3>{token.name}</h3>
+          <span className="token-symbol">${token.symbol}{token.dataStatus === "verified" && <span className="verified"> ✓</span>}</span>
+        </div>
+      </div>
+      <Meter token={token} />
+      <dl className="room-card-metrics">
+        {roomMetrics(token).map((metric) => <div key={metric.label}><dt>{metric.label}</dt><dd className={metric.tone}>{metric.value}</dd></div>)}
+      </dl>
+      <div className="room-card-footer">
+        <span>{cardFooter(token)}</span>
+        <span className="enter-room">Enter room <span aria-hidden="true">→</span></span>
+      </div>
+    </Link>
+  );
+}
+
+function RoomRow({ token, index }: { token: Launch; index: number }) {
+  const meter = roomMeter(token);
+  return (
+    <Link href={`/room/${token.address}`} className="room-row" style={{ "--hue": roomHue(token.address) } as HueStyle}>
+      <span className="rank">{String(index + 1).padStart(2, "0")}</span>
+      <RoomAvatar token={token} size="sm" />
+      <span className="room-row-name"><strong>{token.name}</strong><small>${token.symbol}</small></span>
+      <span className={badgeClass(token)}>{roomBadge(token)}</span>
+      <span className="room-row-meter" aria-hidden="true"><span style={{ width: `${meter?.percent ?? 0}%` }} /></span>
+      {roomMetrics(token).map((metric) => <span key={metric.label} className="room-row-metric"><small>{metric.label}</small><strong className={metric.tone}>{metric.value}</strong></span>)}
+      <span className="room-row-arrow" aria-hidden="true">→</span>
+    </Link>
+  );
+}
+
+function FeaturedRoom({ token }: { token: Launch }) {
+  return (
+    <Link href={`/room/${token.address}`} className="featured-room" style={{ "--hue": roomHue(token.address) } as HueStyle}>
+      <div className="featured-visual" aria-hidden="true">
+        <span className="featured-orb" />
+        <span className="featured-ring ring-a" />
+        <span className="featured-ring ring-b" />
+        <span className="featured-logo">{token.logo}</span>
+      </div>
+      <div className="featured-copy">
+        <div className="featured-tags">
+          <span className="featured-flag"><span className="pulse" /> SPOTLIGHT</span>
+          <span className={badgeClass(token)}>{roomBadge(token)}</span>
+        </div>
+        <h3>{token.name} <span className="token-symbol">${token.symbol}</span></h3>
+        <p>{token.description}</p>
+        <Meter token={token} />
+        <dl className="featured-metrics">
+          {roomMetrics(token).map((metric) => <div key={metric.label}><dt>{metric.label}</dt><dd className={metric.tone}>{metric.value}</dd></div>)}
+        </dl>
+        <span className="primary-button featured-cta">Enter room <span aria-hidden="true">→</span></span>
+      </div>
+    </Link>
+  );
+}
+
 export function DiscoverClient({ initialLaunches, source, children }: { initialLaunches: Launch[]; source: CombinedLaunchDataSource; children?: React.ReactNode }) {
   const [tab, setTab] = useState<Tab>("Trending");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [view, setView] = useState<View>("grid");
   const [query, setQuery] = useState("");
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+        return;
+      }
       const target = event.target as HTMLElement | null;
       if (event.key !== "/" || event.metaKey || event.ctrlKey || target?.closest("input, textarea, [contenteditable]")) return;
       event.preventDefault();
@@ -107,9 +161,17 @@ export function DiscoverClient({ initialLaunches, source, children }: { initialL
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const kindCounts = useMemo(() => {
+    const counts: Record<Filter, number> = { all: initialLaunches.length, native: 0, pons: 0, sample: 0 };
+    for (const token of initialLaunches) counts[roomKind(token)] += 1;
+    return counts;
+  }, [initialLaunches]);
+  const filters = (Object.keys(filterLabels) as Filter[]).filter((key) => key === "all" || kindCounts[key] > 0);
+
   const sorted = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    const filtered = initialLaunches.filter((item) => `${item.name} ${item.symbol} ${item.address}`.toLowerCase().includes(needle));
+    const filtered = initialLaunches.filter((item) =>
+      (filter === "all" || roomKind(item) === filter) && `${item.name} ${item.symbol} ${item.address}`.toLowerCase().includes(needle));
     const byRank = (a: Launch, b: Launch) => a.rank - b.rank;
     if (tab === "New") {
       // Native launches have no indexed timestamp but are already ordered newest block first.
@@ -119,7 +181,11 @@ export function DiscoverClient({ initialLaunches, source, children }: { initialL
     if (tab === "Most HYPR") return [...filtered].sort((a, b) => b.hype - a.hype || (b.curveProgressBps ?? 0) - (a.curveProgressBps ?? 0) || byRank(a, b));
     if (tab === "Rising") return [...filtered].sort((a, b) => b.change24h - a.change24h || tradeCount(b) - tradeCount(a) || byRank(a, b));
     return filtered;
-  }, [initialLaunches, query, tab]);
+  }, [filter, initialLaunches, query, tab]);
+
+  const showFeatured = view === "grid" && !query.trim() && sorted.length > 2;
+  const featured = showFeatured ? sorted[0] : null;
+  const rest = featured ? sorted.slice(1) : sorted;
 
   function onTabKey(event: React.KeyboardEvent, index: number) {
     if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
@@ -129,59 +195,109 @@ export function DiscoverClient({ initialLaunches, source, children }: { initialL
     tabRefs.current[next]?.focus();
   }
 
+  function onGridPointer(event: React.PointerEvent) {
+    const card = (event.target as HTMLElement).closest<HTMLElement>(".room-card, .featured-room");
+    if (!card || !gridRef.current?.contains(card)) return;
+    const rect = card.getBoundingClientRect();
+    card.style.setProperty("--mx", `${event.clientX - rect.left}px`);
+    card.style.setProperty("--my", `${event.clientY - rect.top}px`);
+  }
+
   const peopleExploring = initialLaunches.reduce((total, item) => total + item.activeNow, 0);
   const isDemoSource = source === "fixture" || source === "fixture-fallback";
   const network = getDisplayNetwork(source);
 
-  return <main><Header active="discover" /><div className="page-shell">
-    <section className="hero">
-      <div className="eyebrow"><span className="pulse" /> {networkEyebrow(source)}</div>
-      <h1>Find the rooms<br /><em>where it’s moving.</em></h1>
-      <p>HYPR is the live launchpad for the next wave of onchain communities. Create, go live, trade, and pull up a seat.</p>
-      <div className="hero-actions">
-        <a href="#launch" className="primary-button">Create a launch <span aria-hidden="true">→</span></a>
-        <a href="#discover" className="secondary-button">Explore rooms <span aria-hidden="true">↓</span></a>
-      </div>
-      <ol className="hero-steps" aria-label="How HYPR works">
-        <li><strong>01</strong> Name your coin</li>
-        <li><strong>02</strong> Approve in your wallet</li>
-        <li><strong>03</strong> Open your live room</li>
-      </ol>
-    </section>
-    <div className="data-notice" role="status">{sourceLabel(source)}</div>
-    {children}
-    <section className="signal-strip" aria-label="Network status">
-      <div><span className="signal-label">NETWORK</span><strong>{isDemoSource ? "Robinhood Chain · demo" : network.name}</strong></div>
-      <div><span className="signal-label">CHAIN ID</span><strong>{isDemoSource ? "—" : network.id}</strong></div>
-      <div><span className="signal-label">ROOMS INDEXED</span><strong>{initialLaunches.length.toLocaleString()}</strong></div>
-      <div><span className="signal-label">{isDemoSource ? "PEOPLE IN SAMPLE" : "PEOPLE IN ROOMS"}</span><strong>{isDemoSource ? <><span className="live-number" /> {peopleExploring.toLocaleString()}</> : "—"}</strong></div>
-    </section>
-    <section id="discover" className="discover-section">
-      <div className="section-heading">
-        <div><span className="eyebrow">THE SIGNAL BOARD</span><h2>What’s alive right now</h2></div>
-        <div className="search-wrap">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-          <input ref={searchRef} type="search" aria-label="Search rooms by name, symbol, or address" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") setQuery(""); }} placeholder="Search rooms" />
-          {query ? <button type="button" className="search-clear" onClick={() => { setQuery(""); searchRef.current?.focus(); }} aria-label="Clear search">×</button> : <kbd aria-hidden="true">/</kbd>}
+  return <main className="discover-page"><Header active="discover" />
+    <div className="aurora" aria-hidden="true"><span className="aurora-a" /><span className="aurora-b" /><span className="aurora-c" /></div>
+    <div className="page-shell">
+      <section className="hero hero-split">
+        <div className="hero-copy">
+          <div className="eyebrow"><span className="pulse" /> {networkEyebrow(source)}</div>
+          <h1>Find the rooms<br /><em>where it’s moving.</em></h1>
+          <p>HYPR is the live launchpad for the next wave of onchain communities. Create, go live, trade, and pull up a seat.</p>
+          <div className="hero-actions">
+            <a href="#discover" className="primary-button">Explore rooms <span aria-hidden="true">↓</span></a>
+            <a href="#launch" className="secondary-button">Create a launch <span aria-hidden="true">+</span></a>
+            <button type="button" className="palette-trigger" onClick={() => setPaletteOpen(true)}>
+              <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              Jump to room <kbd>⌘K</kbd>
+            </button>
+          </div>
+          <ol className="hero-steps" aria-label="How HYPR works">
+            <li><strong>01</strong> Name your coin</li>
+            <li><strong>02</strong> Approve in your wallet</li>
+            <li><strong>03</strong> Open your live room</li>
+          </ol>
         </div>
-      </div>
-      <div className="tabs" role="tablist" aria-label="Sort rooms">
-        {tabs.map((item, index) => <button key={item} ref={(node) => { tabRefs.current[index] = node; }} id={`tab-${index}`} className={tab === item ? "selected" : ""} onClick={() => setTab(item)} onKeyDown={(event) => onTabKey(event, index)} role="tab" aria-selected={tab === item} aria-controls="discover-results" tabIndex={tab === item ? 0 : -1}>{item}</button>)}
-        <span className="tabs-count" aria-live="polite">{sorted.length} {sorted.length === 1 ? "room" : "rooms"}</span>
-      </div>
-      <div id="discover-results" className="token-grid" role="tabpanel" aria-labelledby={`tab-${tabs.indexOf(tab)}`}>
-        {sorted.map((token, index) => <TokenCard token={token} index={index} key={token.address} />)}
-      </div>
-      {sorted.length === 0 && (
-        <div className="empty-state">
-          {query ? <><strong>No rooms match “{query.trim()}”.</strong><button type="button" className="secondary-button" onClick={() => setQuery("")}>Clear search</button></> : <><strong>No rooms yet.</strong><a href="#launch" className="primary-button">Create the first one →</a></>}
+        {initialLaunches.length > 0 && <Constellation launches={initialLaunches} totalRooms={initialLaunches.length} />}
+      </section>
+    </div>
+    <Ticker launches={initialLaunches} />
+    <div className="page-shell">
+      <section className="signal-strip" aria-label="Network status">
+        <div><span className="signal-label">NETWORK</span><strong>{isDemoSource ? "Robinhood Chain · demo" : network.name}</strong></div>
+        <div><span className="signal-label">CHAIN ID</span><strong>{isDemoSource ? "—" : network.id}</strong></div>
+        <div><span className="signal-label">ROOMS INDEXED</span><strong>{initialLaunches.length.toLocaleString()}</strong></div>
+        <div><span className="signal-label">{isDemoSource ? "PEOPLE IN SAMPLE" : "PEOPLE IN ROOMS"}</span><strong>{isDemoSource ? <><span className="live-number" /> {peopleExploring.toLocaleString()}</> : "—"}</strong></div>
+      </section>
+      <div className="data-notice" role="status">{sourceLabel(source)}</div>
+
+      <section id="discover" className="discover-section">
+        <div className="section-heading">
+          <div><span className="eyebrow">THE SIGNAL BOARD</span><h2>Discover rooms</h2></div>
+          <p className="section-sub">Every coin opens a live room. Dive into one, or press <kbd>⌘K</kbd> to jump anywhere.</p>
         </div>
-      )}
-    </section>
-    <section id="rooms" className="rooms-callout">
-      <div><span className="eyebrow">NO EMPTY PLATFORM PROBLEM</span><h2>Every launch gets a room.</h2><p>Native HYPR launches create protocol state and a live community destination. Pons launches remain compatible through the clearly labeled discovery path.</p><a href="#launch" className="primary-button">Start yours →</a></div>
-      <div className="callout-orbit" aria-hidden="true"><span>chat</span><span>follow</span><span>share</span><strong>HYPE</strong></div>
-    </section>
-    <SiteFooter />
-  </div></main>;
+
+        <div className="discover-controls">
+          <div className="search-wrap">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <input ref={searchRef} type="search" aria-label="Search rooms by name, symbol, or address" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") setQuery(""); }} placeholder="Search rooms" />
+            {query ? <button type="button" className="search-clear" onClick={() => { setQuery(""); searchRef.current?.focus(); }} aria-label="Clear search">×</button> : <kbd aria-hidden="true">/</kbd>}
+          </div>
+          <div className="segmented" role="tablist" aria-label="Sort rooms" style={{ "--index": tabs.indexOf(tab), "--count": tabs.length } as React.CSSProperties}>
+            <span className="segmented-pill" aria-hidden="true" />
+            {tabs.map((item, index) => <button key={item} ref={(node) => { tabRefs.current[index] = node; }} id={`tab-${index}`} className={tab === item ? "selected" : ""} onClick={() => setTab(item)} onKeyDown={(event) => onTabKey(event, index)} role="tab" aria-selected={tab === item} aria-controls="discover-results" tabIndex={tab === item ? 0 : -1}>{item}</button>)}
+          </div>
+          <div className="view-toggle" role="group" aria-label="Layout">
+            <button type="button" aria-pressed={view === "grid"} onClick={() => setView("grid")} aria-label="Grid view">
+              <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2" /><rect x="13" y="3" width="8" height="8" rx="2" /><rect x="3" y="13" width="8" height="8" rx="2" /><rect x="13" y="13" width="8" height="8" rx="2" /></svg>
+            </button>
+            <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")} aria-label="List view">
+              <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4" width="18" height="4" rx="2" /><rect x="3" y="10" width="18" height="4" rx="2" /><rect x="3" y="16" width="18" height="4" rx="2" /></svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="filter-row">
+          {filters.map((key) => (
+            <button key={key} type="button" className={`filter-chip${filter === key ? " is-active" : ""}`} aria-pressed={filter === key} onClick={() => setFilter(key)}>
+              {filterLabels[key]} <span>{kindCounts[key]}</span>
+            </button>
+          ))}
+          <span className="tabs-count" aria-live="polite">{sorted.length} {sorted.length === 1 ? "room" : "rooms"}</span>
+        </div>
+
+        <div id="discover-results" ref={gridRef} role="tabpanel" aria-labelledby={`tab-${tabs.indexOf(tab)}`} onPointerMove={onGridPointer} key={`${tab}-${filter}-${view}`} className="discover-results">
+          {featured && <FeaturedRoom token={featured} />}
+          {view === "grid"
+            ? <div className="room-grid">{rest.map((token, index) => <RoomCard token={token} index={index + (featured ? 1 : 0)} key={token.address} />)}</div>
+            : <div className="room-list">{rest.map((token, index) => <RoomRow token={token} index={index} key={token.address} />)}</div>}
+        </div>
+        {sorted.length === 0 && (
+          <div className="empty-state">
+            {query ? <><strong>No rooms match “{query.trim()}”.</strong><button type="button" className="secondary-button" onClick={() => setQuery("")}>Clear search</button></> : <><strong>No rooms yet.</strong><a href="#launch" className="primary-button">Create the first one →</a></>}
+          </div>
+        )}
+      </section>
+
+      {children}
+
+      <section id="rooms" className="rooms-callout">
+        <div><span className="eyebrow">NO EMPTY PLATFORM PROBLEM</span><h2>Every launch gets a room.</h2><p>Native HYPR launches create protocol state and a live community destination. Pons launches remain compatible through the clearly labeled discovery path.</p><a href="#launch" className="primary-button">Start yours →</a></div>
+        <div className="callout-orbit" aria-hidden="true"><span>chat</span><span>follow</span><span>share</span><strong>HYPE</strong></div>
+      </section>
+      <SiteFooter />
+    </div>
+    <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} launches={initialLaunches} />
+  </main>;
 }

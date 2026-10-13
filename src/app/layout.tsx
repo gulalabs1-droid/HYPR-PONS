@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 import "./trade.css";
+import "./discover.css";
 import { NavigationProgress } from "@/components/navigation-progress";
 
 const sans = Manrope({ subsets: ["latin"], variable: "--font-sans", display: "swap" });

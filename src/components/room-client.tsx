@@ -12,6 +12,7 @@ import { Toast } from "./toast";
 import { getEthereum, isRobinhoodChainId, shortAddress } from "@/lib/wallet";
 import { formatCurveProgress } from "@/lib/curve-progress";
 import { formatEthExact, formatUsd } from "@/lib/format";
+import { roomHue } from "@/lib/room-display";
 
 function formatFeeBps(value?: string) {
   if (!value) return "—";
@@ -128,7 +129,7 @@ export function RoomClient({ token }: { token: Launch; source?: CombinedLaunchDa
   return (
     <main>
       <Header />
-      <div className="room-shell">
+      <div className="room-shell room-aura" style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
         <Link href="/" className="back-link">← Back to Discover</Link>
         <section className="room-header">
           <div className="room-token-identity">

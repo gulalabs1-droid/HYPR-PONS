@@ -33,9 +33,9 @@ test("the actual room component distinguishes pause, stop, unavailable status an
     await act(async () => tick!()); assert.match(text(), /Broadcast status unavailable/); assert.doesNotMatch(text(), /Broadcast stopped. Room still open/);
     await act(async () => tick!()); assert.match(text(), /Creator in the studio/); assert.doesNotMatch(text(), /Broadcast paused/);
     await act(async () => tick!()); assert.match(text(), /The creator is live/);
-    await act(async () => renderer!.root.findAllByType("button").find((button) => button.props.children === "Open room chat")!.props.onClick());
+    await act(async () => renderer!.root.findAllByType("button").find((button) => button.props["aria-label"] === "Open room chat")!.props.onClick());
     assert.equal(chatOpens, 1); assert.equal(mediaRequests, 0);
-    assert.match(text(), /Video replays are not saved by HYPR/);
+    assert.match(text(), /Video replay: not saved/);
     assert.equal(calls, statuses.length);
   } finally {
     await act(async () => renderer?.unmount());

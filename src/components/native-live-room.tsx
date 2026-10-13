@@ -22,7 +22,7 @@ function signedHostMessage(roomId: string, address: string, timestamp: number) {
   return ["HYPR native live host authorization", `Room: ${roomName}`, `Wallet: ${address.toLowerCase()}`, `Timestamp: ${timestamp}`].join("\n");
 }
 
-export function NativeLiveRoom({ token, onOpenChat, onShareRoom }: { token: Launch; onOpenChat?: () => void; onShareRoom?: () => void }) {
+export function NativeLiveRoom({ token, onOpenChat }: { token: Launch; onOpenChat?: () => void }) {
   const [status, setStatus] = useState<BroadcastStatus | null>(null);
   const [statusError, setStatusError] = useState(false);
   const [seenLive, setSeenLive] = useState(false);
@@ -138,20 +138,21 @@ export function NativeLiveRoom({ token, onOpenChat, onShareRoom }: { token: Laun
     stopPreview(); setShareVideo(false); setShareAudio(false); void refreshStatus();
   }, [refreshStatus, stopPreview]);
 
-  if (session) return <section aria-label="Broadcast player"><ConnectedRoom session={session} onLeave={leaveRoom} onError={setNotice} /><RoomContinuity onOpenChat={onOpenChat} onShareRoom={onShareRoom} />{notice && <div className="live-notice" role="alert">{notice}</div>}</section>;
+  if (session) return <section aria-label="Broadcast player"><ConnectedRoom session={session} onLeave={leaveRoom} onError={setNotice} /><RoomContinuity onOpenChat={onOpenChat} />{notice && <div className="live-notice" role="alert">{notice}</div>}</section>;
 
   const creatorConnected = wallet.account?.toLowerCase() === token.deployer.toLowerCase();
   const phase = publicBroadcastPhase(status, statusError, seenLive, lastExit);
   const copy = broadcastCopy(phase);
+  const phaseLabel = phase === "live" && status?.viewerCount !== undefined ? `LIVE · ${status.viewerCount} viewer${status.viewerCount === 1 ? "" : "s"}` : copy.label;
   return <section className="native-live-surface native-live-watch-first" aria-label="Broadcast player">
     <div className="live-viewport native-live-placeholder"><div className="native-live-mark"><span aria-hidden="true">H</span>
-      <span className="broadcast-phase-label">{copy.label}</span><strong>{copy.title}</strong>
+      <span className="broadcast-phase-label">{phaseLabel}</span><strong>{copy.title}</strong>
       <small>{copy.detail}</small>
       {status?.live && <button className="primary-button live-action" onClick={joinViewer} disabled={busy}>{busy ? "Joining…" : "Watch live →"}</button>}
       {phase === "unavailable" && <button className="secondary-button" onClick={() => void refreshStatus()}>Retry broadcast status</button>}
     </div></div>
     <div className="native-live-copy native-live-viewer-footer">
-      <span className="live-state" role="status">{phase === "live" ? `LIVE · ${status?.viewerCount ?? 0} viewer${status?.viewerCount === 1 ? "" : "s"}` : copy.label}</span>
+      <span className="live-state broadcast-status-announcement" role="status">{phaseLabel}</span>
       {!studioOpen && (creatorConnected ? <button className="secondary-button" onClick={() => setStudioOpen(true)} disabled={!status?.configured}>Open creator studio</button> : <details className="creator-entry"><summary>Are you the creator?</summary><p>Broadcasting requires the wallet that created this room: {token.deployer.slice(0, 6)}…{token.deployer.slice(-4)}.</p><button className="secondary-button" onClick={() => setStudioOpen(true)} disabled={!status?.configured}>Open creator studio</button></details>)}
       {studioOpen && <div className="live-studio-card"><strong>Creator studio · not live yet</strong>
         <ol className="studio-steps"><li>Choose your devices.</li><li>Preview privately on this device.</li><li>Sign with your creator wallet, then broadcast.</li></ol>
@@ -166,6 +167,6 @@ export function NativeLiveRoom({ token, onOpenChat, onShareRoom }: { token: Laun
       </div>}
       {notice && <div className="live-notice" role="status">{notice}</div>}
     </div>
-    <RoomContinuity onOpenChat={onOpenChat} onShareRoom={onShareRoom} />
+    <RoomContinuity onOpenChat={onOpenChat} />
   </section>;
 }

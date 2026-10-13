@@ -58,7 +58,7 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
       <p className="room-safety-note">{isNative ? "Testnet preview · Free test assets, not real money. Watch without a wallet." : token.dataStatus === "demo" ? "Demo room · Sample launch data, not a verified live market." : "Indexed Pons room · Trading availability depends on the launch’s network."}</p>
       {liveData.error && <p className="live-notice" role="status">{liveData.error} Last successful data is kept visible; it may be out of date.</p>}
       <div className="room-experience" ref={sectionsRef}>
-        <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} onShareRoom={() => void share()} /></div>
+        <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} /></div>
         <nav className="room-section-nav" aria-label="Room sections">
           {(Object.keys(sectionLabels) as RoomSection[]).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={`room-${key}`} onClick={() => chooseSection(key)}>{sectionLabels[key]}{key === "trade" && <small>${token.symbol}</small>}</button>)}
         </nav>

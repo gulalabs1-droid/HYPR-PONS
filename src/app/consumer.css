@@ -22,6 +22,14 @@
 .native-live-viewer-footer .live-state { font: 13px/1.5 var(--sans); letter-spacing: 0; }
 .native-live-watch-first .native-live-mark small { font: 14px/1.6 var(--sans); max-width: 340px; }
 .native-live-watch-first .native-live-mark > span { width: 48px; height: 48px; font-size: 24px; border-radius: 12px; }
+.native-live-watch-first .native-live-mark > .broadcast-phase-label { width: auto; height: auto; font: 600 11px/1.5 var(--mono); letter-spacing: .04em; border: 0; border-radius: 0; color: var(--lime); }
+.room-continuity { display: grid; gap: 12px; padding: 18px 20px; border-top: 1px solid var(--line); background: var(--surface); border-radius: 0 0 var(--radius) var(--radius); }
+.room-continuity strong { font-size: 14px; color: var(--text-soft); }
+.room-continuity p, .studio-retention-note, .room-after-live p { margin-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.room-continuity-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
+.room-continuity-actions .secondary-button { min-height: 44px; padding: 10px 16px; font-size: 13px; }
+.room-after-live { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 16px; }
+.room-after-live h3 { font-size: 16px; }
 .creator-entry { width: 100%; }
 .creator-entry summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--text-soft); font-size: 14px; font-weight: 600; }
 .creator-entry summary::after { content: "+"; margin-left: auto; }
@@ -127,6 +135,10 @@
   .native-live-watch-first .live-viewport { min-height: 190px; }
   .native-live-watch-first .native-live-mark { gap: 10px; padding: 20px; }
   .native-live-watch-first .native-live-mark > span { display: none; }
+  .native-live-watch-first .native-live-mark > .broadcast-phase-label { display: block; }
+  .native-live-watch-first .native-live-mark strong { font-size: 22px; }
+  .native-live-watch-first .native-live-mark small { font-size: 13px; }
+  .room-continuity { padding: 16px; }
   .native-live-viewer-footer { padding: 12px 16px; gap: 4px; }
   .native-live-viewer-footer .live-state { font-size: 12px; }
   .room-experience .chat-panel { min-height: 380px; padding: 18px; }

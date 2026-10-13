@@ -8,6 +8,8 @@ import { creatorAccessProblem, streamingErrorMessage } from "@/lib/creator-acces
 import type { Session } from "./native-live-connected";
 import { useWalletStatus } from "@/lib/use-wallet-status";
 import { OPEN_WALLET_EVENT } from "@/lib/wallet-discovery";
+import { broadcastCopy, broadcastExitNotice, publicBroadcastPhase, type BroadcastExit, type BroadcastStatus } from "@/lib/broadcast-lifecycle";
+import { RoomContinuity } from "./room-continuity";
 
 // LiveKit is large; load it only once a viewer joins or a creator starts broadcasting.
 const ConnectedRoom = dynamic(() => import("./native-live-connected-styled"), {
@@ -15,16 +17,16 @@ const ConnectedRoom = dynamic(() => import("./native-live-connected-styled"), {
   loading: () => <div className="native-live-connected"><div className="native-live-toolbar"><span><span className="status-dot inactive" /> CONNECTING TO YOUR ROOM…</span></div></div>,
 });
 
-type Status = { configured: boolean; live: boolean; viewerCount?: number; hostConnected?: boolean; checkedAt?: string };
-
 function signedHostMessage(roomId: string, address: string, timestamp: number) {
   const roomName = `hypr-${roomId.toLowerCase()}`;
   return ["HYPR native live host authorization", `Room: ${roomName}`, `Wallet: ${address.toLowerCase()}`, `Timestamp: ${timestamp}`].join("\n");
 }
 
-export function NativeLiveRoom({ token }: { token: Launch }) {
-  const [status, setStatus] = useState<Status | null>(null);
+export function NativeLiveRoom({ token, onOpenChat, onShareRoom }: { token: Launch; onOpenChat?: () => void; onShareRoom?: () => void }) {
+  const [status, setStatus] = useState<BroadcastStatus | null>(null);
   const [statusError, setStatusError] = useState(false);
+  const [seenLive, setSeenLive] = useState(false);
+  const [lastExit, setLastExit] = useState<BroadcastExit | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [studioOpen, setStudioOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -37,6 +39,8 @@ export function NativeLiveRoom({ token }: { token: Launch }) {
   const wallet = useWalletStatus();
   const mounted = useRef(true);
   const statusPending = useRef(false);
+  const statusGeneration = useRef(0);
+  const sawCurrentMedia = useRef(false);
 
   const stopPreview = useCallback(() => {
     previewStream.current?.getTracks().forEach((track) => track.stop());
@@ -63,12 +67,20 @@ export function NativeLiveRoom({ token }: { token: Launch }) {
   const refreshStatus = useCallback(async () => {
     if (statusPending.current) return;
     statusPending.current = true;
+    const generation = statusGeneration.current;
     try {
       const response = await fetch(`/api/live/status?roomId=${encodeURIComponent(token.address)}`, { cache: "no-store", signal: AbortSignal.timeout(8000) });
-      const next = await response.json() as Status;
-      if (!response.ok) throw new Error("Live status unavailable");
-      if (mounted.current) { setStatus(next); setStatusError(false); }
-    } catch { if (mounted.current) { setStatus(null); setStatusError(true); } }
+      const next = await response.json() as BroadcastStatus;
+      if (!response.ok || typeof next?.configured !== "boolean" || typeof next?.live !== "boolean") throw new Error("Live status unavailable");
+      if (mounted.current && generation === statusGeneration.current) {
+        setStatus(next); setStatusError(false);
+        if (next.live) { sawCurrentMedia.current = true; setSeenLive(true); setLastExit(null); }
+        else if (!next.hostConnected) {
+          if (sawCurrentMedia.current) setLastExit((current) => current === "host-ended" ? current : "creator-offline");
+          sawCurrentMedia.current = false; setSeenLive(false);
+        }
+      }
+    } catch { if (mounted.current && generation === statusGeneration.current) { setStatus(null); setStatusError(true); } }
     finally { statusPending.current = false; }
   }, [token.address]);
 
@@ -85,7 +97,8 @@ export function NativeLiveRoom({ token }: { token: Launch }) {
       const response = await fetch("/api/live/token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomId: token.address, role: "viewer" }) });
       const data = await response.json() as Session & { error?: string };
       if (!response.ok) throw new Error(data.error || "Viewer access is unavailable.");
-      setSession(data);
+      if (!mounted.current) return;
+      setLastExit(null); sawCurrentMedia.current = true; setSeenLive(true); setSession(data);
     } catch (error) { setNotice(error instanceof Error ? error.message : "Viewer access is unavailable."); }
     finally { setBusy(false); }
   }
@@ -110,29 +123,40 @@ export function NativeLiveRoom({ token }: { token: Launch }) {
       const data = await response.json() as Session & { error?: string };
       if (!response.ok) throw new Error(data.error || "The creator wallet could not be authorized.");
       if (!mounted.current) return;
-      stopPreview(); setSession({ ...data, video: shareVideo, audio: shareAudio }); setStudioOpen(false); await refreshStatus();
+      stopPreview(); setLastExit(null); sawCurrentMedia.current = false; setSeenLive(false); setSession({ ...data, video: shareVideo, audio: shareAudio }); setStudioOpen(false); await refreshStatus();
     } catch (error) { setNotice(streamingErrorMessage(error)); }
     finally { setBusy(false); }
   }
 
-  function leaveRoom() { setSession(null); setStudioOpen(false); void refreshStatus(); }
+  const leaveRoom = useCallback((reason: BroadcastExit) => {
+    statusGeneration.current++;
+    setLastExit(reason); setNotice(broadcastExitNotice(reason)); setSession(null); setStudioOpen(false);
+    if (reason === "host-ended" || reason === "creator-offline") {
+      sawCurrentMedia.current = false; setSeenLive(false);
+      setStatus((current) => current ? { ...current, live: false, hostConnected: false, viewerCount: undefined } : null);
+    }
+    stopPreview(); setShareVideo(false); setShareAudio(false); void refreshStatus();
+  }, [refreshStatus, stopPreview]);
 
-  if (session) return <section><ConnectedRoom session={session} onLeave={leaveRoom} onError={setNotice} />{notice && <div className="live-notice" role="alert">{notice}</div>}</section>;
+  if (session) return <section aria-label="Broadcast player"><ConnectedRoom session={session} onLeave={leaveRoom} onError={setNotice} /><RoomContinuity onOpenChat={onOpenChat} onShareRoom={onShareRoom} />{notice && <div className="live-notice" role="alert">{notice}</div>}</section>;
 
   const creatorConnected = wallet.account?.toLowerCase() === token.deployer.toLowerCase();
+  const phase = publicBroadcastPhase(status, statusError, seenLive, lastExit);
+  const copy = broadcastCopy(phase);
   return <section className="native-live-surface native-live-watch-first" aria-label="Broadcast player">
     <div className="live-viewport native-live-placeholder"><div className="native-live-mark"><span aria-hidden="true">H</span>
-      <strong>{statusError ? "Broadcast status unavailable" : !status ? "Checking for a broadcast…" : status.live ? "The creator is live" : status.hostConnected ? "The creator is preparing a broadcast" : "Creator offline"}</strong>
-      <small>{status?.live ? "Watch here, without a wallet or token purchase." : "You can still chat and explore the room. Your camera and microphone stay off."}</small>
+      <span className="broadcast-phase-label">{copy.label}</span><strong>{copy.title}</strong>
+      <small>{copy.detail}</small>
       {status?.live && <button className="primary-button live-action" onClick={joinViewer} disabled={busy}>{busy ? "Joining…" : "Watch live →"}</button>}
-      {statusError && <button className="secondary-button" onClick={() => void refreshStatus()}>Retry broadcast status</button>}
+      {phase === "unavailable" && <button className="secondary-button" onClick={() => void refreshStatus()}>Retry broadcast status</button>}
     </div></div>
     <div className="native-live-copy native-live-viewer-footer">
-      <span className="live-state" role="status">{statusError ? "Rechecking connection…" : status?.live ? `LIVE · ${status.viewerCount ?? 0} viewer${status.viewerCount === 1 ? "" : "s"}` : status?.configured ? "Watching never requests your camera or microphone." : !status ? "Checking streaming availability…" : "Streaming is unavailable right now."}</span>
+      <span className="live-state" role="status">{phase === "live" ? `LIVE · ${status?.viewerCount ?? 0} viewer${status?.viewerCount === 1 ? "" : "s"}` : copy.label}</span>
       {!studioOpen && (creatorConnected ? <button className="secondary-button" onClick={() => setStudioOpen(true)} disabled={!status?.configured}>Open creator studio</button> : <details className="creator-entry"><summary>Are you the creator?</summary><p>Broadcasting requires the wallet that created this room: {token.deployer.slice(0, 6)}…{token.deployer.slice(-4)}.</p><button className="secondary-button" onClick={() => setStudioOpen(true)} disabled={!status?.configured}>Open creator studio</button></details>)}
       {studioOpen && <div className="live-studio-card"><strong>Creator studio · not live yet</strong>
         <ol className="studio-steps"><li>Choose your devices.</li><li>Preview privately on this device.</li><li>Sign with your creator wallet, then broadcast.</li></ol>
         <span>Preview requests access but does not publish or record. “Start broadcast” shares your selected devices live through LiveKit. Authorization is a free signature, not a transaction.</span>
+        <p className="studio-retention-note">Live-only session · no automatic recording or replay. Ending the broadcast stops this session, not your community room. Reopen this same room for your next broadcast.</p>
         <div className="studio-device-options"><label><input type="checkbox" checked={shareVideo} onChange={(event) => setShareVideo(event.target.checked)} disabled={busy} /> Camera</label><label><input type="checkbox" checked={shareAudio} onChange={(event) => setShareAudio(event.target.checked)} disabled={busy} /> Microphone</label></div>
         <small>{!shareVideo && !shareAudio ? "Both devices are off. Choose at least one to preview; microphone-only is supported." : "You are not live. Preview first, then choose whether to broadcast."}</small>
         {preview && <div className="studio-preview">{shareVideo ? <video ref={previewVideo} autoPlay playsInline muted aria-label="Private camera preview" /> : <strong>Microphone ready · private preview</strong>}<span>Only on this device · not broadcasting</span><button className="secondary-button" onClick={stopPreview} disabled={busy}>Stop preview</button></div>}
@@ -142,5 +166,6 @@ export function NativeLiveRoom({ token }: { token: Launch }) {
       </div>}
       {notice && <div className="live-notice" role="status">{notice}</div>}
     </div>
+    <RoomContinuity onOpenChat={onOpenChat} onShareRoom={onShareRoom} />
   </section>;
 }

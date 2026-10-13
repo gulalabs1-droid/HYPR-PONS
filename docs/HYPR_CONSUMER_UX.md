@@ -23,6 +23,7 @@ HYPR remains a testnet MVP. These improvements do not imply mainnet readiness, a
 
 ## Creator journey and privacy
 
+- [Broadcast lifecycle](HYPR_BROADCAST_LIFECYCLE.md): the media session is temporary; saved chat/follows and the token-address community destination remain. Offline, paused, reconnecting and stopped states are distinct. No automatic recording or replay is enabled.
 - Creator controls are separated from the watcher experience. The indexed creator is still checked on the server before issuing a publishing token.
 - Camera and microphone start OFF. Opening the studio makes no media request.
 - A user-initiated private device preview requests permission but does not publish or record. Preview tracks stop when preferences change, the preview/studio closes, the page unmounts, or broadcasting starts.

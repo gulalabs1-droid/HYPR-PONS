@@ -83,7 +83,7 @@ export function CommunityPanel({ roomId, creator }: { roomId: string; creator: s
   }
 
   return <div className="chat-panel">
-    <div className="panel-heading"><div><span className="eyebrow">COMMUNITY</span><h2>Room chat</h2></div><span className="chat-count">{state ? `${state.followers} follower${state.followers === 1 ? "" : "s"}` : "Checking…"}</span></div>
+    <div className="panel-heading"><div><span className="eyebrow">COMMUNITY · CHAT CONTINUES</span><h2>Room chat</h2></div><span className="chat-count">{state ? `${state.followers} follower${state.followers === 1 ? "" : "s"}` : "Checking…"}</span></div>
     <button className="secondary-button" disabled={busy || !state} aria-pressed={state?.following || false} onClick={() => void update("follow", { following: !state?.following })}>{state?.following ? "✓ Following" : "Follow room"}</button>
     {state?.wallet ? <p className="accounting-copy">Signed in as {shortAddress(state.wallet)} <button className="claim-link" disabled={busy} onClick={async () => { await fetch("/api/community/session", { method: "DELETE" }); await refresh(); }}>Sign out</button></p> : <p className="accounting-copy">One free wallet signature enables shared chat and follows. No transaction or token approval.</p>}
     <div className="chat-messages" role="log" aria-label="Shared room messages" aria-live="polite" aria-relevant="additions">

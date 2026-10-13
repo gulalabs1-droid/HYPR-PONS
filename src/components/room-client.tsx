@@ -58,7 +58,7 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
       <p className="room-safety-note">{isNative ? "Testnet preview · Free test assets, not real money. Watch without a wallet." : token.dataStatus === "demo" ? "Demo room · Sample launch data, not a verified live market." : "Indexed Pons room · Trading availability depends on the launch’s network."}</p>
       {liveData.error && <p className="live-notice" role="status">{liveData.error} Last successful data is kept visible; it may be out of date.</p>}
       <div className="room-experience" ref={sectionsRef}>
-        <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} /></div>
+        <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} onShareRoom={() => void share()} /></div>
         <nav className="room-section-nav" aria-label="Room sections">
           {(Object.keys(sectionLabels) as RoomSection[]).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={`room-${key}`} onClick={() => chooseSection(key)}>{sectionLabels[key]}{key === "trade" && <small>${token.symbol}</small>}</button>)}
         </nav>
@@ -70,6 +70,7 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
           <div className="activity-panel room-about-card"><span className="eyebrow">ABOUT ${token.symbol}</span><h2>A coin and a community room</h2>
             <p className="accounting-copy">{token.description}</p>
             <p className="accounting-copy">{isNative ? "This ERC-20 token belongs to this launch. It is not company ownership, a promise of income, or a requirement to watch. Only the wallet that created it can broadcast in this room." : "This launch is indexed from Pons. A room listing does not endorse the token or guarantee its value."}</p>
+            {isNative && <div className="room-after-live"><h3>What happens after a broadcast?</h3><p>The audio/video session stops, but this same room link, saved chat, follows and token remain. The creator can broadcast here again. Trading depends on the contract’s status, not whether someone is streaming.</p><p>HYPR does not automatically record broadcasts or save video replays. Saved messages are different from saved video.</p></div>}
             <div className="room-contract-links"><a href={`${explorer}/address/${token.address}`} target="_blank" rel="noreferrer">Token {shortAddress(token.address)} ↗</a><a href={`${explorer}/address/${token.deployer}`} target="_blank" rel="noreferrer">Creator {shortAddress(token.deployer)} ↗</a>{token.launchTxHash && <a href={`${explorer}/tx/${token.launchTxHash}`} target="_blank" rel="noreferrer">Creation transaction ↗</a>}</div>
           </div>
           {isNative && <details className="room-details"><summary>Trading details <span>Price rules, fees & live contract data</span></summary>

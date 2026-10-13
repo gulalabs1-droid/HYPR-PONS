@@ -8,7 +8,7 @@ import { getHyprClientConfig } from "@/lib/hypr-client-config";
 import { classifyTransactionReceipt, waitForTransactionReceipt } from "@/lib/transaction";
 import { ROBINHOOD_TESTNET } from "@/lib/integrations/pons/constants";
 import { minimumTradeOutput, reviewIsCurrent, pendingTradeKey, parsePendingTrade } from "@/lib/trade-review";
-import { OPEN_WALLET_EVENT, walletErrorMessage } from "@/lib/wallet-discovery";
+import { OPEN_WALLET_EVENT, walletErrorMessage, walletSessionDisconnected } from "@/lib/wallet-discovery";
 import { useWalletStatus } from "@/lib/use-wallet-status";
 import { Modal } from "./modal";
 
@@ -52,6 +52,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
   const wallet = useWalletStatus();
   const quoteVersion = useRef(0);
   const gasVersion = useRef(0);
+  const pendingRef = useRef(false);
   const invalidateQuote = useCallback(() => { quoteVersion.current++; }, []);
 
   const parsedAmount = useMemo(() => {
@@ -118,12 +119,12 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
   }, [pending, readQuote]);
 
   useEffect(() => {
-    if (pending) return;
+    if (pendingRef.current) return;
     let saved = null;
     try { if (wallet.account) saved = parsePendingTrade(window.localStorage?.getItem(pendingTradeKey(curveAddress, wallet.account)) || null); } catch { /* Browsers may disable storage. */ }
     setUnresolvedHash(saved?.hash || null);
     if (saved) { setHashes([saved.hash]); setStatus(`A previous ${saved.kind === "approval" ? "token allowance" : "trade"} needs a receipt check. Check it below before sending another.`); }
-  }, [curveAddress, wallet.account, pending]);
+  }, [curveAddress, wallet.account]);
 
   function savePending(hash: string, from: string, kind: "approval" | "trade") {
     setUnresolvedHash(hash);
@@ -156,12 +157,12 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
   async function trade() {
     const provider = getEthereum();
     if (!provider || !wallet.account) { window.dispatchEvent(new Event(OPEN_WALLET_EVENT)); return; }
-    if (pending || unresolvedHash) return;
+    if (pendingRef.current || unresolvedHash) return;
     if (!review || !reviewIsCurrent(review, parsedAmount, direction) || parsedAmount <= 0n) {
       setStatus("This review has expired. Close it and review the latest price before confirming.");
       return;
     }
-    setPending(true);
+    pendingRef.current = true; setPending(true);
     setStatus("");
     let tradingAccount: string | null = null;
     try {
@@ -174,7 +175,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
       if (from.toLowerCase() !== wallet.account.toLowerCase()) throw new Error("Your wallet account changed. Close this review and check the new account before trying again.");
       async function checkSigner() {
         const currentAccounts = await provider!.request({ method: "eth_accounts" }) as string[];
-        if (getEthereum() !== provider || currentAccounts[0]?.toLowerCase() !== from.toLowerCase() || Number(await provider!.request({ method: "eth_chainId" })) !== EXPECTED_CHAIN_ID) throw new Error("Your wallet or network changed during the checks. Reconnect on Robinhood testnet and review again.");
+        if (walletSessionDisconnected() || getEthereum() !== provider || currentAccounts[0]?.toLowerCase() !== from.toLowerCase() || Number(await provider!.request({ method: "eth_chainId" })) !== EXPECTED_CHAIN_ID) throw new Error("Your wallet or network changed during the checks. Reconnect on Robinhood testnet and review again.");
       }
       const fresh = await readQuote();
       const minimum = minimumTradeOutput(review.output);
@@ -220,7 +221,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
       if (tradingAccount && /reverted/i.test(error instanceof Error ? error.message : "")) clearPending(tradingAccount);
       setStatus(walletErrorMessage(error));
     } finally {
-      setPending(false);
+      pendingRef.current = false; setPending(false);
     }
   }
 
@@ -272,7 +273,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
           <div><dt>{direction === "buy" ? "You pay" : "You sell"}</dt><dd>{formatEther(review.input)} {direction === "buy" ? "test ETH" : tokenSymbol}</dd></div>
           <div><dt>You receive (estimated)</dt><dd>{formatEther(review.output)} {direction === "buy" ? tokenSymbol : "test ETH"}</dd></div>
           <div><dt>Minimum you receive (2% limit)</dt><dd>{formatEther(minimumTradeOutput(review.output))} {direction === "buy" ? tokenSymbol : "test ETH"}</dd></div>
-          <div><dt>Trading fee · included</dt><dd>{formatEther(review.fee)} test ETH</dd></div>
+          <div><dt>Trading fee (1.25%) · included</dt><dd>{formatEther(review.fee)} test ETH</dd></div>
           <div><dt>Network fee · extra</dt><dd>{gasEstimate !== null ? `About ${formatEther(gasEstimate)} test ETH; wallet confirms final fee` : "Your wallet shows the fee before approval"}</dd></div>
           <div><dt>Wallet</dt><dd>{wallet.account ? shortAddress(wallet.account) : "Not connected"}</dd></div>
           <div><dt>Network</dt><dd>Robinhood Chain testnet (46630)</dd></div>
@@ -281,6 +282,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
         {status && <p className="live-notice" role="status">{status}</p>}
         {hashes.map((hash, index) => <a className="transaction-link" key={hash} href={`${hyprClientConfig.explorerUrl}/tx/${hash}`} target="_blank" rel="noreferrer">Transaction {index + 1} ↗</a>)}
         <button className="primary-button" disabled={pending || Boolean(unresolvedHash)} onClick={() => void trade()}>{pending ? "Check your wallet…" : !wallet.account ? "Connect wallet to continue" : wallet.chainId !== EXPECTED_CHAIN_ID ? "Switch to testnet & continue" : "Confirm in wallet"}</button>
+        <button className="secondary-button" disabled={pending || Boolean(unresolvedHash)} onClick={async () => { const fresh = await readQuote(); if (fresh) { setReview({ ...fresh, reviewedAt: Date.now() }); setStatus("Quote refreshed. Check the updated amounts before confirming."); } }}>Refresh review quote</button>
         <button className="secondary-button" disabled={pending} onClick={() => setReview(null)}>Back to amount</button>
       </Modal>}
     </section>

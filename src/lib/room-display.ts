@@ -34,8 +34,8 @@ export function roomMetrics(token: Launch): RoomMetric[] {
   const kind = roomKind(token);
   if (kind === "native") {
     return [
-      { label: "CURVE", value: formatCurveProgress(token.nativeRealQuoteReserve, token.nativeGraduationThreshold, token.curveProgressBps, token.curvePhase) },
-      { label: "RESERVE", value: formatEthCompact(token.nativeRealQuoteReserve) },
+      { label: "VIEWERS", value: token.viewerCount === undefined ? "—" : token.viewerCount.toLocaleString() },
+      { label: "TRADE RESERVE", value: formatEthCompact(token.nativeRealQuoteReserve) },
       { label: "RECENT TRADES", value: token.nativeTradeCount === undefined ? "—" : token.nativeTradeCount.toLocaleString() },
     ];
   }
@@ -58,7 +58,7 @@ export function roomMeter(token: Launch): { label: string; percent: number; text
   const kind = roomKind(token);
   if (kind === "native") {
     const percent = roomCurvePercent(token);
-    return { label: "Graduation", percent, text: formatCurveProgress(token.nativeRealQuoteReserve, token.nativeGraduationThreshold, token.curveProgressBps, token.curvePhase) };
+    return { label: "Progress to liquidity pool", percent, text: formatCurveProgress(token.nativeRealQuoteReserve, token.nativeGraduationThreshold, token.curveProgressBps, token.curvePhase) };
   }
   if (kind === "sample") return { label: "HYPE", percent: Math.min(100, token.hype), text: `${token.hype}/100` };
   return null;
@@ -66,7 +66,7 @@ export function roomMeter(token: Launch): { label: string; percent: number; text
 
 export function roomTickerValue(token: Launch): RoomMetric {
   const kind = roomKind(token);
-  if (kind === "native") return { label: "curve", value: roomMetrics(token)[0].value };
+  if (kind === "native") return { label: "to pool", value: formatCurveProgress(token.nativeRealQuoteReserve, token.nativeGraduationThreshold, token.curveProgressBps, token.curvePhase) };
   if (kind === "sample") return roomMetrics(token)[2];
   return { label: "swaps", value: token.ponsTradeCount === undefined ? "—" : token.ponsTradeCount.toLocaleString() };
 }

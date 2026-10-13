@@ -1,0 +1,145 @@
+/* Watch-first rooms and explicit wallet/trade flows. */
+.room-page .room-shell { padding-top: 16px; }
+.room-header-compact { align-items: center; padding: 16px 0 12px; gap: 16px; border-bottom: 0; }
+.room-header-compact .room-token-identity { align-items: center; gap: 14px; min-width: 0; }
+.room-header-compact .room-token-identity > div { min-width: 0; }
+.room-header-compact .room-logo { width: 52px; height: 52px; border-radius: 14px; font-size: 26px; }
+.room-header-compact h1 { margin-top: 3px; font-size: clamp(22px, 2.8vw, 34px); line-height: 1.2; overflow-wrap: anywhere; }
+.room-header-compact h1 span { display: inline; margin-left: 8px; font-size: 16px; color: var(--lime); background: none; -webkit-text-fill-color: currentColor; }
+.room-header-compact > button { flex: 0 0 auto; }
+.room-safety-note { color: var(--amber); font-size: 13px; line-height: 1.5; padding-bottom: 16px; }
+.room-experience { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 390px); grid-template-areas: "watch chat" "about trade"; gap: 18px; align-items: start; }
+.room-experience > * { min-width: 0; }
+.room-watch { grid-area: watch; }
+.room-chat-section { grid-area: chat; }
+.room-trade-section { grid-area: trade; }
+.room-about-section { grid-area: about; display: grid; gap: 16px; }
+.room-section-nav { display: none; }
+.room-experience .native-live-surface, .room-experience .native-live-connected, .room-experience .trade-panel { margin-top: 0; }
+.native-live-watch-first { display: flex; flex-direction: column; min-height: 0; }
+.native-live-watch-first .live-viewport { border: 0; aspect-ratio: 16 / 9; min-height: 240px; }
+.native-live-viewer-footer { padding: 16px 20px; gap: 12px; }
+.native-live-viewer-footer .live-state { font: 13px/1.5 var(--sans); letter-spacing: 0; }
+.native-live-watch-first .native-live-mark small { font: 14px/1.6 var(--sans); max-width: 340px; }
+.native-live-watch-first .native-live-mark > span { width: 48px; height: 48px; font-size: 24px; border-radius: 12px; }
+.creator-entry { width: 100%; }
+.creator-entry summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--text-soft); font-size: 14px; font-weight: 600; }
+.creator-entry summary::after { content: "+"; margin-left: auto; }
+.creator-entry[open] summary::after { content: "−"; }
+.creator-entry p { padding: 4px 0 14px; max-width: none; }
+.room-experience .chat-panel { min-height: 420px; padding: 20px; }
+.room-experience .chat-messages { max-height: 270px; min-height: 80px; padding: 20px 0; }
+.room-experience .chat-footnote { font: 12px/1.6 var(--sans); }
+.room-experience .trade-panel { padding: 22px; }
+.room-experience .trade-panel .panel-heading { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+.room-experience .trade-panel .panel-heading h2 { font-size: 22px; overflow-wrap: anywhere; }
+.room-experience .trade-form { grid-template-columns: 1fr; }
+.trade-tabs button { min-height: 44px; }
+.trade-presets button { min-height: 44px; font: 600 13px var(--sans); }
+.trade-quote span, .trade-quote small { font: 13px/1.5 var(--sans); }
+.trade-quote strong { font-size: 17px; }
+.trade-form label { font-size: 14px; }
+.trade-form .claim-link { justify-self: start; }
+.trade-fee-note { font-size: 13px; line-height: 1.6; color: var(--text-soft); margin-top: 12px; }
+.transaction-link { display: block; min-height: 44px; padding: 12px 0; color: var(--lime); font-size: 13px; overflow-wrap: anywhere; }
+.room-details { border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.room-details > summary { padding: 20px; min-height: 64px; cursor: pointer; font-size: 16px; font-weight: 700; }
+.room-details > summary span { display: block; margin-top: 6px; font-size: 13px; font-weight: 400; color: var(--muted); }
+.room-details-body { padding: 0 22px 22px; }
+.room-details-body h3 { font-size: 17px; margin: 22px 0 10px; }
+.room-details-body p { font-size: 14px; line-height: 1.7; color: var(--muted); }
+.room-progress-value { display: block; font: 600 28px var(--mono); color: var(--lime); margin: 12px 0; }
+.room-accounting-list, .trade-review-rows { margin: 20px 0; }
+.room-accounting-list > div, .trade-review-rows > div { display: flex; justify-content: space-between; gap: 18px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.room-accounting-list dt, .trade-review-rows dt { color: var(--muted); font-size: 14px; line-height: 1.5; }
+.room-accounting-list dd, .trade-review-rows dd { margin: 0; text-align: right; font-size: 14px; line-height: 1.5; max-width: 55%; overflow-wrap: anywhere; }
+.room-contract-links { display: flex; gap: 6px 18px; flex-wrap: wrap; margin-top: 16px; }
+.room-contract-links a { display: inline-flex; align-items: center; min-height: 44px; color: var(--lime); font-size: 13px; }
+.live-studio-card { max-width: none; width: 100%; }
+.live-studio-card small { color: var(--text-soft); font-size: 13px; line-height: 1.5; }
+.studio-steps { margin: 0; padding-left: 22px; color: var(--text-soft); font-size: 14px; line-height: 1.8; }
+.studio-device-options { display: flex; flex-wrap: wrap; gap: 12px; width: 100%; }
+.studio-device-options label { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 10px 14px; border: 1px solid var(--line-strong); border-radius: 10px; font-size: 15px; }
+.studio-device-options input { width: 20px; height: 20px; accent-color: var(--lime); }
+.studio-preview { display: grid; gap: 12px; width: 100%; padding: 12px; background: var(--bg); border-radius: 10px; }
+.studio-preview video { width: 100%; max-height: 320px; border-radius: 8px; object-fit: contain; }
+.studio-preview > span { font-size: 13px; }
+.native-live-connected { min-height: 0; }
+.native-live-connected .lk-room-container { min-height: 0; }
+.hypr-broadcast-stage { min-height: 220px; aspect-ratio: 16 / 9; }
+.live-control-button { min-height: 44px; font: 700 14px var(--sans); }
+.native-live-toolbar { font: 13px/1.5 var(--sans); letter-spacing: 0; }
+.hypr-broadcast-stage .lk-participant-tile { min-height: 0; }
+.wallet-account-panel { position: absolute; right: 0; top: calc(100% + 12px); width: min(340px, calc(100vw - 32px)); padding: 20px; display: grid; gap: 12px; background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: 0 16px 50px #0009; }
+.header-actions { position: relative; }
+.wallet-full-address { overflow-wrap: anywhere; color: var(--text-soft); font-size: 13px; line-height: 1.6; }
+.wallet-network-warning { color: var(--amber); font-size: 14px; line-height: 1.5; }
+.wallet-banner .wallet-switch { width: auto; height: auto; min-height: 44px; font-size: 13px; font-weight: 700; line-height: 1.4; padding: 8px; border: 1px solid var(--amber-line); }
+.wallet-banner > button:not(.wallet-switch), .toast-close, .search-clear { min-width: 44px; min-height: 44px; }
+.main-nav a, .site-footer-links a { min-height: 44px; }
+.hypr-dialog { color: var(--text); background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 18px; width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); padding: 24px; box-shadow: 0 24px 80px #000b; overflow-y: auto; overscroll-behavior: contain; }
+.hypr-dialog::backdrop { background: #050608b8; backdrop-filter: blur(5px); }
+.dialog-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.dialog-heading h2 { font-size: 24px; letter-spacing: -.03em; }
+.dialog-close { flex: 0 0 auto; width: 44px; height: 44px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface-3); color: var(--text-soft); font-size: 24px; }
+.dialog-copy { font-size: 14px; line-height: 1.7; color: var(--text-soft); margin: 16px 0; }
+.hypr-dialog > .primary-button, .hypr-dialog > .secondary-button { width: 100%; margin-top: 12px; }
+.wallet-choices { display: grid; gap: 10px; margin-top: 16px; }
+.wallet-choices button { justify-content: space-between; font-size: 15px; white-space: normal; text-align: left; }
+.wallet-help { padding: 18px; background: var(--bg); border-radius: 12px; }
+.wallet-help p { color: var(--text-soft); font-size: 14px; line-height: 1.6; margin: 12px 0; }
+.wallet-help button { white-space: normal; text-align: left; }
+.chat-form button { width: 44px; height: 44px; }
+.message time { color: var(--muted); }
+.discover-data-details { margin-top: 18px; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0 16px 16px; }
+.discover-data-details:not([open]) { padding-bottom: 0; }
+.discover-data-details > summary { cursor: pointer; min-height: 48px; padding: 14px 0; font-size: 14px; color: var(--text-soft); }
+.discover-data-details .signal-strip { margin-bottom: 12px; }
+.discovery-safety { color: var(--amber); font-size: 14px; margin-top: 16px; }
+.view-toggle button { min-width: 44px; min-height: 44px; }
+.filter-chip, .segmented button, .palette-trigger { min-height: 44px; }
+
+@media (max-width: 1000px) and (min-width: 761px) {
+  .room-experience { grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 14px; }
+  .room-header-compact h1 span { display: block; margin-left: 0; margin-top: 4px; }
+}
+@media (max-width: 760px) {
+  .room-page .room-shell { padding-top: 8px; padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+  .room-header-compact { flex-direction: row; align-items: center; padding: 8px 0 12px; gap: 10px; }
+  .room-header-compact .room-token-identity { gap: 10px; }
+  .room-header-compact .room-logo { width: 40px; height: 40px; font-size: 20px; border-radius: 11px; }
+  .room-header-compact h1 { font-size: 22px; }
+  .room-header-compact h1 span { display: block; margin-left: 0; margin-top: 4px; font-size: 14px; }
+  .room-header-compact .eyebrow { font-size: 10px; letter-spacing: .04em; }
+  .room-header-compact > button { padding: 10px; font-size: 12px; }
+  .room-safety-note { padding-bottom: 12px; font-size: 13px; }
+  .room-experience { display: flex; flex-direction: column; gap: 14px; }
+  .room-experience > * { width: 100%; scroll-margin-top: 112px; }
+  .room-chat-section[data-mobile-active="false"], .room-trade-section[data-mobile-active="false"], .room-about-section[data-mobile-active="false"] { display: none; }
+  .room-section-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; position: fixed; z-index: 25; bottom: 0; left: 0; width: 100%; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line-strong); background: #111317f5; backdrop-filter: blur(16px); }
+  .room-section-nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; border: 0; border-radius: 10px; background: transparent; color: var(--text-soft); font-size: 15px; font-weight: 700; }
+  .room-section-nav button[aria-pressed="true"] { color: var(--lime); background: var(--lime-soft); }
+  .room-section-nav small { font-size: 11px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .native-live-watch-first .live-viewport { min-height: 190px; }
+  .native-live-watch-first .native-live-mark { gap: 10px; padding: 20px; }
+  .native-live-watch-first .native-live-mark > span { display: none; }
+  .native-live-viewer-footer { padding: 12px 16px; gap: 4px; }
+  .native-live-viewer-footer .live-state { font-size: 12px; }
+  .room-experience .chat-panel { min-height: 380px; padding: 18px; }
+  .room-experience .chat-messages { max-height: 300px; }
+  .room-experience .trade-panel, .room-about-card { padding: 20px; }
+  .room-accounting-list > div { flex-direction: column; gap: 4px; }
+  .room-accounting-list dd { max-width: none; text-align: left; }
+  .chat-form input, .search-wrap input, .launchpad-form input { font-size: 16px; }
+  .primary-button, .secondary-button, .wallet-button, .trade-tabs button, .trade-presets button, .claim-link { min-height: 48px; }
+  .hypr-dialog { padding: 20px; max-height: calc(100dvh - 24px); }
+  .hypr-dialog .dialog-heading h2 { font-size: 22px; }
+  .wallet-account-panel { top: calc(100% + 6px); }
+  .room-page .toast-region { bottom: calc(88px + env(safe-area-inset-bottom)); }
+  .native-live-toolbar { align-items: flex-start; }
+  .native-live-toolbar > span { flex: 1; }
+  .discover-page .hero { padding-top: 48px; padding-bottom: 40px; }
+  .discover-page .hero-steps { display: none; }
+  .discover-page .constellation { display: none; }
+  .discover-page .discover-section { padding-top: 40px; }
+}

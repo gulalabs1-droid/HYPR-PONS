@@ -22,7 +22,7 @@ test("connected host and viewer controls render inside the LiveKit room provider
         }));
       });
       const controls = renderer!.root.findAllByType("button");
-      assert.ok(controls.some(control => control.props.children === (role === "host" ? "End live" : "Leave live")));
+      assert.ok(controls.some(control => control.props.children === (role === "host" ? "End broadcast" : "Leave live")));
       await act(async () => renderer!.unmount());
   }
   } finally {

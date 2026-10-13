@@ -11,13 +11,13 @@ import { Header } from "./header";
 import { SiteFooter } from "./site-footer";
 import { useLiveLaunches } from "@/lib/use-live-launches";
 
-const tabs = ["Live first", "Recent activity", "New", "Curve progress"] as const;
+const tabs = ["Live first", "Recent activity", "New", "Pool progress"] as const;
 type Tab = (typeof tabs)[number];
 type Filter = "all" | RoomKind;
 type View = "grid" | "list";
 type HueStyle = React.CSSProperties & { "--hue"?: number; "--meter"?: string };
 
-const filterLabels: Record<Filter, string> = { all: "All rooms", native: "Native", pons: "Pons", sample: "Sample" };
+const filterLabels: Record<Filter, string> = { all: "All rooms", native: "HYPR-created", pons: "Pons", sample: "Sample" };
 
 function networkEyebrow(source: CombinedLaunchDataSource) {
   if (source === "fixture" || source === "fixture-fallback") return "DEMO MODE · ROBINHOOD CHAIN";
@@ -47,7 +47,7 @@ function tradeCount(token: Launch) {
 
 function cardFooter(token: Launch) {
   const kind = roomKind(token);
-  if (kind === "native") return "to graduation";
+  if (kind === "native") return "testnet room";
   if (kind === "pons") return "partial onchain data";
   return `${token.holders.toLocaleString()} holders`;
 }
@@ -182,7 +182,7 @@ export function DiscoverClient({ initialLaunches: seed, source: initialSource, c
       const stamp = (item: Launch) => item.launchedAt || (item.origin === "hypr" ? "9999" : "");
       return [...filtered].sort((a, b) => stamp(b).localeCompare(stamp(a)) || byRank(a, b));
     }
-    if (tab === "Curve progress") return [...filtered].sort((a, b) => roomCurvePercent(b) - roomCurvePercent(a) || byRank(a, b));
+    if (tab === "Pool progress") return [...filtered].sort((a, b) => roomCurvePercent(b) - roomCurvePercent(a) || byRank(a, b));
     if (tab === "Recent activity") return [...filtered].sort((a, b) => tradeCount(b) - tradeCount(a) || byRank(a, b));
     return [...filtered].sort((a, b) => Number(b.broadcastStatus === "live") - Number(a.broadcastStatus === "live") || (b.viewerCount ?? 0) - (a.viewerCount ?? 0) || roomCurvePercent(b) - roomCurvePercent(a) || byRank(a, b));
   }, [filter, initialLaunches, query, tab]);
@@ -220,19 +220,19 @@ export function DiscoverClient({ initialLaunches: seed, source: initialSource, c
         <div className="hero-copy">
           <div className="eyebrow"><span className="pulse" /> {networkEyebrow(source)}</div>
           <h1>Find the rooms<br /><em>where it’s moving.</em></h1>
-          <p>HYPR is the live launchpad for the next wave of onchain communities. Create, go live, trade, and pull up a seat.</p>
+          <p>Watch creators, chat with the community, and explore each room’s coin. Watching is free—no wallet needed.</p>
           <div className="hero-actions">
             <a href="#discover" className="primary-button">Explore rooms <span aria-hidden="true">↓</span></a>
-            <a href="#launch" className="secondary-button">Create a launch <span aria-hidden="true">+</span></a>
+            <a href="#launch" className="secondary-button">Create a coin & room <span aria-hidden="true">+</span></a>
             <button type="button" className="palette-trigger" onClick={() => setPaletteOpen(true)}>
               <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
               Jump to room <kbd>⌘K</kbd>
             </button>
           </div>
-          <ol className="hero-steps" aria-label="How HYPR works">
-            <li><strong>01</strong> Name your coin</li>
-            <li><strong>02</strong> Approve in your wallet</li>
-            <li><strong>03</strong> Start your broadcast</li>
+          <ol className="hero-steps" aria-label="Explore HYPR">
+            <li><strong>01</strong> Find a room</li>
+            <li><strong>02</strong> Watch & chat</li>
+            <li><strong>03</strong> Trade only if you choose</li>
           </ol>
         </div>
         {initialLaunches.length > 0 && <Constellation launches={initialLaunches} totalRooms={initialLaunches.length} />}
@@ -240,6 +240,7 @@ export function DiscoverClient({ initialLaunches: seed, source: initialSource, c
     </div>
     <Ticker launches={initialLaunches} />
     <div className="page-shell">
+      <details className="discover-data-details"><summary>Live data & network details</summary>
       <section className="signal-strip" aria-label="Network status">
         <div><span className="signal-label">NETWORK</span><strong>{isDemoSource ? "Robinhood Chain · demo" : network.name}</strong></div>
         <div><span className="signal-label">CHAIN ID</span><strong>{isDemoSource ? "—" : network.id}</strong></div>
@@ -248,12 +249,14 @@ export function DiscoverClient({ initialLaunches: seed, source: initialSource, c
       </section>
       <div className="data-notice" role="status">{sourceLabel(source)}</div>
       <p className="accounting-copy" role="status">{liveData.error || (liveData.updatedAt ? `Auto-refreshing every 15 seconds · checked ${new Date(liveData.updatedAt).toLocaleTimeString()}` : "Checking current broadcast status…")}</p>
-      {broadcastsChecked && <p className="accounting-copy">{broadcastCount ? `${broadcastCount} broadcast${broadcastCount === 1 ? "" : "s"} live now.` : "No creators are broadcasting right now. Open your room’s creator studio to start one."}</p>}
+      </details>
+      {source !== "rpc-partial" && (source === "native-rpc" || source === "native-empty") && <p className="discovery-safety">Testnet preview · Free test assets, not real money.</p>}
+      {broadcastsChecked && <p className="accounting-copy">{broadcastCount ? `${broadcastCount} broadcast${broadcastCount === 1 ? "" : "s"} live now.` : "No creators are live right now. Explore a room or create your own."}</p>}
 
       <section id="discover" className="discover-section">
         <div className="section-heading">
           <div><span className="eyebrow">THE SIGNAL BOARD</span><h2>Discover rooms</h2></div>
-          <p className="section-sub">Every coin gets a room. Creators go live separately. Press <kbd>⌘K</kbd> to jump anywhere.</p>
+          <p className="section-sub">Open a room to watch, chat, or learn about its token. A coin can exist even while its creator is offline.</p>
         </div>
 
         <div className="discover-controls">
@@ -301,7 +304,7 @@ export function DiscoverClient({ initialLaunches: seed, source: initialSource, c
       {children}
 
       <section id="rooms" className="rooms-callout">
-        <div><span className="eyebrow">NO EMPTY PLATFORM PROBLEM</span><h2>Every launch gets a room.</h2><p>Native HYPR launches create protocol state and a live community destination. Pons launches remain compatible through the clearly labeled discovery path.</p><a href="#launch" className="primary-button">Start yours →</a></div>
+        <div><span className="eyebrow">FOR CREATORS</span><h2>Your coin. Your live room.</h2><p>Create a testnet coin and community room, then open the studio to preview your devices and go live. Creating a coin does not turn your camera on.</p><a href="#launch" className="primary-button">Create your room →</a></div>
         <div className="callout-orbit" aria-hidden="true"><span>chat</span><span>follow</span><span>share</span><strong>HYPE</strong></div>
       </section>
       <SiteFooter />

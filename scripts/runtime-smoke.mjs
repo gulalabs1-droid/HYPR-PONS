@@ -54,8 +54,8 @@ if (!hasIndexedRooms) {
 } else {
   if (!roomResponse.ok) throw new Error(`indexed room returned HTTP ${roomResponse.status}`);
   const roomHtml = await roomResponse.text();
-  if (!roomHtml.includes("NATIVE HYPR LIVE") && !roomHtml.includes("LIVE LAUNCH EXPERIENCE")) throw new Error("room is missing the live launch surface");
-  if (!roomHtml.includes("SHARED ROOM CHAT")) throw new Error("room is missing shared community chat");
+  if (!roomHtml.includes('aria-label="Broadcast player"') && !roomHtml.includes("LIVE LAUNCH EXPERIENCE") && !roomHtml.includes("INDEXED PONS ROOM")) throw new Error("room is missing the live launch surface");
+  if (!roomHtml.includes("Room chat")) throw new Error("room is missing shared community chat");
   if (roomHtml.includes("LOCAL PREVIEW") || roomHtml.includes("Illustrative sample")) throw new Error("room is still presenting sample activity");
   if (expectUnconfigured && roomHtml.includes("people are in the room right now")) throw new Error("demo room metadata is presenting sample activity as live");
 }

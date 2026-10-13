@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Launch } from "@/lib/types";
 import type { CombinedLaunchDataSource } from "@/lib/launch-data";
 import { Header } from "./header";
@@ -9,72 +9,27 @@ import { LiveLaunchSurface } from "./live-launch-surface";
 import { NativeTradePanel } from "./native-trade-panel";
 import { SiteFooter } from "./site-footer";
 import { Toast } from "./toast";
-import { getEthereum, isRobinhoodChainId, personalSignHex, shortAddress } from "@/lib/wallet";
+import { shortAddress } from "@/lib/wallet";
 import { formatCurveProgress } from "@/lib/curve-progress";
-import { formatEthExact, formatUsd } from "@/lib/format";
+import { formatEthExact } from "@/lib/format";
 import { roomHue } from "@/lib/room-display";
 import { useLiveLaunches } from "@/lib/use-live-launches";
 import { CommunityPanel } from "./community-panel";
 
-function formatFeeBps(value?: string) {
-  if (!value) return "—";
-  const bps = Number(value);
-  return Number.isFinite(bps) ? `${(bps / 100).toFixed(2)}%` : "—";
-}
-function roomNetworkLabel(token: Launch) {
-  if (token.origin === "pons") return token.dataStatus === "demo" ? "Robinhood Chain · demo" : "Robinhood Chain";
-  return process.env.NEXT_PUBLIC_HYPR_NETWORK === "mainnet" ? "Robinhood Chain" : "Robinhood Chain testnet";
-}
-function explorerBase(token: Launch) {
-  if (token.origin === "hypr" && process.env.NEXT_PUBLIC_HYPR_NETWORK !== "mainnet") return "https://explorer.testnet.chain.robinhood.com";
-  return "https://robinhoodchain.blockscout.com";
-}
+type RoomSection = "chat" | "trade" | "about";
+const sectionLabels: Record<RoomSection, string> = { chat: "Chat", trade: "Trade", about: "About" };
+function feePercent(value?: string) { return value && Number.isFinite(Number(value)) ? `${(Number(value) / 100).toFixed(2)}%` : "—"; }
 
 export function RoomClient({ token: initialToken, source }: { token: Launch; source?: CombinedLaunchDataSource }) {
   const liveData = useLiveLaunches([initialToken], source);
   const token = liveData.launches.find((launch) => launch.address.toLowerCase() === initialToken.address.toLowerCase()) || initialToken;
-  const isDemo = token.dataStatus === "demo";
-  const isUnverified = token.dataStatus !== "verified";
   const isNative = token.origin === "hypr";
-  const hasVerifiedMarketMetrics = token.dataStatus === "verified";
+  const [section, setSection] = useState<RoomSection>("chat");
   const [notice, setNotice] = useState("");
-  const [claiming, setClaiming] = useState(false);
+  const sectionsRef = useRef<HTMLDivElement>(null);
   const dismissNotice = useCallback(() => setNotice(""), []);
-
-  async function claimRoom() {
-    const ethereum = getEthereum();
-    if (!ethereum) { setNotice("Connect an EVM wallet to start a verifiable claim."); return; }
-    setClaiming(true);
-    try {
-      const accounts = (await ethereum.request({ method: "eth_requestAccounts" })) as string[];
-      const chainId = Number(await ethereum.request({ method: "eth_chainId" }));
-      if (!isRobinhoodChainId(chainId)) { setNotice("Switch to Robinhood Chain (4663) or testnet (46630) before claiming."); return; }
-      const address = accounts[0];
-      if (!address) { setNotice("No wallet account was returned."); return; }
-      const challengeResponse = await fetch("/api/room-claims/challenge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tokenAddress: token.address, claimantAddress: address, chainId }),
-      });
-      const challenge = await challengeResponse.json() as { challengeId?: string; message?: string; error?: string };
-      if (!challengeResponse.ok || !challenge.challengeId || !challenge.message) throw new Error(challenge.error || "Unable to start the room claim");
-      const signature = await ethereum.request({ method: "personal_sign", params: [personalSignHex(challenge.message), address] });
-      const verifyResponse = await fetch("/api/room-claims/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ challengeId: challenge.challengeId, signature }),
-      });
-      const verification = await verifyResponse.json() as { verified?: boolean; persistence?: "supabase" | "process-local"; error?: string };
-      if (!verifyResponse.ok || !verification.verified) throw new Error(verification.error || "Claim verification failed");
-      setNotice(verification.persistence === "supabase"
-        ? "Creator wallet verified and the room claim was persisted."
-        : "Creator wallet verified against the indexed launch. This acknowledgement is process-local until persistence is configured.");
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Claim cancelled. No transaction was sent.");
-    } finally {
-      setClaiming(false);
-    }
-  }
+  const explorer = isNative && process.env.NEXT_PUBLIC_HYPR_NETWORK !== "mainnet" ? "https://explorer.testnet.chain.robinhood.com" : "https://robinhoodchain.blockscout.com";
+  const progress = formatCurveProgress(token.nativeRealQuoteReserve, token.nativeGraduationThreshold, token.curveProgressBps, token.curvePhase);
 
   async function share() {
     const url = window.location.href;
@@ -84,89 +39,60 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
     try { await navigator.clipboard.writeText(url); setNotice("Room link copied."); } catch { setNotice("Copy the room URL from your browser to share it."); }
   }
 
-  async function copyAddress() {
-    try { await navigator.clipboard.writeText(token.address); setNotice("Token address copied."); } catch { setNotice(token.address); }
+  function chooseSection(next: RoomSection) {
+    setSection(next);
+    if (window.matchMedia("(max-width: 760px)").matches) window.requestAnimationFrame(() => sectionsRef.current?.querySelector(`#room-${next}`)?.scrollIntoView({ behavior: "instant", block: "start" }));
   }
 
-  const progressText = formatCurveProgress(token.nativeRealQuoteReserve, token.nativeGraduationThreshold, token.curveProgressBps, token.curvePhase);
-  const ringDegrees = isNative
-    ? Math.min(360, ((token.curveProgressBps ?? 0) / 10_000) * 360)
-    : hasVerifiedMarketMetrics ? token.hype * 3.6 : 0;
-
-  return (
-    <main>
-      <Header />
-      <div className="room-shell room-aura" style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
-        <Link href="/" className="back-link">← Back to Discover</Link>
-        <section className="room-header">
-          <div className="room-token-identity">
-            <span className="room-logo" aria-hidden="true">{token.logo}</span>
-            <div>
-              <div className="eyebrow"><span className="pulse" /> COMMUNITY ROOM</div>
-              <h1>{token.name} <span>${token.symbol}</span></h1>
-              <p>{token.description}</p>
-              <span className="address-line">
-                <button type="button" className="address-copy" onClick={copyAddress} title="Copy token address">{shortAddress(token.address)} <span aria-hidden="true">⧉</span></button>
-                <span>· {roomNetworkLabel(token)}</span>
-                <a href={`${explorerBase(token)}/address/${token.address}`} target="_blank" rel="noreferrer">Explorer ↗</a>
-              </span>
-            </div>
-          </div>
-          <div className="room-actions">
-            <button className="secondary-button" onClick={share}>Share ↗</button>
-            <button className="secondary-button" onClick={claimRoom} disabled={claiming}>{claiming ? "Check your wallet…" : "Verify creator wallet"}</button>
-          </div>
+  return <main className="room-page">
+    <Header />
+    <div className="room-shell room-aura" style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
+      <Link href="/" className="back-link">← Discover rooms</Link>
+      <section className="room-header room-header-compact">
+        <div className="room-token-identity"><span className="room-logo" aria-hidden="true">{token.logo}</span><div>
+          <span className="eyebrow">{isNative ? "HYPR COMMUNITY ROOM" : "PONS COMMUNITY ROOM"}</span>
+          <h1>{token.name} <span>${token.symbol}</span></h1>
+        </div></div>
+        <button className="secondary-button" onClick={share}>Share room ↗</button>
+      </section>
+      <p className="room-safety-note">{isNative ? "Testnet preview · Free test assets, not real money. Watch without a wallet." : token.dataStatus === "demo" ? "Demo room · Sample launch data, not a verified live market." : "Indexed Pons room · Trading availability depends on the launch’s network."}</p>
+      {liveData.error && <p className="live-notice" role="status">{liveData.error} Last successful data is kept visible; it may be out of date.</p>}
+      <div className="room-experience" ref={sectionsRef}>
+        <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} /></div>
+        <nav className="room-section-nav" aria-label="Room sections">
+          {(Object.keys(sectionLabels) as RoomSection[]).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={`room-${key}`} onClick={() => chooseSection(key)}>{sectionLabels[key]}{key === "trade" && <small>${token.symbol}</small>}</button>)}
+        </nav>
+        <section className="room-chat-section" id="room-chat" data-mobile-active={section === "chat"} aria-label="Room chat"><CommunityPanel roomId={token.address} creator={token.deployer} /></section>
+        <section className="room-trade-section" id="room-trade" data-mobile-active={section === "trade"} aria-label={`Trade ${token.symbol}`}>
+          {isNative ? <NativeTradePanel curveAddress={token.pool} tokenAddress={token.address} tokenSymbol={token.symbol} /> : <div className="activity-panel"><h2>About this token’s trading</h2><p className="accounting-copy">HYPR’s in-room buy and sell controls currently support native HYPR testnet launches only. This indexed Pons token is not offered for trading here.</p><a className="claim-link" href={`${explorer}/address/${token.address}`} target="_blank" rel="noreferrer">View its contract ↗</a></div>}
         </section>
-        {isUnverified && <div className="data-notice" role="status">Onchain testnet data · broadcast status comes from published media · chat and follows are shared. Unavailable market metrics stay blank; no sample activity is shown.</div>}
-        <p className="accounting-copy" role="status">{liveData.error || (liveData.updatedAt ? `Auto-refreshing chain snapshots · last check ${new Date(liveData.updatedAt).toLocaleTimeString()}` : "Refreshing current onchain state…")}</p>
-        <LiveLaunchSurface token={token} />
-        {isNative && <NativeTradePanel curveAddress={token.pool} tokenAddress={token.address} tokenSymbol={token.symbol} />}
-        {isNative && (
-          <section className="activity-panel accounting-panel">
-            <div className="panel-heading"><div><span className="eyebrow">PROTOCOL ACCOUNTING</span><h2>Transparent testnet flow</h2></div><span className="live-chip">onchain</span></div>
-            <p className="accounting-copy">These are unclaimed curve fee balances, not lifetime earnings. Claimed fees return to zero. Testnet ETH has no economic value.</p>
-            <div className="accounting-grid">
-              <div><span>CREATOR UNCLAIMED</span><strong>{formatEthExact(token.nativeCreatorFees)}</strong></div>
-              <div><span>HYPR UNCLAIMED</span><strong>{formatEthExact(token.nativeProtocolFees)}</strong></div>
-              <div><span>CURVE RESERVE</span><strong>{formatEthExact(token.nativeRealQuoteReserve)}</strong></div>
-              <div><span>FEE SPLIT</span><strong>{formatFeeBps(token.nativeTotalFeeBps)} total</strong><small>{formatFeeBps(token.nativeCreatorFeeBps)} creator · {formatFeeBps(token.nativeProtocolFeeBps)} HYPR</small></div>
-            </div>
-          </section>
-        )}
-        <section className="room-layout">
-          <div className="room-main">
-            <div className="hype-panel">
-              {isNative ? (
-                <div><span className="eyebrow">GRADUATION PROGRESS</span><h2>Curve <strong>{progressText}</strong></h2><p>Share of the {formatEthExact(token.nativeGraduationThreshold)} reserve needed to graduate to Uniswap v4. Phase: {token.curvePhase === "Live" ? "Active trading curve" : token.curvePhase || "unavailable"}. This is not broadcast status.</p></div>
-              ) : (
-                <div><span className="eyebrow">SOCIAL ACTIVITY SCORE</span><h2>HYPE <strong>{hasVerifiedMarketMetrics ? token.hype : "—"}</strong></h2><p>Social activity only — not market cap, token quality, or investment advice.</p></div>
-              )}
-              <div className="hype-ring" style={{ "--hype": `${ringDegrees}deg` } as React.CSSProperties} aria-hidden="true"><span>{isNative ? (token.curvePhase === "Graduated" ? "✓" : "↗") : hasVerifiedMarketMetrics ? token.hype : "—"}</span></div>
-            </div>
-            <div className="activity-panel">
-              <div className="panel-heading"><div><span className="eyebrow">{isNative ? "ONCHAIN CURVE STATE" : "ROOM ACTIVITY"}</span><h2>{isNative ? "Curve snapshot" : "Community pulse"}</h2></div><span className="live-chip">{isNative ? token.curvePhase === "Live" ? "Active curve" : token.curvePhase || "State unavailable" : "Onchain"}</span></div>
-              <p className="accounting-copy">Live chain snapshot. Recent trade counts cover the confirmed 2,500-block scan, not lifetime trades or 24 hours. Historical charts and USD prices are unavailable.</p>
-              <div className="stats-grid">
-                <div><span>{isNative ? "CURVE PROGRESS" : token.origin === "pons" ? "POOL PRICE" : "PRICE"}</span><strong>{isNative ? progressText : token.origin === "pons" ? token.poolPriceQuote === undefined ? "—" : `${token.poolPriceQuote.toPrecision(4)} WETH` : hasVerifiedMarketMetrics ? `$${token.priceUsd.toFixed(4)}` : "—"}</strong></div>
-                <div><span>{token.origin === "pons" ? "LIQUIDITY UNITS" : "MARKET CAP"}</span><strong>{token.origin === "pons" ? token.poolLiquidity || "—" : isNative || !hasVerifiedMarketMetrics ? "—" : formatUsd(token.marketCapUsd)}</strong></div>
-                <div><span>24H CHANGE</span><strong>{isNative || !hasVerifiedMarketMetrics ? "—" : <span className={token.change24h >= 0 ? "positive" : "negative"}>{token.change24h >= 0 ? "+" : ""}{token.change24h}%</span>}</strong></div>
-                <div><span>{isNative ? "TRADES / LOOKBACK" : "SWAPS / LOOKBACK"}</span><strong>{isNative ? (token.nativeTradeCount === undefined ? "—" : token.nativeTradeCount.toLocaleString()) : (token.ponsTradeCount === undefined ? "—" : token.ponsTradeCount.toLocaleString())}</strong></div>
-              </div>
-            </div>
-            <div className="activity-panel onchain">
-              <div className="panel-heading"><div><span className="eyebrow">ONCHAIN</span><h2>Recent signals</h2></div><a href={`${explorerBase(token)}/${token.launchTxHash ? `tx/${token.launchTxHash}` : `address/${token.address}`}`} target="_blank" rel="noreferrer">{token.launchTxHash ? "View launch tx ↗" : "View explorer ↗"} </a></div>
-              <div className="event-row"><span className="event-icon buy">↗</span><div><strong>{isNative ? "HYPR LaunchCreated indexed" : isDemo ? "Demo launch signal" : "TokenLaunched source indexed"}</strong><span>{isNative ? "Native factory event found; token and curve state are the source of truth." : isDemo ? "Fixture data — verify the token address onchain." : "Launch event read from the pons factory."}</span></div><time>{isNative ? "native" : isDemo ? "demo" : "indexed"}</time></div>
-              <div className="event-row"><span className="event-icon trade">◌</span><div><strong>{isNative ? (token.nativeTradeCount === undefined ? "Curve activity" : `${token.nativeTradeCount.toLocaleString()} curve trades indexed`) : isDemo ? "Illustrative trade activity" : token.ponsTradeCount === undefined ? "Pool activity" : `${token.ponsTradeCount} pool swaps indexed`}</strong><span>{isNative ? `Gross quote volume ${formatEthExact(token.nativeTradeVolume)} · Curve ${shortAddress(token.pool)}` : `Pool ${shortAddress(token.pool)}${token.poolLiquidity ? ` · liquidity units ${token.poolLiquidity}` : ""}`}</span>{isNative && token.curvePhase && <small>Phase {token.curvePhase}{token.graduationTxHash ? " · graduation confirmed" : ""}</small>}</div><time>{isNative ? "native" : isDemo ? "demo" : "indexed"}</time></div>
-            </div>
+        <section className="room-about-section" id="room-about" data-mobile-active={section === "about"} aria-label="About this room">
+          <div className="activity-panel room-about-card"><span className="eyebrow">ABOUT ${token.symbol}</span><h2>A coin and a community room</h2>
+            <p className="accounting-copy">{token.description}</p>
+            <p className="accounting-copy">{isNative ? "This ERC-20 token belongs to this launch. It is not company ownership, a promise of income, or a requirement to watch. Only the wallet that created it can broadcast in this room." : "This launch is indexed from Pons. A room listing does not endorse the token or guarantee its value."}</p>
+            <div className="room-contract-links"><a href={`${explorer}/address/${token.address}`} target="_blank" rel="noreferrer">Token {shortAddress(token.address)} ↗</a><a href={`${explorer}/address/${token.deployer}`} target="_blank" rel="noreferrer">Creator {shortAddress(token.deployer)} ↗</a>{token.launchTxHash && <a href={`${explorer}/tx/${token.launchTxHash}`} target="_blank" rel="noreferrer">Creation transaction ↗</a>}</div>
           </div>
-          <aside className="room-sidebar">
-            <CommunityPanel roomId={token.address} creator={token.deployer} />
-            <div className="creator-panel"><span className="eyebrow">ROOM CREATOR</span><div className="creator-row"><span className="creator-avatar" aria-hidden="true">{token.logo}</span><div><strong>{isDemo ? "Demo creator" : isNative ? "Onchain creator" : "Indexed creator"}</strong><a href={`${explorerBase(token)}/address/${token.deployer}`} target="_blank" rel="noreferrer">{shortAddress(token.deployer)} ↗</a></div></div><p className="accounting-copy">Only this creator wallet can authorize a native broadcast. Verification does not transfer tokens or withdraw fees.</p></div>
-          </aside>
+          {isNative && <details className="room-details"><summary>Trading details <span>Price rules, fees & live contract data</span></summary>
+            <div className="room-details-body">
+              <h3>How pricing works</h3><p>Before graduation, the contract sets the price automatically: buying pushes it up and selling pushes it down. The “bonding curve” is that pricing rule—not a chart or a guarantee of profit.</p>
+              <dl className="room-accounting-list">
+                <div><dt>ETH available for trades</dt><dd>{formatEthExact(token.nativeRealQuoteReserve)}</dd></div>
+                <div><dt>Creator fees available</dt><dd>{formatEthExact(token.nativeCreatorFees)}</dd></div>
+                <div><dt>HYPR fees available</dt><dd>{formatEthExact(token.nativeProtocolFees)}</dd></div>
+                <div><dt>Trading fee · buy and sell</dt><dd>{feePercent(token.nativeTotalFeeBps)} total · {feePercent(token.nativeCreatorFeeBps)} creator / {feePercent(token.nativeProtocolFeeBps)} HYPR</dd></div>
+              </dl>
+              <p>Fees available means unclaimed fees, not lifetime earnings. Claimed balances return to zero. Trading fees and network fees are different; all values here are testnet assets.</p>
+              <h3>Progress toward liquidity-pool trading</h3><strong className="room-progress-value">{progress}</strong><p>{formatEthExact(token.nativeRealQuoteReserve)} of the {formatEthExact(token.nativeGraduationThreshold)} reserve target. Buys add to the reserve after fees; sells reduce it. Reaching the target triggers the contract’s Uniswap v4 migration. This is not a funding goal, a live-stream status, or a return guarantee.</p>
+              <dl className="room-accounting-list"><div><dt>Trading status</dt><dd>{token.curvePhase === "Live" ? "Trading open" : token.curvePhase || "Unavailable"}</dd></div><div><dt>Trades in indexed window</dt><dd>{token.nativeTradeCount === undefined ? "Unavailable" : token.nativeTradeCount.toLocaleString()}</dd></div><div><dt>Gross trading volume in that window</dt><dd>{formatEthExact(token.nativeTradeVolume)}</dd></div></dl>
+              <p>Recent activity covers the confirmed 2,500-block scan, not lifetime activity or 24 hours. USD prices and historical charts are not available; we do not invent them.</p>
+              <a className="claim-link" href={`${explorer}/address/${token.pool}`} target="_blank" rel="noreferrer">View trading contract ↗</a>
+              <p className="accounting-copy">{liveData.updatedAt ? `Live contract data checked ${new Date(liveData.updatedAt).toLocaleTimeString()} · refreshes every 15 seconds while visible.` : "Checking live contract data…"}</p>
+            </div>
+          </details>}
         </section>
-        <SiteFooter />
       </div>
-      <Toast message={notice} onDismiss={dismissNotice} />
-    </main>
-  );
+      <SiteFooter />
+    </div>
+    <Toast message={notice} onDismiss={dismissNotice} />
+  </main>;
 }

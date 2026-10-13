@@ -24,7 +24,7 @@ function BroadcastStage({ role, onLeave }: { role: Session["role"]; onLeave: () 
   return <>
     <div className="native-live-toolbar" aria-live="polite">
       <span><span className={connected && live ? "pulse" : "status-dot inactive"} /> {connected ? live ? `LIVE · ${viewers} viewer${viewers === 1 ? "" : "s"}` : role === "host" ? "STUDIO READY · TURN ON CAMERA OR MIC" : "BROADCAST PAUSED · WAITING FOR CREATOR" : connection === ConnectionState.Reconnecting ? "RECONNECTING…" : "CONNECTING…"}</span>
-      <button className="live-control-button" onClick={async () => { await room.disconnect(); onLeave(); }}>{role === "host" ? "End live" : "Leave live"}</button>
+      <button className="live-control-button" onClick={async () => { await room.disconnect(); onLeave(); }}>{role === "host" ? "End broadcast" : "Leave live"}</button>
     </div>
     <div className="hypr-broadcast-stage">
       {videos.length ? videos.map((track) => <ParticipantTile key={track.publication.trackSid} trackRef={track} />) : <div className="native-live-placeholder"><div className="native-live-mark"><span>H</span><strong>{live ? "Audio broadcast" : connected ? "Waiting for the creator" : "Connecting to HYPR"}</strong><small>{live ? "The creator is sharing audio. Video is off." : "No video or audio is being published yet."}</small></div></div>}

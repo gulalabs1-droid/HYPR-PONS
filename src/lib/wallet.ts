@@ -1,3 +1,5 @@
+import { selectedWalletProvider } from "./wallet-discovery";
+
 export const ROBINHOOD_CHAIN_ID = 4663;
 export const ROBINHOOD_TESTNET_CHAIN_ID = 46630;
 export const ROBINHOOD_CHAIN_IDS = [ROBINHOOD_CHAIN_ID, ROBINHOOD_TESTNET_CHAIN_ID] as const;
@@ -20,7 +22,7 @@ export type EthereumProvider = {
 
 export function getEthereum(): EthereumProvider | null {
   if (typeof window === "undefined") return null;
-  return (window as Window & { ethereum?: EthereumProvider }).ethereum || null;
+  return selectedWalletProvider() || (window as Window & { ethereum?: EthereumProvider }).ethereum || null;
 }
 
 const TESTNET_PARAMS = {

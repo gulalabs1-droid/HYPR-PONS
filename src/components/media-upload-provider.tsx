@@ -42,8 +42,8 @@ export function MediaUploadProvider({ children }: { children: React.ReactNode })
   return <MediaUploads.Provider value={{ available: true, canAccept: jobs.length + captures < 2, capturing, enqueue }}>
     {children}
     {jobs.length > 0 && <aside className="media-upload-tray" aria-label="Recording uploads" aria-live="polite">{jobs.map(job => <div className="media-upload-job" key={job.reservation.id}>
-      <strong>{job.reservation.title}</strong><span>{job.status === "saved" ? "Private draft saved · creator review required" : job.status === "error" ? "Not saved to HYPR" : `Uploading ${job.percent}% · keep HYPR open`}</span>
-      {(job.status === "uploading" || job.status === "queued") && <progress max={100} value={job.percent} aria-label={`Upload ${job.reservation.title}`} />}
+      <strong>{job.reservation.title}</strong><span>{job.status === "saved" ? "Private draft saved · creator review required" : job.status === "error" ? "Not saved to HYPR" : job.percent >= 99 ? "Verifying private recording · keep HYPR open" : "Saving private recording · keep HYPR open"}</span>
+      {(job.status === "uploading" || job.status === "queued") && <progress max={100} aria-label={`Upload ${job.reservation.title}`} />}
       {job.error && <p role="alert">{job.error}</p>}
       <div className="media-actions"><a href={job.download} download={`HYPR-${job.reservation.kind}.${job.media.mime.endsWith("webm") ? "webm" : "mp4"}`}>Download backup</a>
         {job.status === "saved" && <Link href={`/room/${job.roomId}/recording/${job.reservation.id}`} onClick={() => window.dispatchEvent(new Event(MEDIA_UPDATED_EVENT))}>Preview draft</Link>}

@@ -27,14 +27,17 @@ export async function uploadCapturedMedia(roomId: string, reservation: MediaRese
   const url = new URL(fresh.uploadUrl), token = url.searchParams.get("token");
   const path = url.pathname.match(/^\/storage\/v1\/object\/upload\/sign\/(hypr-(?:replays|clips))\/(0x[0-9a-f]{40}\/[0-9a-f-]{36}\.(?:mp4|webm))$/);
   if (!token || !path || url.protocol !== "https:") throw new Error("Storage returned an invalid upload destination.");
-  if (!fresh.uploaded) { const { Upload } = await import("tus-js-client");
-  await new Promise<void>((resolve, reject) => {
-    const upload = new Upload(media.blob, { endpoint: `${url.origin}/storage/v1/upload/resumable`, headers: { "x-signature": token, "x-upsert": "false" },
-      metadata: { bucketName: path[1], objectName: path[2], contentType: media.mime, cacheControl: "0" }, chunkSize: 6 * 1024 * 1024,
-      uploadDataDuringCreation: true, storeFingerprintForResuming: false, removeFingerprintOnSuccess: true, retryDelays: [0, 1000, 3000, 5000],
-      onProgress: (sent, total) => progress(Math.min(99, Math.round(sent / total * 100))), onError: reject, onSuccess: () => resolve() });
-    upload.start();
-  }); }
+  if (!fresh.uploaded) {
+    // Use the exact signed PUT destination. The hosted TUS endpoint currently rejects
+    // these scoped signatures; never work around that by exposing service credentials.
+    // Bounded files remain below the project's single-upload limit. Retries restart
+    // the transfer, while a completed object is finalized without being overwritten.
+    const uploaded = await fetch(url.toString(), { method: "PUT", body: media.blob, headers: {
+      "Content-Type": media.mime, "cache-control": "no-cache", "x-upsert": "false",
+    }, signal: AbortSignal.timeout(180000) });
+    if (!uploaded.ok && uploaded.status !== 409) throw new Error("Your recording could not upload. Keep this tab open, retry, or download your backup.");
+    progress(99);
+  }
   await mediaAction(roomId, "complete", { id: fresh.id, durationSeconds: media.durationSeconds });
   progress(100); window.dispatchEvent(new Event(MEDIA_UPDATED_EVENT));
 }

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { createElement } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
@@ -26,6 +27,8 @@ test("connected host and viewer controls render inside the LiveKit room provider
       });
       const controls = renderer!.root.findAllByType("button");
       assert.ok(controls.some(control => control.props.children === (role === "host" ? "End broadcast" : "Leave live")));
+      assert.equal(controls.filter(control => control.props["aria-label"] === "Open room chat").length, 0);
+      assert.doesNotMatch(JSON.stringify(renderer!.toJSON()), /You’re live/);
       await act(async () => renderer!.unmount());
   }
   } finally {
@@ -127,4 +130,10 @@ test("a failed end action preserves the session and allows retry instead of clai
     await act(async () => button("End broadcast now").props.onClick());
     assert.equal(attempts, 2); assert.deepEqual(exits, ["host-ended"]);
   } finally { await act(async () => renderer?.unmount()); room.disconnect = originalDisconnect; browser.restore(); }
+});
+
+test("studio HUD names the live session without a second chat control", () => {
+  const source = readFileSync(new URL("../src/components/native-live-connected.tsx", import.meta.url), "utf8");
+  assert.match(source, /You.re live · not recording/);
+  assert.doesNotMatch(source, /aria-label="Open room chat"/);
 });

@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { NextRequest } from "next/server";
 import { createCommunityChallenge, communitySession, encodeAuthorization } from "../src/lib/community-auth";
 import { GET, POST } from "../src/app/api/community/growth/route";
+import { GET as readReports } from "../src/app/api/community/reports/route";
 import { POST as analytics } from "../src/app/api/community/analytics/route";
 import { issuePilotConsent, permitsPilotRequest, readPilotConsent } from "../src/lib/pilot-analytics-server";
 const roomId = `0x${"1".repeat(40)}`, wallet = `0x${"2".repeat(40)}`;
@@ -39,5 +40,23 @@ test("analytics consent is signed, expiring and bot/privacy filtered; clients ca
     assert.equal((await analytics(request({action:"event",event:"creator_followed",roomId,id:crypto.randomUUID()},cookie))).status,400);
     assert.equal((await analytics(request({action:"event",event:"room_viewed",roomId,id:crypto.randomUUID()},cookie))).status,200);
     assert.equal((await analytics(request({action:"withdraw"},cookie))).status,200);
+  } finally { globalThis.fetch=original; for(const key of Object.keys(process.env)) if(!(key in saved)) delete process.env[key]; Object.assign(process.env,saved); }
+});
+test("operator reports require the configured operator wallet and never pass it into SQL", async () => {
+  const saved={...process.env},original=globalThis.fetch; const calls:{url:string;body:Record<string,unknown>}[]=[];
+  Object.assign(process.env,{SUPABASE_URL:"https://db.test",SUPABASE_SERVICE_ROLE_KEY:"test-only-key",HYPR_NETWORK:"testnet",HYPR_GROWTH_ENABLED:"true",HYPR_OPERATOR_WALLET:wallet});
+  globalThis.fetch=async(url,init)=>{ calls.push({url:String(url),body:JSON.parse(String(init?.body))}); return Response.json([]); };
+  try {
+    const cookie=`hypr-community-session=${encodeAuthorization(communitySession(createCommunityChallenge(wallet,"https://hypr.test")))}`;
+    const outsider=`hypr-community-session=${encodeAuthorization(communitySession(createCommunityChallenge(roomId,"https://hypr.test")))}`;
+    assert.equal((await readReports(new NextRequest("https://hypr.test/api/community/reports?scope=operator"))).status,401);
+    assert.equal((await readReports(new NextRequest("https://hypr.test/api/community/reports?scope=operator",{headers:{cookie:outsider}}))).status,403);
+    assert.equal(calls.length,0);
+    const allowed=await readReports(new NextRequest("https://hypr.test/api/community/reports?scope=operator",{headers:{cookie}}));
+    assert.equal(allowed.status,200);
+    assert.equal(calls.length,1);
+    assert.match(calls[0].url,/hypr_read_operator_reports$/);
+    assert.equal(calls[0].body.p_allowed,true);
+    assert.equal("p_wallet_address" in calls[0].body,false);
   } finally { globalThis.fetch=original; for(const key of Object.keys(process.env)) if(!(key in saved)) delete process.env[key]; Object.assign(process.env,saved); }
 });

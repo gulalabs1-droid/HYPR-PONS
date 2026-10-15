@@ -27,6 +27,12 @@ test("elapsed scheduled times do not manufacture live or ended broadcasts", () =
   assert.equal(showPhase(null,false,now),"offline");
   assert.equal(showPhase({...show,status:"canceled"},false,now),"canceled");
 });
+test("room-level reports keep a null message id instead of inventing a message", () => {
+  const report = validateGrowthWrite({ roomId, action: "report", payload: { reason: "unsafe", details: "Room-level", messageId: null } });
+  assert.equal(report?.payload.messageId, null);
+  assert.equal(validateGrowthWrite({ roomId, action: "report", payload: { reason: "unsafe", details: "", messageId: "not-a-uuid" } }), null);
+});
+
 test("calendar carries UTC time and escapes injected fields rather than adding calendar properties", () => {
   const show:Show={id,title:"Hello\nATTENDEE:bad",description:"one,two;three",revision:1,status:"scheduled",startsAt:"2026-10-15T12:00:00Z"};
   const text = calendarText(show,canonicalRoomUrl(roomId));

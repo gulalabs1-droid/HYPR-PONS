@@ -43,6 +43,18 @@ test("Supabase migration preserves the HYPR persistence and RLS boundaries", () 
   assert.match(migration, /status = 'error'/);
 });
 
+test("0006 moderation migration keeps unique functions and does not overload community reads", () => {
+  const sql = readFileSync(new URL("../supabase/migrations/0006_hypr_room_moderation.sql", import.meta.url), "utf8");
+  const names = [...sql.matchAll(/^create(?: or replace)? function public\.(\w+)/gm)].map(match => match[1]);
+  assert.equal(new Set(names).size, names.length);
+  assert.ok(names.includes("hypr_read_community_feed"));
+  assert.ok(names.includes("hypr_read_operator_reports"));
+  assert.ok(!names.includes("hypr_read_community"));
+  assert.match(sql, /operator_inbox/);
+  assert.match(sql, /'shows', shows\.list/);
+  assert.match(sql, /p_allowed is not true/);
+});
+
 test("the one-shot Pons adapter persists bounded metadata instead of replacing it with demo placeholders", () => {
   const worker = readFileSync(new URL("../scripts/indexer-once.ts", import.meta.url), "utf8");
   assert.match(worker, /name: launch\.name \|\| "Unresolved Robinhood token"/);

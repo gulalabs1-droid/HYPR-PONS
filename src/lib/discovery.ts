@@ -21,6 +21,21 @@ export function discoveryRooms(launches: Launch[], creators: GrowthRoom[], now =
   });
 }
 
+const THROWAWAY = /^(test|demo|asdf|foo|bar|tmp|xxx+|kkk+|aaa+|hypr testnet demo)$/i;
+
+/** Pilot/catalog hygiene: obvious scratch names stay out of Explore unless searched. Never guesses quality. */
+export function isThrowawayRoom(room: Pick<DiscoveryRoom, "token" | "creator" | "title">) {
+  const named = room.creator?.displayName?.trim();
+  if (named && named.length >= 4 && !THROWAWAY.test(named)) return false;
+  const title = room.title.trim();
+  const name = room.token.name.trim();
+  // Do not treat a ticker like TEST as junk by itself; fixtures and real rooms share that pattern.
+  if (THROWAWAY.test(title) || THROWAWAY.test(name)) return true;
+  if (title.length <= 2 || name.length <= 2) return true;
+  if (/^(.)\1{2,}$/u.test(title) || /^(.)\1{2,}$/u.test(name)) return true;
+  return false;
+}
+
 export function selectDiscoveryRooms(rooms: DiscoveryRoom[], query: string, filter: DiscoveryFilter, saved: string[], sort: DiscoverySort) {
   const needle = query.trim().toLocaleLowerCase();
   const savedSet = new Set(saved.map(address => address.toLowerCase()));
@@ -28,6 +43,7 @@ export function selectDiscoveryRooms(rooms: DiscoveryRoom[], query: string, filt
     if (filter === "live" && room.token.broadcastStatus !== "live") return false;
     if (filter === "upcoming" && !room.upcoming) return false;
     if (filter === "saved" && !savedSet.has(room.token.address.toLowerCase())) return false;
+    if (filter === "all" && !needle && isThrowawayRoom(room)) return false;
     return `${room.title} ${room.description} ${room.token.name} ${room.token.symbol} ${room.token.address} ${room.creator?.show?.title || ""}`.toLocaleLowerCase().includes(needle);
   }).sort((a, b) => {
     if (sort === "name") return a.title.localeCompare(b.title) || a.token.address.localeCompare(b.token.address);

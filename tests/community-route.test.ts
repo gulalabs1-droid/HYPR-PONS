@@ -11,9 +11,11 @@ test("community routes require a same-origin verified session and consume sign-i
   Object.assign(process.env, { SUPABASE_URL: "https://database.test", SUPABASE_SERVICE_ROLE_KEY: "test-only-role-key", HYPR_NETWORK: "testnet" });
   let nonceConsumed = false;
   const writes: Record<string, unknown>[] = [];
+  const reads: { url: string; body: Record<string, unknown> }[] = [];
   globalThis.fetch = async (url, init) => {
     if (String(url).endsWith("hypr_consume_community_nonce")) { const accepted = !nonceConsumed; nonceConsumed = true; return Response.json(accepted); }
     if (String(url).endsWith("hypr_write_community")) { writes.push(JSON.parse(String(init?.body))); return Response.json(true); }
+    reads.push({ url: String(url), body: JSON.parse(String(init?.body || "{}")) });
     return Response.json({ messages: [], followers: 0, following: false });
   };
   const request = (path: string, body: unknown, cookie = "", origin = "https://hypr.test") => new NextRequest(`https://hypr.test${path}`, { method: "POST", headers: { origin, cookie, "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -41,6 +43,14 @@ test("community routes require a same-origin verified session and consume sign-i
     const publicState = await readCommunity(new NextRequest(`https://hypr.test/api/community?roomId=${roomId}`));
     assert.equal(publicState.status, 200);
     assert.equal((await publicState.json()).wallet, null);
+    assert.equal((await writeCommunity(request("/api/community", { roomId, action: "pin" }, sessionCookie))).status, 400);
+    const messageId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    assert.equal((await writeCommunity(request("/api/community", { roomId, action: "pin", messageId }, sessionCookie))).status, 200);
+    assert.equal(writes.at(-1)?.p_action, "pin");
+    assert.equal((await readCommunity(new NextRequest(`https://hypr.test/api/community?roomId=${roomId}&before=not-a-uuid`))).status, 400);
+    const older = await readCommunity(new NextRequest(`https://hypr.test/api/community?roomId=${roomId}&before=${messageId}`));
+    assert.equal(older.status, 200);
+    assert.ok(reads.some(read => read.url.endsWith("hypr_read_community_feed") && read.body.p_before === messageId));
   } finally {
     globalThis.fetch = originalFetch;
     for (const [key, value] of Object.entries(saved)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { Launch } from "@/lib/types";
 import type { CombinedLaunchDataSource } from "@/lib/launch-data";
-import { broadcastLabel, discoveryFilters, discoveryRooms, selectDiscoveryRooms, type DiscoveryFilter, type DiscoverySort } from "@/lib/discovery";
+import { broadcastLabel, discoveryFilters, discoveryRooms, isThrowawayRoom, selectDiscoveryRooms, type DiscoveryFilter, type DiscoverySort } from "@/lib/discovery";
 import { useLiveLaunches } from "@/lib/use-live-launches";
 import { useGrowth } from "@/lib/use-growth";
 import { SAVED_ROOMS_EVENT, savedRooms } from "@/lib/saved-rooms";
@@ -36,7 +36,8 @@ export function DiscoveryDirectory({ initialLaunches, source }: { initialLaunche
   }, []);
   const rooms = useMemo(() => discoveryRooms(live.launches, growth.state?.rooms || [], clock || Date.now()), [live.launches, growth.state, clock]);
   const results = useMemo(() => selectDiscoveryRooms(rooms, query, filter, saved, sort), [rooms, query, filter, saved, sort]);
-  const counts = { all: rooms.length, live: rooms.filter(room => room.token.broadcastStatus === "live").length, upcoming: rooms.filter(room => room.upcoming).length, saved: rooms.filter(room => saved.includes(room.token.address.toLowerCase())).length };
+  const throwaway = rooms.filter(isThrowawayRoom).length;
+  const counts = { all: rooms.filter(room => !isThrowawayRoom(room)).length, live: rooms.filter(room => room.token.broadcastStatus === "live").length, upcoming: rooms.filter(room => room.upcoming).length, saved: rooms.filter(room => saved.includes(room.token.address.toLowerCase())).length };
   const spotlight = selectDiscoveryRooms(rooms, "", "all", saved, "live")[0];
   const shows = rooms.filter(room => room.upcoming).sort((a, b) => Date.parse(a.creator!.show!.startsAt) - Date.parse(b.creator!.show!.startsAt)).slice(0, 4);
   function update(key: string, value: string) {
@@ -64,7 +65,7 @@ export function DiscoveryDirectory({ initialLaunches, source }: { initialLaunche
             <small>Room artwork, not recorded footage. No automatic playback.</small>
           </div>
         </section>}
-        <div className="discovery-data-line"><span>◉ {counts.live} confirmed live · {rooms.length} indexed {rooms.length === 1 ? "room" : "rooms"}</span><Link href="/faq#wallet">First visit? Start here ↗</Link></div>
+        <div className="discovery-data-line"><span>◉ {counts.live} confirmed live · {rooms.length} indexed {rooms.length === 1 ? "room" : "rooms"}{filter === "all" && !query && throwaway ? ` · ${throwaway} test ${throwaway === 1 ? "room" : "rooms"} hidden from Explore` : ""}</span><Link href="/faq#wallet">First visit? Start here ↗</Link></div>
         <section className="discovery-browse" aria-labelledby="discovery-results-title">
           <div className="discovery-results-heading"><h2 id="discovery-results-title">{labels[filter]}</h2><span role="status" aria-live="polite">{results.length} {results.length === 1 ? "room" : "rooms"}{query ? ` matching “${query}”` : ""}</span></div>
           {unavailable && <p className="discovery-service-notice" role="status">Room updates are unavailable. Previously loaded rooms may still appear; live status can change. Refresh to retry.</p>}

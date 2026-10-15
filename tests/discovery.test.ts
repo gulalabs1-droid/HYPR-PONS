@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { broadcastLabel, discoveryRooms, selectDiscoveryRooms } from "../src/lib/discovery";
+import { broadcastLabel, discoveryRooms, isThrowawayRoom, selectDiscoveryRooms } from "../src/lib/discovery";
 import type { Launch } from "../src/lib/types";
 import type { GrowthRoom } from "../src/lib/growth";
 import { DiscoveryRoomCard } from "../src/components/discovery-room-card";
@@ -61,6 +61,17 @@ test("viewer count is displayed only when known and confirmed live, including a 
     const html = renderToStaticMarkup(createElement(DiscoveryRoomCard, { room }));
     assert.equal(html.includes("connected viewers"), expected);
   }
+});
+test("Explore hides throwaway ticker names unless searched, without inventing categories", () => {
+  const junk = discoveryRooms([token(9, { name: "kkk", symbol: "KKK" })], [])[0];
+  const named = discoveryRooms([token(1)], [profile(token(1))])[0];
+  const fixture = discoveryRooms([token(2)], [])[0];
+  assert.equal(isThrowawayRoom(junk), true);
+  assert.equal(isThrowawayRoom(named), false);
+  assert.equal(isThrowawayRoom(fixture), false, "symbol TEST alone is not junk");
+  assert.equal(selectDiscoveryRooms([junk, named], "", "all", [], "live").map(room => room.token.rank).join(), "1");
+  assert.equal(selectDiscoveryRooms([junk], "kkk", "all", [], "live").length, 1);
+  assert.equal(selectDiscoveryRooms([junk], "", "saved", [junk.token.address], "live").length, 1);
 });
 test("FAQ explicitly explains clipping is unavailable, wallet-free watching, and persistent rooms", () => {
   const html = renderToStaticMarkup(createElement(RoomFaq));

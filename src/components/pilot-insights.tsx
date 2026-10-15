@@ -27,11 +27,22 @@ const cohorts = [
 
 function shortAddress(address: string) { return `${address.slice(0, 6)}…${address.slice(-4)}`; }
 
+type ShowRow = { id: string; title: string; startsAt: string; status: string; viewers: number; follows: number };
+type OperatorReport = { id: string; roomId?: string; room?: string; reason: string; details: string; message: string | null };
+
 export function PilotInsights({ roomId }: { roomId?: string }) {
   const [data, setData] = useState<Record<string, unknown> | null>(null), [error, setError] = useState(""), [busy, setBusy] = useState(false);
+  const [operatorReports, setOperatorReports] = useState<OperatorReport[] | null>(null);
   async function load() {
     setBusy(true); setError("");
-    try { await signInCommunity(); const response = await fetch(`/api/community/analytics${roomId ? `?roomId=${encodeURIComponent(roomId)}` : ""}`, { cache:"no-store" }); const body = await response.json(); if (!response.ok) throw new Error(body.error); setData(body); }
+    try {
+      await signInCommunity();
+      const response = await fetch(`/api/community/analytics${roomId ? `?roomId=${encodeURIComponent(roomId)}` : ""}`, { cache:"no-store" });
+      const body = await response.json(); if (!response.ok) throw new Error(body.error); setData(body);
+      const inbox = await fetch("/api/community/reports?scope=operator", { cache: "no-store" });
+      const payload = inbox.ok ? await inbox.json() as { reports?: OperatorReport[] } : null;
+      setOperatorReports(Array.isArray(payload?.reports) ? payload.reports : null);
+    }
     catch (failure) { setError(walletErrorMessage(failure)); } finally { setBusy(false); }
   }
   const value = (key: string) => typeof data?.[key] === "number" ? data[key] as number : null;
@@ -63,6 +74,14 @@ export function PilotInsights({ roomId }: { roomId?: string }) {
           </div>; })}</div>
           <p className="creator-fineprint">No mature cohort means retention is not measurable yet—not a 0% failure. Shares-to-arrivals is a ratio, not a probability: one share may reach many browsers. Without consent, visits are intentionally not counted.</p>
         </section>
+        {Array.isArray(data.shows) && <section className="insights-group" aria-labelledby="insights-shows">
+          <header><h2 id="insights-shows">By scheduled show</h2><p>Consenting threshold browsers whose first event in this window fell around the scheduled start (±15 minutes / +4 hours). Not a certified broadcast log.</p></header>
+          {!(data.shows as ShowRow[]).length ? <p className="creator-fineprint">No shows in the last 30 days, so there is nothing to group yet.</p> : <div className="insights-shows">{(data.shows as ShowRow[]).map(show => <article key={show.id}><span className="eyebrow">{show.status}</span><strong>{show.title}</strong><time dateTime={show.startsAt}>{new Date(show.startsAt).toLocaleString()}</time><dl><div><dt>Viewer browsers</dt><dd>{Number(show.viewers).toLocaleString()}</dd></div><div><dt>Follows in window</dt><dd>{Number(show.follows).toLocaleString()}</dd></div></dl></article>)}</div>}
+        </section>}
+        {operatorReports && <section className="insights-group" aria-labelledby="insights-ops">
+          <header><h2 id="insights-ops">Operator inbox</h2><p>Room-level reports, independent of the accused creator. Message reports stay with that room’s creator.</p></header>
+          {operatorReports.length === 0 ? <p className="creator-fineprint">No unresolved operator reports.</p> : operatorReports.map(report => <article className="growth-report" key={report.id}><strong>{report.reason}{report.room ? ` · ${report.room}` : ""}</strong><p>{report.details}</p>{report.message && <blockquote>{report.message}</blockquote>}{report.roomId && <Link href={`/room/${report.roomId}`}>Open room →</Link>}</article>)}
+        </section>}
       </>}
       <section className="insights-notes" aria-label="About these numbers">
         {data && <article><h2>Not measured yet</h2><p>Average watch duration, creator repeat-broadcast rate, provider-confirmed successful broadcasts and engagement without a trade are unavailable. Anonymous identities are not merged with wallets or counted as unique people.</p></article>}

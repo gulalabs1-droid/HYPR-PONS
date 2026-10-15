@@ -19,7 +19,7 @@ function timeAgo(iso: string, now: number) {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-type Community = { messages: Message[]; followers: number; following: boolean; wallet: string | null; checkedAt: string };
+type Community = { messages: Message[]; followers: number; following: boolean; wallet: string | null; checkedAt: string; hasMore?: boolean; pinned?: Message | null };
 
 function speakerName(wallet: string, creator: string, creatorName?: string) {
   if (wallet.toLowerCase() !== creator.toLowerCase()) return shortAddress(wallet);
@@ -36,19 +36,34 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
   const [now, setNow] = useState(() => Date.now());
   const log = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
+  const extended = useRef(false);
   const pending = useRef(false);
   const active = useRef(true);
   const generation = useRef(0);
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (before?: string) => {
     if (pending.current || document.visibilityState === "hidden") return;
     pending.current = true;
     const current = generation.current;
     try {
       await awaitCommunityReset();
-      const response = await fetch(`/api/community?roomId=${encodeURIComponent(roomId)}`, { cache: "no-store", signal: AbortSignal.timeout(10000) });
+      const response = await fetch(`/api/community?roomId=${encodeURIComponent(roomId)}${before ? `&before=${encodeURIComponent(before)}` : ""}`, { cache: "no-store", signal: AbortSignal.timeout(10000) });
       const data = await response.json() as Community & { error?: string };
       if (!response.ok || !Array.isArray(data.messages)) throw new Error(data.error || "Shared chat is unavailable.");
-      if (active.current && generation.current===current) { setState(data); setError(""); }
+      if (active.current && generation.current===current) {
+        setState(existing => {
+          if (before && existing) {
+            extended.current = true;
+            pinned.current = false;
+            return { ...data, messages: [...data.messages, ...existing.messages.filter(message => !data.messages.some(item => item.id === message.id))], hasMore: data.hasMore };
+          }
+          if (extended.current && existing) {
+            const known = new Set(existing.messages.map(message => message.id));
+            return { ...data, messages: [...existing.messages, ...data.messages.filter(message => !known.has(message.id))], hasMore: existing.hasMore };
+          }
+          return data;
+        });
+        setError("");
+      }
     } catch (failure) { if (active.current && generation.current===current) setError(failure instanceof Error ? failure.message : "Shared chat is unavailable."); }
     finally { pending.current = false; }
   }, [roomId]);
@@ -71,11 +86,12 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
       void changedWallet();
     }
     window.addEventListener(WALLET_CHANGED_EVENT, selectedWalletChanged);
-    window.addEventListener(COMMUNITY_UPDATED_EVENT, refresh);
+    const reload = () => void refresh();
+    window.addEventListener(COMMUNITY_UPDATED_EVENT, reload);
     function pinged(event: Event) { if ((event as CustomEvent<{ roomId?: string }>).detail?.roomId === roomId.toLowerCase()) void refresh(); }
     window.addEventListener(LIVE_CHAT_PING_EVENT, pinged);
-    document.addEventListener("visibilitychange", refresh);
-    return () => { active.current = false; window.clearInterval(timer); provider?.removeListener?.("accountsChanged", changedWallet); window.removeEventListener(WALLET_CHANGED_EVENT, selectedWalletChanged); window.removeEventListener(COMMUNITY_UPDATED_EVENT, refresh); window.removeEventListener(LIVE_CHAT_PING_EVENT, pinged); document.removeEventListener("visibilitychange", refresh); };
+    document.addEventListener("visibilitychange", reload);
+    return () => { active.current = false; window.clearInterval(timer); provider?.removeListener?.("accountsChanged", changedWallet); window.removeEventListener(WALLET_CHANGED_EVENT, selectedWalletChanged); window.removeEventListener(COMMUNITY_UPDATED_EVENT, reload); window.removeEventListener(LIVE_CHAT_PING_EVENT, pinged); document.removeEventListener("visibilitychange", reload); };
   }, [refresh, roomId]);
 
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 30000); return () => window.clearInterval(timer); }, []);
@@ -88,7 +104,7 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
     await signInCommunity();
   }
 
-  async function update(action: "message" | "follow" | "hide", extra: Record<string, unknown>) {
+  async function update(action: "message" | "follow" | "hide" | "pin" | "unpin", extra: Record<string, unknown>) {
     if (busy) return;
     setBusy(true); setError("");
     const draft = action === "message" ? String(extra.body || "") : "";
@@ -118,9 +134,11 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
     <button className="secondary-button" disabled={busy || !state} aria-pressed={state?.following || false} onClick={() => void update("follow", { following: !state?.following })}>{state?.following ? "✓ Following" : "Follow room"}</button>
     {state?.wallet ? <p className="accounting-copy">Signed in as {shortAddress(state.wallet)} <button className="claim-link" disabled={busy} onClick={async () => { await fetch("/api/community/session", { method: "DELETE" }); await refresh(); }}>Sign out</button></p> : <p className="accounting-copy">One free wallet signature enables shared chat and follows. No transaction or token approval.</p>}
     <div className="chat-messages" ref={log} onScroll={(event) => { const element = event.currentTarget; pinned.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80; }} role="log" aria-label="Shared room messages" aria-live="polite" aria-relevant="additions">
+      {state?.hasMore && <button type="button" className="claim-link" disabled={busy} onClick={() => void refresh(state.messages[0]?.id)}>Load earlier messages</button>}
+      {state?.pinned && <div className="message is-pinned"><span className="avatar" aria-hidden="true"><TokenArt seed={state.pinned.wallet} /></span><div><strong>Pinned · {speakerName(state.pinned.wallet, creator, creatorName)}</strong><p>{state.pinned.body}</p>{state.wallet === creator.toLowerCase() && <button className="claim-link" disabled={busy} onClick={() => void update("unpin", {})}>Unpin</button>}</div></div>}
       {state && state.messages.length === 0 && <div className="chat-empty"><span aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /><path d="M8.5 12h.01M12 12h.01M15.5 12h.01" /></svg></span><strong>No messages yet</strong><span>Be the first to say gm. Messages are shared with everyone in this room.</span></div>}
       {!state && <p className="accounting-copy">Loading shared messages…</p>}
-      {state?.messages.map((message) => <div className={`message${message.wallet.toLowerCase() === creator.toLowerCase() ? " is-creator" : ""}${state.wallet === message.wallet.toLowerCase() ? " is-mine" : ""}`} key={message.id}><span className="avatar" aria-hidden="true"><TokenArt seed={message.wallet} /></span><div><strong>{speakerName(message.wallet, creator, creatorName)}{message.wallet.toLowerCase() === creator.toLowerCase() ? " · creator" : ""}</strong><p>{message.body}</p><time dateTime={message.created_at} title={new Date(message.created_at).toLocaleString()}>{timeAgo(message.created_at, now)}</time>{state.wallet && (state.wallet === message.wallet.toLowerCase() || state.wallet === creator.toLowerCase()) && <button className="claim-link" disabled={busy} onClick={() => void update("hide", { messageId: message.id })}>Hide message</button>}{reportsEnabled && <button className="claim-link" onClick={() => setReport(message.id)}>Report message</button>}</div></div>)}
+      {state?.messages.map((message) => <div className={`message${message.wallet.toLowerCase() === creator.toLowerCase() ? " is-creator" : ""}${state.wallet === message.wallet.toLowerCase() ? " is-mine" : ""}`} key={message.id}><span className="avatar" aria-hidden="true"><TokenArt seed={message.wallet} /></span><div><strong>{speakerName(message.wallet, creator, creatorName)}{message.wallet.toLowerCase() === creator.toLowerCase() ? " · creator" : ""}</strong><p>{message.body}</p><time dateTime={message.created_at} title={new Date(message.created_at).toLocaleString()}>{timeAgo(message.created_at, now)}</time>{state.wallet && (state.wallet === message.wallet.toLowerCase() || state.wallet === creator.toLowerCase()) && <button className="claim-link" disabled={busy} onClick={() => void update("hide", { messageId: message.id })}>Hide message</button>}{state.wallet === creator.toLowerCase() && <button className="claim-link" disabled={busy} onClick={() => void update("pin", { messageId: message.id })}>Pin</button>}{reportsEnabled && <button className="claim-link" onClick={() => setReport(message.id)}>Report message</button>}</div></div>)}
       {pendingBody && state?.wallet && <div className="message is-mine is-pending"><span className="avatar" aria-hidden="true"><TokenArt seed={state.wallet} /></span><div><strong>{speakerName(state.wallet, creator, creatorName)}</strong><p>{pendingBody}</p><time>Sending…</time></div></div>}
     </div>
     <form className="chat-form" onSubmit={(event) => { event.preventDefault(); void update("message", { body: text.trim() }); }}><input aria-label="Shared room message" value={text} onChange={(event) => setText(event.target.value)} maxLength={280} disabled={busy || !state} placeholder="Say hello to the room" /><button aria-label="Send shared message" disabled={busy || !state || !text.trim()}>↑</button></form>

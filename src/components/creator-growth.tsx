@@ -54,7 +54,7 @@ function ShowEditor({ room, onSave }: { room: GrowthRoom; onSave: (action: strin
     } catch { setError("Choose a valid local date and time before publishing."); } finally { setBusy(false); }
   }
   return <form className="growth-form" onSubmit={event => { event.preventDefault(); void run("schedule"); }}>
-    <h3>{show ? "Edit your next show" : "Schedule your next show"}</h3>
+    <div className="hub-form-head"><h3>{show ? "Edit your next show" : "Schedule your next show"}</h3><p>Followers see it in Discover and Following, with an add-to-calendar link.</p></div>
     <label>Show title<input required maxLength={100} value={title} onChange={event => setTitle(event.target.value)} placeholder="What will your community watch?" /></label>
     <label>Description (optional)<textarea maxLength={500} value={description} onChange={event => setDescription(event.target.value)} /></label>
     <label>Start time · your local timezone<input type="datetime-local" required value={time} onChange={event => setTime(event.target.value)} /></label>
@@ -65,16 +65,26 @@ function ShowEditor({ room, onSave }: { room: GrowthRoom; onSave: (action: strin
   </form>;
 }
 
-function ProfileEditor({ room, onSave }: { room: GrowthRoom; onSave: (action: string, payload: Record<string, unknown>) => Promise<void> }) {
-  const [name, setName] = useState(room.displayName || room.name), [bio, setBio] = useState(room.bio || ""), [avatar, setAvatar] = useState(room.avatar);
+function ProfileForm({ room, onSave }: { room: GrowthRoom; onSave: (action: string, payload: Record<string, unknown>) => Promise<void> }) {
+  const [name, setName] = useState(room.displayName || room.name), [bio, setBio] = useState(room.bio || ""), [avatar, setAvatar] = useState(room.avatar), [busy, setBusy] = useState(false);
+  async function save() { setBusy(true); try { await onSave("profile", { displayName: name, bio, avatar }); } finally { setBusy(false); } }
+  return <form className="growth-form" onSubmit={event => { event.preventDefault(); void save(); }}>
+    <div className="hub-form-head"><h3>Creator identity</h3><p>How your room appears in Discover and Following.</p></div>
+    <div className="hub-field-row"><label>Display name<input required maxLength={60} value={name} onChange={event => setName(event.target.value)} /></label>
+      <fieldset className="avatar-picker"><legend>Avatar</legend>{AVATARS.map(icon => <label key={icon} className={avatar === icon ? "is-selected" : ""}><input type="radio" name="avatar" value={icon} checked={avatar === icon} onChange={() => setAvatar(icon)} /><span aria-hidden="true">{icon}</span><span className="sr-only">{icon}</span></label>)}</fieldset></div>
+    <label>About your community<textarea maxLength={500} value={bio} onChange={event => setBio(event.target.value)} placeholder="What your room is about, in a sentence or two." /></label>
+    <div className="growth-actions"><button className="primary-button" disabled={busy}>{busy ? "Saving…" : "Save creator profile"}</button></div>
+  </form>;
+}
+
+function MomentForm({ room, onSave }: { room: GrowthRoom; onSave: (action: string, payload: Record<string, unknown>) => Promise<void> }) {
   const [moment, setMoment] = useState(room.moment || ""), [busy, setBusy] = useState(false);
-  async function save(action: "profile" | "moment") {
-    setBusy(true); try { await onSave(action, action === "profile" ? { displayName: name, bio, avatar } : { title: moment }); } finally { setBusy(false); }
-  }
-  return <>
-    <form className="growth-form" onSubmit={event => { event.preventDefault(); void save("profile"); }}><h3>Creator identity</h3><label>Display name<input required maxLength={60} value={name} onChange={event => setName(event.target.value)} /></label><label>About your community<textarea maxLength={500} value={bio} onChange={event => setBio(event.target.value)} /></label><label>Avatar<select value={avatar} onChange={event => setAvatar(event.target.value)}>{AVATARS.map(icon => <option key={icon}>{icon}</option>)}</select></label><button className="secondary-button" disabled={busy}>Save creator profile</button></form>
-    <form className="growth-form" onSubmit={event => { event.preventDefault(); void save("moment"); }}><h3>Moment Share Card</h3><p className="accounting-copy">A topic card linking back to your room—not a video clip or replay. Save your profile first. Clear the topic and save to remove the card.</p><label>Moment or topic<input maxLength={100} value={moment} onChange={event => setMoment(event.target.value)} placeholder="A topic worth sharing" /></label><button className="secondary-button" disabled={busy}>Save share card</button></form>
-  </>;
+  async function save() { setBusy(true); try { await onSave("moment", { title: moment }); } finally { setBusy(false); } }
+  return <form className="growth-form" onSubmit={event => { event.preventDefault(); void save(); }}>
+    <div className="hub-form-head"><h3>Moment Share Card</h3><p>A topic card linking back to your room—not a video clip or replay. Save your profile first. Clear the topic and save to remove the card.</p></div>
+    <label>Moment or topic<input maxLength={100} value={moment} onChange={event => setMoment(event.target.value)} placeholder="A topic worth sharing" /></label>
+    <div className="growth-actions"><button className="primary-button" disabled={busy}>{busy ? "Saving…" : "Save share card"}</button>{room.moment && <Link className="secondary-button" href={`/room/${room.address}/moment`}>Preview card →</Link>}</div>
+  </form>;
 }
 
 type Report = { id: string; reason: string; details: string; message: string | null; messageId: string | null };
@@ -83,7 +93,34 @@ function CreatorReports({ room, onSave }: { room: GrowthRoom; onSave: (action: s
   async function load() {
     try { const response = await fetch(`/api/community/reports?roomId=${room.address}`, { cache: "no-store" }); const data = await response.json(); if (!response.ok) throw new Error(data.error); setReports(data.reports); setError(""); } catch { setError("Report inbox unavailable."); }
   }
-  return <div className="growth-form"><h3>Community reports</h3><p className="accounting-copy">Reports are private to this room’s creator. This is not an emergency service or a platform takedown system.</p><button className="secondary-button" onClick={() => void load()}>Check reports</button>{reports?.length === 0 && <p>No unresolved reports.</p>}{reports?.map(report => <div className="growth-report" key={report.id}><strong>{report.reason}</strong><p>{report.details}</p>{report.message && <blockquote>{report.message}</blockquote>}<button className="secondary-button" onClick={async () => { await onSave("resolve-report", { id: report.id, hideMessage: Boolean(report.messageId) }); await load(); }}>{report.messageId ? "Hide message & resolve" : "Mark reviewed"}</button></div>)}{error && <p role="alert">{error}</p>}</div>;
+  return <div className="growth-form"><div className="hub-form-head"><h3>Community reports</h3><p>Reports are private to this room’s creator. This is not an emergency service or a platform takedown system.</p></div><div className="growth-actions"><button className="secondary-button" onClick={() => void load()}>{reports ? "Refresh reports" : "Check reports"}</button></div>{reports?.length === 0 && <p>No unresolved reports.</p>}{reports?.map(report => <div className="growth-report" key={report.id}><strong>{report.reason}</strong><p>{report.details}</p>{report.message && <blockquote>{report.message}</blockquote>}<button className="secondary-button" onClick={async () => { await onSave("resolve-report", { id: report.id, hideMessage: Boolean(report.messageId) }); await load(); }}>{report.messageId ? "Hide message & resolve" : "Mark reviewed"}</button></div>)}{error && <p role="alert">{error}</p>}</div>;
+}
+
+type HubTab = "show" | "profile" | "moment" | "reports";
+const hubTabs: { key: HubTab; label: string }[] = [{ key: "show", label: "Next show" }, { key: "profile", label: "Profile" }, { key: "moment", label: "Share card" }, { key: "reports", label: "Reports" }];
+
+function CreatorHub({ room, roomId, onSave }: { room: GrowthRoom; roomId: string; onSave: (action: string, payload: Record<string, unknown>) => Promise<void> }) {
+  const [tab, setTab] = useState<HubTab>("show");
+  return <details className="creator-hub" open>
+    <summary><span className="hub-title"><span className="hub-badge">ONLY YOU SEE THIS</span><strong>Creator dashboard</strong><small>Shows, profile, share card & reports</small></span><span className="hub-chevron" aria-hidden="true" /></summary>
+    <div className="hub-body">
+      <div className="hub-actions">
+        <a className="hub-action" href="#room-watch"><span aria-hidden="true">◉</span><strong>Go live</strong><small>Open the broadcast studio</small></a>
+        <Link className="hub-action" href={`/insights?roomId=${roomId}`}><span aria-hidden="true">↗</span><strong>Insights</strong><small>Return visits & shares</small></Link>
+        <div className="hub-action is-share"><span aria-hidden="true">⇪</span><strong>Share room</strong><ShareRoom roomId={roomId} name={room.displayName || room.name} /></div>
+      </div>
+      <div className="hub-tabs" role="tablist" aria-label="Creator dashboard sections">
+        {hubTabs.map(item => <button key={item.key} type="button" role="tab" id={`hub-tab-${item.key}`} aria-selected={tab === item.key} aria-controls="hub-panel" className={tab === item.key ? "selected" : ""} onClick={() => setTab(item.key)}>{item.label}{item.key === "show" && room.show && <i aria-hidden="true" />}</button>)}
+      </div>
+      <div className="hub-panel" id="hub-panel" role="tabpanel" aria-labelledby={`hub-tab-${tab}`}>
+        {tab === "show" && <ShowEditor key={`${room.show?.id || "new"}-${room.show?.revision || 0}`} room={room} onSave={onSave} />}
+        {tab === "profile" && <ProfileForm room={room} onSave={onSave} />}
+        {tab === "moment" && <MomentForm room={room} onSave={onSave} />}
+        {tab === "reports" && <CreatorReports room={room} onSave={onSave} />}
+      </div>
+      <p className="creator-fineprint">These controls edit only your community and schedule. Start and end broadcasts in the player’s studio.</p>
+    </div>
+  </details>;
 }
 
 export function CreatorGrowth({ roomId, creator, live, growth }: { roomId: string; creator: string; live: boolean; growth: ReturnType<typeof useGrowth> }) {
@@ -119,10 +156,19 @@ export function CreatorGrowth({ roomId, creator, live, growth }: { roomId: strin
   return <section className="creator-growth" aria-label="Creator and next show">
     {growth.error && <p className="live-notice" role="status">{growth.error} <button className="claim-link" onClick={growth.refresh}>Retry</button></p>}
     {!room && !growth.error && <p className="accounting-copy">Checking creator and next show…</p>}
-    {room && <><div className="creator-profile"><CreatorAvatar seed={room.address} avatar={room.avatar} name={room.displayName || room.name} /><div><span className="eyebrow">CREATOR COMMUNITY</span><h2>{room.displayName || room.name}</h2>{room.bio && <p>{room.bio}</p>}<span className="accounting-copy">{room.followers} wallet follower{room.followers === 1 ? "" : "s"} · associated token remains unchanged</span></div></div><div className="growth-actions"><button className="secondary-button" aria-pressed={room.following} disabled={busy} onClick={() => void follow()}>{busy ? "Saving…" : room.following ? "✓ Following with wallet" : "Follow with wallet"}</button><Link className="secondary-button" href="/following">Go to Following →</Link></div><p className="accounting-copy">Saving needs no wallet and stays in this browser. Wallet follows sync across devices; neither requires buying tokens.</p><UpcomingShow room={room} live={live} />
-      {room.moment && <div className="moment-share"><span className="eyebrow">MOMENT SHARE CARD · NOT VIDEO</span><h3>{room.moment}</h3><a href={`/room/${room.address}/moment`}>Open share card →</a><ShareRoom roomId={room.address} name={room.displayName || room.name} moment /></div>}
+    {room && <>
+      <div className="creator-card">
+        <div className="creator-profile"><CreatorAvatar seed={room.address} avatar={room.avatar} name={room.displayName || room.name} /><div><span className="eyebrow">CREATOR COMMUNITY</span><h2>{room.displayName || room.name}</h2>{room.bio && <p>{room.bio}</p>}</div></div>
+        <div className="creator-card-side">
+          <div className="creator-stat"><strong>{room.followers.toLocaleString()}</strong><span>wallet follower{room.followers === 1 ? "" : "s"}</span></div>
+          <div className="growth-actions"><button className={`${room.following ? "secondary-button following" : "primary-button"}`} aria-pressed={room.following} disabled={busy} onClick={() => void follow()}>{busy ? "Saving…" : room.following ? "✓ Following with wallet" : "Follow with wallet"}</button><Link className="secondary-button" href="/following">Following →</Link></div>
+        </div>
+      </div>
+      <p className="creator-fineprint">Saving needs no wallet and stays in this browser. Wallet follows sync across devices; neither requires buying tokens. The associated token is unchanged by following.</p>
+      <UpcomingShow room={room} live={live} />
+      {room.moment && <div className="moment-share"><span className="eyebrow">MOMENT SHARE CARD · NOT VIDEO</span><h3>{room.moment}</h3><div className="growth-actions"><Link className="secondary-button" href={`/room/${room.address}/moment`}>Open share card →</Link><ShareRoom roomId={room.address} name={room.displayName || room.name} moment /></div></div>}
     </>}
-    {ownsWallet && room && <details className="growth-studio"><summary>Creator dashboard · shows, profile & reports</summary><p className="accounting-copy">Use the existing player’s studio to start/end broadcasts. These controls edit only your community and schedule.</p><a className="secondary-button" href="#room-watch">Open broadcast studio ↑</a><Link className="secondary-button" href={`/insights?roomId=${roomId}`}>View pilot insights →</Link><ShareRoom roomId={roomId} name={room.displayName || room.name} /><ShowEditor key={`${room.show?.id || "new"}-${room.show?.revision || 0}`} room={room} onSave={save} /><ProfileEditor room={room} onSave={save} /><CreatorReports room={room} onSave={save} /></details>}
+    {ownsWallet && room && <CreatorHub room={room} roomId={roomId} onSave={save} />}
     {notice && <p className="live-notice" role="status">{notice}</p>}
   </section>;
 }

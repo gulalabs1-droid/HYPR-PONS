@@ -1,5 +1,7 @@
 # HYPR creator growth implementation — October 14, 2026
 
+Deployment follow-up: the founder subsequently requested deployment of the existing testnet app. The additive schema is now installed and its rollback-only PostgreSQL assertions passed again. `HYPR_GROWTH_ENABLED=true` is configured for Preview and Production; the configured preview passed the guest save → Following → reload → room-return → remove journey. See `HYPR_DEPLOYMENT_20261014.md` for the release outcome and remaining acceptance boundaries. This does not approve a paid upgrade, mainnet use, or commercial-hosting eligibility.
+
 ## What existed
 
 Native Robinhood testnet 46630 token/curve creation and trades, fixed reviewed fees, creator-authorized LiveKit publishing, guest viewing, explicit device preview, persistent token-address rooms, shared wallet-authenticated chat/follows, and responsive watch/chat/trade sections. See `HYPR_GROWTH_AUDIT.md` for the source audit. The founder reports the real creator/viewer test passed; this agent did not observe/record that session.
@@ -38,7 +40,7 @@ Rollback application behavior by disabling `HYPR_GROWTH_ENABLED` and redeploying
 
 At initial audit, hosted production was still c39c9c9 and growth schema was absent (read-only database check: 3 existing rooms, 1 visible saved message). Deployment and browser evidence must be recorded in the quality audit before treating this slice as live. Successful local build and database rollback assertions alone are insufficient.
 
-**Founder decision during the October 14 quality audit:** keep the current Hobby plan for now; no billing/upgrade approved. The business release stays staged. Migrations were tested with full rollback, **not permanently applied**; the feature flag was not enabled on Vercel and no new production deployment was triggered. Existing public app remains unchanged. Local preview has no Supabase/LiveKit credentials; its empty bounded chain window does not recover historical persisted rooms. This is a setup/test limitation, not permission to fill the UI with sample creators.
+**Historical founder decision during the October 14 quality audit:** keep the current Hobby plan for now; no billing/upgrade approved. At that audit snapshot, migrations were tested with full rollback, **not permanently applied**; the feature flag was not enabled on Vercel and no new production deployment was triggered. The later explicit testnet deployment request supersedes the deployment hold, not the unresolved business-hosting limitation. Local preview still has no Supabase/LiveKit credentials; configured hosted verification must not be confused with the earlier local empty-state checks.
 
 ## Honest limits
 

@@ -48,3 +48,15 @@ test("oversized recording chunks are rejected without uploading or stopping the 
     await assert.rejects(capture.result, /file-size limit/);
   } finally { if (original) Object.defineProperty(globalThis, "performance", original); }
 });
+
+test("device shutdown waits for raw flush, not a slow metadata download or finalizer", async () => {
+  const original = Object.getOwnPropertyDescriptor(globalThis,"performance"); let now=0, finish:(blob:Blob)=>void=()=>{}; let raw:Blob|undefined;
+  Object.defineProperty(globalThis,"performance",{configurable:true,value:{now:()=>now}});
+  try {
+    const source={kind:"video",readyState:"live",addEventListener(){},removeEventListener(){}};
+    const capture=recordPublishedStream({getTracks:()=>[source]} as unknown as MediaStream,"replay",{Recorder:FakeRecorder as unknown as typeof MediaRecorder,finalize:blob=>{raw=blob;return new Promise<Blob>(resolve=>{finish=resolve;});}});
+    now=1200;const result=capture.stop();await capture.flushed;
+    assert.ok(raw,"raw media is flushed even though finalization is still pending");
+    finish(raw!);assert.equal((await result).durationSeconds,1.2);
+  } finally {if(original)Object.defineProperty(globalThis,"performance",original);}
+});

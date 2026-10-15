@@ -32,7 +32,7 @@ export function MediaCaptureControls({ roomId, host, tracks, registerStop, onRec
   const requestGeneration = useRef(0);
   const fingerprint = tracks.map(track => track.id).sort().join(":");
   useEffect(() => { setReady(typeof MediaRecorder !== "undefined" && typeof MediaStream !== "undefined"); }, []);
-  const stop = useCallback(async () => { await capture.current?.stop().catch(() => undefined); }, []);
+  const stop = useCallback(async () => { const current = capture.current; if (!current) return; void current.stop().catch(() => undefined); await current.flushed; }, []);
   useEffect(() => { registerStop(stop); return () => registerStop(null); }, [registerStop, stop]);
   useEffect(() => {
     const counter = requestGeneration;

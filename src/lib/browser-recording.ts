@@ -21,6 +21,8 @@ export function recordPublishedStream(stream: MediaStream, kind: MediaKind, opti
   let bytes = 0, started = performance.now(), stopped = false, failure = "";
   let resolve: (value: CapturedMedia) => void = () => {}, reject: (error: Error) => void = () => {};
   const result = new Promise<CapturedMedia>((yes, no) => { resolve = yes; reject = no; });
+  let flush: () => void = () => {};
+  const flushed = new Promise<void>(done => { flush = done; });
   // Attach a rejection handler immediately; consumers can still await the original result.
   void result.catch(() => undefined);
   let timer: ReturnType<typeof setInterval>;
@@ -38,6 +40,8 @@ export function recordPublishedStream(stream: MediaStream, kind: MediaKind, opti
   recorder.onerror = () => { failure = "The browser could not finish this recording. Your broadcast is unchanged."; void stop(); };
   recorder.onstop = async () => {
     clearInterval(timer); tracks.forEach(track => track.removeEventListener("ended", changed));
+    // Device shutdown must not wait for a lazy module download or metadata repair.
+    flush();
     const milliseconds = Math.max(0, performance.now() - started);
     if (failure || bytes < 32 || milliseconds < 200 || milliseconds > (limit.seconds + 1) * 1000) { reject(new Error(failure || "The recording was too short or the browser paused it past its limit. Nothing was published.")); return; }
     try {
@@ -57,5 +61,5 @@ export function recordPublishedStream(stream: MediaStream, kind: MediaKind, opti
     options.onState?.(seconds, bytes);
     if (seconds >= limit.seconds || tracks.some(track => track.readyState !== "live")) void stop();
   }, 250);
-  return { stop, result };
+  return { stop, result, flushed };
 }

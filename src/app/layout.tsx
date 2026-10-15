@@ -6,7 +6,9 @@ import "./discover.css";
 import "./consumer.css";
 import "./growth.css";
 import "./polish.css";
+import "./discovery-hub.css";
 import { NavigationProgress } from "@/components/navigation-progress";
+import { PwaRegister } from "@/components/pwa-register";
 
 const sans = Manrope({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
@@ -19,6 +21,7 @@ export const metadata: Metadata = {
   },
   description: "Watch creators, join lasting communities and return for the next show. Trading is optional. Robinhood Chain testnet preview.",
   applicationName: "HYPR",
+  appleWebApp: { capable: true, title: "HYPR", statusBarStyle: "black-translucent" },
   openGraph: {
     title: "HYPR — discover what is moving",
     description: "Find the rooms where Robinhood Chain communities are gathering.",
@@ -45,6 +48,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <a className="skip-link" href="#content">Skip to content</a>
         <NavigationProgress />
+        <PwaRegister />
         <div id="content">{children}</div>
       </body>
     </html>

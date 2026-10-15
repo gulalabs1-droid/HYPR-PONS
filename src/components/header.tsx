@@ -6,6 +6,7 @@ import { getEthereum, ROBINHOOD_TESTNET_CHAIN_ID, shortAddress, switchToRobinhoo
 import { discoverWallets, OPEN_WALLET_EVENT, setWalletSessionDisconnected, walletErrorMessage } from "@/lib/wallet-discovery";
 import { useWalletStatus } from "@/lib/use-wallet-status";
 import { WalletPicker } from "./wallet-picker";
+import { LiveAlerts } from "./live-alerts";
 
 export function Header({ active }: { active?: "discover" | "protocol" | "following" }) {
   const wallet = useWalletStatus();
@@ -68,7 +69,7 @@ export function Header({ active }: { active?: "discover" | "protocol" | "followi
     <div className="header-inner">
       <Link href="/" className="brand" aria-label="HYPR home"><span className="brand-mark">H</span><span>HYPR</span></Link>
       <nav className="main-nav" aria-label="Main navigation">
-        <Link className={active === "discover" ? "active" : ""} aria-current={active === "discover" ? "page" : undefined} href="/">Discover</Link>
+        <Link className={active === "discover" ? "active" : ""} aria-current={active === "discover" ? "page" : undefined} href="/discover">Discover</Link>
         <Link className={active === "following" ? "active" : ""} aria-current={active === "following" ? "page" : undefined} href="/following">Following</Link>
         <Link href="/#launch">Create</Link>
         <Link className={active === "protocol" ? "active" : ""} aria-current={active === "protocol" ? "page" : undefined} href="/protocol">How it works</Link>
@@ -88,6 +89,7 @@ export function Header({ active }: { active?: "discover" | "protocol" | "followi
         </div>}
       </div>
     </div>
+    <LiveAlerts />
     {wrongChain && !message && <div className="wallet-banner"><span>Wallet connected · switch to Robinhood testnet before creating or trading.</span><button className="wallet-switch" onClick={() => void switchNetwork()} disabled={busy}>Switch to testnet</button></div>}
     {message && <div className="wallet-banner" role="status"><span>{message}</span><button onClick={() => setMessage("")} aria-label="Dismiss wallet message">×</button></div>}
     {pickerOpen && <WalletPicker onSelect={() => void connect()} onClose={() => setPickerOpen(false)} />}

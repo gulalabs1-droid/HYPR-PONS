@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { calendarText, canonicalRoomUrl, showPhase, validateGrowthWrite, type Show } from "../src/lib/growth";
+import { agendaDay, calendarText, canonicalRoomUrl, showPhase, validateGrowthWrite, type Show } from "../src/lib/growth";
 const roomId = `0x${"1".repeat(40)}`, id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const now = Date.parse("2026-10-14T12:00:00Z");
 test("scheduling requires a timezone, bounded future time, valid id/revision and bounded text", () => {
@@ -13,6 +13,12 @@ test("growth validation discards actor/owner overrides and forbids external imag
   const body = validateGrowthWrite({roomId,action:"profile",wallet:"evil",payload:{displayName:"Creator",bio:"Hello",avatar:"H",creator:"evil"}});
   assert.deepEqual(body?.payload,{displayName:"Creator",bio:"Hello",avatar:"H"});
   assert.equal(validateGrowthWrite({roomId,action:"profile",payload:{displayName:"Creator",bio:"",avatar:"https://tracker.test/pixel"}}),null);
+});
+test("agenda days label today and tomorrow in local time without inventing a live badge", () => {
+  const today = new Date("2026-10-15T18:00:00").getTime();
+  assert.match(agendaDay("2026-10-15T20:00:00", today), /^Today · /);
+  assert.match(agendaDay("2026-10-16T09:00:00", today), /^Tomorrow · /);
+  assert.doesNotMatch(agendaDay("2026-10-20T09:00:00", today), /Today|Tomorrow/);
 });
 test("elapsed scheduled times do not manufacture live or ended broadcasts", () => {
   const show:Show = {id,title:"Show",description:"",revision:1,status:"scheduled",startsAt:"2026-10-14T11:00:00Z"};

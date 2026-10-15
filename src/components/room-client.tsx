@@ -12,6 +12,8 @@ import { shortAddress } from "@/lib/wallet";
 import { formatCurveProgress } from "@/lib/curve-progress";
 import { formatEthExact } from "@/lib/format";
 import { roomHue } from "@/lib/room-display";
+import { showPhase } from "@/lib/growth";
+import { ShowTime } from "./creator-growth";
 import { useLiveLaunches } from "@/lib/use-live-launches";
 import { CommunityPanel } from "./community-panel";
 import { CreatorGrowth } from "./creator-growth";
@@ -20,6 +22,7 @@ import { PilotConsent } from "./pilot-consent";
 import { useGrowth } from "@/lib/use-growth";
 import { SaveRoom } from "./save-room";
 import { TokenArt, tokenGlyph } from "./token-art";
+import { RoomFaq } from "./room-faq";
 
 type RoomSection = "chat" | "trade" | "about";
 const sectionLabels: Record<RoomSection, string> = { chat: "Chat", trade: "Trade", about: "About" };
@@ -40,6 +43,9 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
   const sectionsRef = useRef<HTMLDivElement>(null);
   const explorer = isNative && process.env.NEXT_PUBLIC_HYPR_NETWORK !== "mainnet" ? "https://explorer.testnet.chain.robinhood.com" : "https://robinhoodchain.blockscout.com";
   const progress = formatCurveProgress(token.nativeRealQuoteReserve, token.nativeGraduationThreshold, token.curveProgressBps, token.curvePhase);
+  const liveNow = token.broadcastStatus === "live";
+  const phase = showPhase(creatorProfile?.show || null, liveNow);
+  const roomName = creatorProfile?.displayName || token.name;
 
   function chooseSection(next: RoomSection) {
     setSection(next);
@@ -49,22 +55,23 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
   return <main className="room-page">
     <Header />
     <div className="room-shell room-aura" style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
-      <Link href="/" className="back-link">← Discover rooms</Link>
+      <Link href="/discover" className="back-link">← Discover rooms</Link>
       <section className="room-header room-header-compact">
         <div className="room-token-identity"><span className="room-logo" aria-hidden="true"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} /></span><div>
           <span className="eyebrow">{isNative ? "HYPR COMMUNITY ROOM" : "PONS COMMUNITY ROOM"}</span>
-          <h1>{creatorProfile?.displayName || token.name} <span>{creatorProfile?.displayName ? "Community room" : `$${token.symbol}`}</span></h1>
+          <h1>{roomName} <span>{creatorProfile?.displayName ? "Community room" : `$${token.symbol}`}</span></h1>
         </div></div>
-        <div className="share-controls"><SaveRoom roomId={token.address}/><ShareRoom roomId={token.address} name={creatorProfile?.displayName || token.name} /></div>
+        <div className="share-controls"><SaveRoom roomId={token.address}/><ShareRoom roomId={token.address} name={roomName} /></div>
       </section>
+      {(liveNow || creatorProfile?.show) && <p className={`room-now is-${phase}`}><span className="room-now-badge">{liveNow ? <><span className="pulse" />LIVE NOW</> : phase === "upcoming" ? "NEXT SHOW" : phase === "awaiting-creator" ? "WAITING ON CREATOR" : "SCHEDULED"}</span>{creatorProfile?.show && <><strong>{creatorProfile.show.title}</strong>{phase !== "live" && <ShowTime iso={creatorProfile.show.startsAt} />}</>}</p>}
       <p className="room-safety-note">{isNative ? "Testnet preview · Free test assets, not real money. Watch without a wallet." : token.dataStatus === "demo" ? "Demo room · Sample launch data, not a verified live market." : "Indexed Pons room · Trading availability depends on the launch’s network."}</p>
       {liveData.error && <p className="live-notice" role="status">{liveData.error} Last successful data is kept visible; it may be out of date.</p>}
       <div className="room-experience" ref={sectionsRef}>
-        <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} />{isNative && <CreatorGrowth roomId={token.address} creator={token.deployer} live={token.broadcastStatus === "live"} growth={growth} />}</div>
+        <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} showTitle={creatorProfile?.show?.title} /></div>
         <nav className="room-section-nav" aria-label="Room sections">
           {(Object.keys(sectionLabels) as RoomSection[]).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={`room-${key}`} onClick={() => chooseSection(key)}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{sectionIcons[key]}</svg><span>{sectionLabels[key]}{key === "trade" && <small> ${token.symbol}</small>}</span></button>)}
         </nav>
-        <section className="room-chat-section" id="room-chat" data-mobile-active={section === "chat"} aria-label="Room chat"><CommunityPanel roomId={token.address} creator={token.deployer} reportsEnabled={growth.state?.enabled === true} /></section>
+        <section className="room-chat-section" id="room-chat" data-mobile-active={section === "chat"} aria-label="Room chat"><CommunityPanel roomId={token.address} creator={token.deployer} creatorName={creatorProfile?.displayName || token.name} reportsEnabled={growth.state?.enabled === true} /></section>
         <section className="room-trade-section" id="room-trade" data-mobile-active={section === "trade"} aria-label={`Trade ${token.symbol}`}>
           {isNative ? <NativeTradePanel curveAddress={token.pool} tokenAddress={token.address} tokenSymbol={token.symbol} /> : <div className="activity-panel"><h2>About this token’s trading</h2><p className="accounting-copy">HYPR’s in-room buy and sell controls currently support native HYPR testnet launches only. This indexed Pons token is not offered for trading here.</p><a className="claim-link" href={`${explorer}/address/${token.address}`} target="_blank" rel="noreferrer">View its contract ↗</a></div>}
         </section>
@@ -92,7 +99,9 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
               <p className="accounting-copy">{liveData.updatedAt ? `Live contract data checked ${new Date(liveData.updatedAt).toLocaleTimeString()} · refreshes every 15 seconds while visible.` : "Checking live contract data…"}</p>
             </div>
           </details>}
+          <RoomFaq compact />
         </section>
+        {isNative && <div className="room-creator" id="creator-dashboard"><CreatorGrowth roomId={token.address} creator={token.deployer} live={liveNow} growth={growth} /></div>}
       </div>
       {isNative && growth.state?.enabled === true && <PilotConsent roomId={token.address} />}
       <SiteFooter />

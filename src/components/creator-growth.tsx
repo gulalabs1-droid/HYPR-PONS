@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AVATARS, BROADCAST_ENDED_EVENT, COMMUNITY_UPDATED_EVENT, localDateTime, showPhase, type GrowthRoom } from "@/lib/growth";
 import { analyticsAllowed, shareAttribution } from "@/lib/pilot-analytics";
@@ -97,13 +97,61 @@ function CreatorReports({ room, onSave }: { room: GrowthRoom; onSave: (action: s
 }
 
 type HubTab = "show" | "profile" | "moment" | "reports";
+const wentLiveKey = (roomId: string) => `hypr-went-live-${roomId.toLowerCase()}`;
+
+function SetupChecklist({ room, roomId, live, onOpen }: { room: GrowthRoom; roomId: string; live: boolean; onOpen: (tab: HubTab) => void }) {
+  const [wentLive, setWentLive] = useState(false);
+  useEffect(() => {
+    try {
+      if (live) window.localStorage.setItem(wentLiveKey(roomId), "1");
+      setWentLive(live || window.localStorage.getItem(wentLiveKey(roomId)) === "1");
+    } catch { setWentLive(live); }
+  }, [live, roomId]);
+  const steps: { done: boolean; label: string; action: React.ReactNode }[] = [
+    { done: Boolean(room.displayName || room.bio), label: "Name your community", action: <button type="button" className="claim-link" onClick={() => onOpen("profile")}>Edit profile</button> },
+    { done: Boolean(room.show), label: "Schedule your first show", action: <button type="button" className="claim-link" onClick={() => onOpen("show")}>Schedule</button> },
+    { done: Boolean(room.moment), label: "Make a share card", action: <button type="button" className="claim-link" onClick={() => onOpen("moment")}>Create</button> },
+    { done: wentLive, label: "Go live once", action: <a className="claim-link" href="#room-watch">Open studio</a> },
+    { done: room.followers >= 10, label: `Reach 10 followers (${Math.min(room.followers, 10)}/10)`, action: <ShareRoom roomId={roomId} name={room.displayName || room.name} /> },
+  ];
+  const done = steps.filter(step => step.done).length;
+  if (done === steps.length) return <p className="hub-setup-done"><span aria-hidden="true">✓</span> Setup complete. Keep a show on the calendar so followers have a reason to return.</p>;
+  const next = steps.find(step => !step.done)!;
+  return <div className="hub-setup">
+    <div className="hub-setup-ring" style={{ "--progress": `${done / steps.length * 360}deg` } as React.CSSProperties} role="img" aria-label={`${done} of ${steps.length} setup steps done`}><span>{done}/{steps.length}</span></div>
+    <div className="hub-setup-body">
+      <strong>Get your room ready</strong>
+      <small>Next: {next.label}</small>
+      <ol>{steps.map(step => <li key={step.label} className={step.done ? "is-done" : ""}><span aria-hidden="true">{step.done ? "✓" : ""}</span><span>{step.label}</span>{!step.done && step === next && <span className="hub-setup-action">{step.action}</span>}</li>)}</ol>
+    </div>
+  </div>;
+}
+
+const VIEWER_TIPS_KEY = "hypr-viewer-tips-v1";
+function ViewerTips() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => { try { setOpen(window.localStorage.getItem(VIEWER_TIPS_KEY) !== "done"); } catch { setOpen(false); } }, []);
+  if (!open) return null;
+  function close() { setOpen(false); try { window.localStorage.setItem(VIEWER_TIPS_KEY, "done"); } catch { /* private mode */ } }
+  return <aside className="viewer-tips" aria-label="New to HYPR">
+    <div className="viewer-tips-head"><span className="eyebrow">NEW HERE?</span><button type="button" className="live-alerts-close" aria-label="Dismiss tips" onClick={close}>×</button></div>
+    <ol>
+      <li><span aria-hidden="true">1</span><div><strong>Watch free</strong><small>No wallet, camera or sign-up needed.</small></div></li>
+      <li><span aria-hidden="true">2</span><div><strong>Save the room</strong><small>Find it again on this device in Following.</small></div></li>
+      <li><span aria-hidden="true">3</span><div><strong>Follow for the next show</strong><small>Then turn on live alerts in Following.</small></div></li>
+    </ol>
+    <button type="button" className="secondary-button" onClick={close}>Got it</button>
+  </aside>;
+}
+
 const hubTabs: { key: HubTab; label: string }[] = [{ key: "show", label: "Next show" }, { key: "profile", label: "Profile" }, { key: "moment", label: "Share card" }, { key: "reports", label: "Reports" }];
 
-function CreatorHub({ room, roomId, onSave }: { room: GrowthRoom; roomId: string; onSave: (action: string, payload: Record<string, unknown>) => Promise<void> }) {
+function CreatorHub({ room, roomId, live, onSave }: { room: GrowthRoom; roomId: string; live: boolean; onSave: (action: string, payload: Record<string, unknown>) => Promise<void> }) {
   const [tab, setTab] = useState<HubTab>("show");
   return <details className="creator-hub" open>
     <summary><span className="hub-title"><span className="hub-badge">ONLY YOU SEE THIS</span><strong>Creator dashboard</strong><small>Shows, profile, share card & reports</small></span><span className="hub-chevron" aria-hidden="true" /></summary>
     <div className="hub-body">
+      <SetupChecklist room={room} roomId={roomId} live={live} onOpen={setTab} />
       <div className="hub-actions">
         <a className="hub-action" href="#room-watch"><span aria-hidden="true">◉</span><strong>Go live</strong><small>Open the broadcast studio</small></a>
         <Link className="hub-action" href={`/insights?roomId=${roomId}`}><span aria-hidden="true">↗</span><strong>Insights</strong><small>Return visits & shares</small></Link>
@@ -156,6 +204,7 @@ export function CreatorGrowth({ roomId, creator, live, growth }: { roomId: strin
   return <section className="creator-growth" aria-label="Creator and next show">
     {growth.error && <p className="live-notice" role="status">{growth.error} <button className="claim-link" onClick={growth.refresh}>Retry</button></p>}
     {!room && !growth.error && <p className="accounting-copy">Checking creator and next show…</p>}
+    {room && !ownsWallet && <ViewerTips />}
     {room && <>
       <div className="creator-card">
         <div className="creator-profile"><CreatorAvatar seed={room.address} avatar={room.avatar} name={room.displayName || room.name} /><div><span className="eyebrow">CREATOR COMMUNITY</span><h2>{room.displayName || room.name}</h2>{room.bio && <p>{room.bio}</p>}</div></div>
@@ -168,7 +217,7 @@ export function CreatorGrowth({ roomId, creator, live, growth }: { roomId: strin
       <UpcomingShow room={room} live={live} />
       {room.moment && <div className="moment-share"><span className="eyebrow">MOMENT SHARE CARD · NOT VIDEO</span><h3>{room.moment}</h3><div className="growth-actions"><Link className="secondary-button" href={`/room/${room.address}/moment`}>Open share card →</Link><ShareRoom roomId={room.address} name={room.displayName || room.name} moment /></div></div>}
     </>}
-    {ownsWallet && room && <CreatorHub room={room} roomId={roomId} onSave={save} />}
+    {ownsWallet && room && <CreatorHub room={room} roomId={roomId} live={live} onSave={save} />}
     {notice && <p className="live-notice" role="status">{notice}</p>}
   </section>;
 }

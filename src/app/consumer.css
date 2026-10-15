@@ -8,12 +8,21 @@
 .room-header-compact h1 span { display: inline; margin-left: 8px; font-size: 16px; color: var(--lime); background: none; -webkit-text-fill-color: currentColor; }
 .room-header-compact > button { flex: 0 0 auto; }
 .room-safety-note { color: var(--amber); font-size: 13px; line-height: 1.5; padding-bottom: 16px; }
-.room-experience { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 390px); grid-template-areas: "watch chat" "about trade"; gap: 18px; align-items: start; }
+.room-experience { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 390px); grid-template-areas: "watch chat" "about trade" "creator creator"; gap: 18px; align-items: start; }
 .room-experience > * { min-width: 0; }
 .room-watch { grid-area: watch; }
 .room-chat-section { grid-area: chat; }
 .room-trade-section { grid-area: trade; }
 .room-about-section { grid-area: about; display: grid; gap: 16px; }
+.room-creator { grid-area: creator; }
+.room-now { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: -4px 0 14px; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line-strong); background: var(--surface); }
+.room-now strong { font-size: 15px; }
+.room-now time { color: var(--text-soft); font-size: 13px; }
+.room-now-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .06em; background: rgba(255,255,255,.06); color: var(--text-soft); }
+.room-now.is-live { border-color: rgba(255, 77, 109, .4); background: rgba(255, 77, 109, .08); }
+.room-now.is-live .room-now-badge { background: var(--live, #ff4d6d); color: #fff; }
+.room-now.is-upcoming { border-color: rgba(168, 147, 255, .35); }
+.native-live-mark .stage-show { display: block; margin: 4px 0 0; font-style: normal; font-size: 15px; color: var(--lime); }
 .room-section-nav { display: none; }
 .room-experience .native-live-surface, .room-experience .native-live-connected, .room-experience .trade-panel { margin-top: 0; }
 .native-live-watch-first { display: flex; flex-direction: column; min-height: 0; }
@@ -36,8 +45,8 @@
 .creator-entry summary::after { content: "+"; margin-left: auto; }
 .creator-entry[open] summary::after { content: "−"; }
 .creator-entry p { padding: 4px 0 14px; max-width: none; }
-.room-experience .chat-panel { min-height: 420px; padding: 20px; }
-.room-experience .chat-messages { max-height: 270px; min-height: 80px; padding: 20px 0; }
+.room-experience .chat-panel { min-height: 520px; height: 100%; padding: 20px; display: flex; flex-direction: column; }
+.room-experience .chat-messages { max-height: none; flex: 1; min-height: 180px; padding: 20px 0; }
 .room-experience .chat-footnote { font: 12px/1.6 var(--sans); }
 .room-experience .trade-panel { padding: 22px; }
 .room-experience .trade-panel .panel-heading { align-items: flex-start; flex-wrap: wrap; gap: 10px; }

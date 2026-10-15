@@ -24,7 +24,7 @@ function signedHostMessage(roomId: string, address: string, timestamp: number) {
   return ["HYPR native live host authorization", `Room: ${roomName}`, `Wallet: ${address.toLowerCase()}`, `Timestamp: ${timestamp}`].join("\n");
 }
 
-export function NativeLiveRoom({ token, onOpenChat }: { token: Launch; onOpenChat?: () => void }) {
+export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch; onOpenChat?: () => void; showTitle?: string }) {
   const [status, setStatus] = useState<BroadcastStatus | null>(null);
   const [statusError, setStatusError] = useState(false);
   const [seenLive, setSeenLive] = useState(false);
@@ -150,7 +150,9 @@ export function NativeLiveRoom({ token, onOpenChat }: { token: Launch; onOpenCha
     <div className={`live-viewport native-live-placeholder stage-poster is-${phase}`} style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
       <div className="stage-backdrop" aria-hidden="true"><TokenArt seed={token.address} /></div>
       <div className="native-live-mark"><span className="stage-avatar" aria-hidden="true"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} /></span>
-      <span className="broadcast-phase-label">{phase === "live" && <span className="pulse" />}{phaseLabel}</span><strong>{copy.title}</strong>
+      <span className="broadcast-phase-label">{phase === "live" && <span className="pulse" />}{phaseLabel}</span>
+      {showTitle && phase !== "live" && <em className="stage-show">{showTitle}</em>}
+      <strong>{copy.title}</strong>
       <small>{copy.detail}</small>
       {status?.live && <button className="primary-button live-action" onClick={joinViewer} disabled={busy}>{busy ? "Joining…" : "Watch live →"}</button>}
       {phase === "unavailable" && <button className="secondary-button" onClick={() => void refreshStatus()}>Retry broadcast status</button>}

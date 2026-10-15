@@ -2,12 +2,58 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ControlBar, LiveKitRoom, ParticipantTile, RoomAudioRenderer, StartAudio, useConnectionState, useParticipants, useRoomContext, useTracks } from "@livekit/components-react";
-import { ConnectionState, Track, type Room } from "livekit-client";
+import { ConnectionState, RoomEvent, Track, type Room } from "livekit-client";
+import { decodeLiveSignal, encodeLiveSignal, LIVE_CHAT_PING_EVENT, LIVE_SIGNAL_SEND_EVENT, LIVE_SIGNAL_TOPIC, REACTIONS, SenderThrottle, sendLiveSignal, type LiveSignal } from "@/lib/live-signals";
 import { streamingErrorMessage } from "@/lib/creator-access";
 import { broadcastCopy, connectedBroadcastPhase, CREATOR_RETURN_GRACE_MS, shouldReleaseViewer, type BroadcastExit } from "@/lib/broadcast-lifecycle";
 import { Modal } from "./modal";
 import { analyticsAllowed, pilotEvent, ANALYTICS_PREFERENCE_EVENT } from "@/lib/pilot-analytics";
 import { BROADCAST_ENDED_EVENT } from "@/lib/growth";
+
+type Floating = { id: number; reaction: number; x: number; mine: boolean };
+
+function LiveReactions({ roomId, live }: { roomId?: string; live: boolean }) {
+  const room = useRoomContext();
+  const [floating, setFloating] = useState<Floating[]>([]);
+  const nextId = useRef(0);
+  const remote = useRef(new SenderThrottle(5, 3000));
+  const local = useRef(new SenderThrottle(8, 3000));
+  const show = useCallback((reaction: number, mine: boolean) => {
+    const id = nextId.current++;
+    setFloating(current => [...current.slice(-39), { id, reaction, mine, x: 8 + Math.random() * 84 }]);
+    window.setTimeout(() => setFloating(current => current.filter(item => item.id !== id)), 2600);
+  }, []);
+  useEffect(() => {
+    function received(payload: Uint8Array, participant?: { identity: string }, _kind?: unknown, topic?: string) {
+      if (topic !== LIVE_SIGNAL_TOPIC) return;
+      const signal = decodeLiveSignal(payload);
+      if (!signal) return;
+      if (signal.type === "chat") { if (roomId) window.dispatchEvent(new CustomEvent(LIVE_CHAT_PING_EVENT, { detail: { roomId: roomId.toLowerCase() } })); return; }
+      if (remote.current.allow(participant?.identity || "unknown")) show(signal.reaction, false);
+    }
+    room.on(RoomEvent.DataReceived, received);
+    return () => { room.off(RoomEvent.DataReceived, received); };
+  }, [room, roomId, show]);
+  useEffect(() => {
+    if (!roomId) return;
+    function send(event: Event) {
+      const detail = (event as CustomEvent<{ roomId: string; signal: LiveSignal }>).detail;
+      if (detail?.roomId !== roomId!.toLowerCase() || room.state !== ConnectionState.Connected) return;
+      void room.localParticipant.publishData(encodeLiveSignal(detail.signal), { reliable: detail.signal.type === "chat", topic: LIVE_SIGNAL_TOPIC }).catch(() => undefined);
+    }
+    window.addEventListener(LIVE_SIGNAL_SEND_EVENT, send);
+    return () => window.removeEventListener(LIVE_SIGNAL_SEND_EVENT, send);
+  }, [room, roomId]);
+  function react(reaction: number) {
+    if (!roomId || !local.current.allow("me")) return;
+    show(reaction, true);
+    sendLiveSignal(roomId, { type: "react", reaction });
+  }
+  return <>
+    <div className="live-reactions-layer" aria-hidden="true">{floating.map(item => <span key={item.id} className={item.mine ? "is-mine" : ""} style={{ left: `${item.x}%` }}>{REACTIONS[item.reaction]}</span>)}</div>
+    {live && roomId && <div className="live-reaction-bar" role="group" aria-label="Send a reaction">{REACTIONS.map((emoji, index) => <button key={emoji} type="button" aria-label={`Send ${emoji} reaction`} onClick={() => react(index)}>{emoji}</button>)}</div>}
+  </>;
+}
 
 export type Session = { token: string; serverUrl: string; role: "host" | "viewer"; video?: boolean; audio?: boolean; roomId?: string };
 
@@ -81,6 +127,7 @@ function BroadcastStage({ role, onExit, roomId }: { role: Session["role"]; onExi
     </div>
     <div className="hypr-broadcast-stage">
       {phase === "live" && videos.length ? videos.map((track) => <ParticipantTile key={track.publication.trackSid} trackRef={track} />) : <div className="native-live-placeholder"><div className="native-live-mark"><span aria-hidden="true">H</span><strong>{phase === "live" ? "Audio broadcast" : copy.title}</strong><small>{phase === "live" ? "The creator is sharing audio. Video is off." : copy.detail}</small></div></div>}
+      <LiveReactions roomId={roomId} live={phase === "live"} />
     </div>
     {role === "host" ? <ControlBar controls={{ microphone: true, camera: true, screenShare: true, chat: false, leave: false }} saveUserChoices={false} /> : <p className="accounting-copy">You’re watching only. Your camera and microphone are never requested.</p>}
     <StartAudio label="Tap to hear the broadcast" />

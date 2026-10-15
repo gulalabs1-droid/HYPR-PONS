@@ -16,9 +16,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const stateLabel = token.dataStatus === "demo" ? "demo" : token.dataStatus === "partial" ? "partial" : "verified";
   const room = await readGrowth(null, tokenAddress).then(rooms => rooms[0]).catch(() => null);
   const name = room?.displayName || token.name, url = canonicalRoomUrl(tokenAddress), image = `${url}/share-image`;
+  const live = token.broadcastStatus === "live";
   return {
-    title: `${name} · Creator community${verified ? "" : ` · ${stateLabel}`}`,
-    description: `${room?.bio || `Watch ${name}, join the conversation and return for the next show.`} Watching needs no wallet. Trading is optional; testnet assets have no real value.`,
+    title: live ? `${name} is live · HYPR` : `${name} · Creator community${verified ? "" : ` · ${stateLabel}`}`,
+    description: live ? `Watch ${name} live now. No wallet needed. This is a live session, not a saved replay.` : `${room?.bio || `Watch ${name}, join the conversation and return for the next show.`} Watching needs no wallet. Trading is optional; testnet assets have no real value.`,
     alternates: { canonical: url },
     openGraph: {
       title: `${name} on HYPR`,

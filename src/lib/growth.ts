@@ -31,6 +31,17 @@ export function showPhase(show: Show | null, live: boolean, now = Date.now()) {
   return Date.parse(show.startsAt) > now ? "upcoming" : "awaiting-creator";
 }
 
+export function agendaDay(iso: string, now = Date.now()) {
+  const date = new Date(iso);
+  const today = new Date(now);
+  const start = (value: Date) => Date.UTC(value.getFullYear(), value.getMonth(), value.getDate());
+  const diff = Math.round((start(date) - start(today)) / 86400000);
+  const weekday = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "short", day: "numeric" }).format(date);
+  if (diff === 0) return `Today · ${weekday}`;
+  if (diff === 1) return `Tomorrow · ${weekday}`;
+  return weekday;
+}
+
 export function localDateTime(iso: string) {
   const date = new Date(iso);
   const part = (number: number) => String(number).padStart(2, "0");

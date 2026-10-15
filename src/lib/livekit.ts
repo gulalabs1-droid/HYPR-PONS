@@ -32,7 +32,8 @@ export async function createLiveKitToken({ roomName, identity, name, role, launc
     roomCreate: role === "host",
     canPublish: role === "host",
     canSubscribe: true,
-    canPublishData: role === "host",
+    // Viewers send only reactions and chat pings; receivers validate and throttle every packet.
+    canPublishData: true,
   });
   return token.toJwt();
 }

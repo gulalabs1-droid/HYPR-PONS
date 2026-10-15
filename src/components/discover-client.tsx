@@ -11,6 +11,7 @@ import { Header } from "./header";
 import { SiteFooter } from "./site-footer";
 import { useLiveLaunches } from "@/lib/use-live-launches";
 import { GrowthDiscovery } from "./growth-discovery";
+import { TokenArt, tokenGlyph } from "./token-art";
 
 const tabs = ["Live first", "Recent activity", "New", "Pool progress"] as const;
 type Tab = (typeof tabs)[number];
@@ -64,6 +65,10 @@ function Meter({ token }: { token: Launch }) {
   );
 }
 
+function metricClass(metric: { value: string; tone?: string }) {
+  return [metric.tone, /^(0|0 ETH|—)$/.test(metric.value) && "is-quiet"].filter(Boolean).join(" ") || undefined;
+}
+
 function badgeClass(token: Launch) {
   const kind = roomKind(token);
   return `token-badge${kind === "native" ? " is-native" : kind === "sample" ? " is-demo" : ""}`;
@@ -73,6 +78,7 @@ function RoomCard({ token, index }: { token: Launch; index: number }) {
   return (
     <Link href={`/room/${token.address}`} className="room-card" style={{ "--hue": roomHue(token.address) } as HueStyle}>
       <span className="room-card-glow" aria-hidden="true" />
+      <span className="room-card-cover" aria-hidden="true"><TokenArt seed={token.address} /></span>
       <div className="room-card-top">
         <span className="rank">{String(index + 1).padStart(2, "0")}</span>
         <span className={badgeClass(token)}>{roomBadge(token)}</span>
@@ -86,7 +92,7 @@ function RoomCard({ token, index }: { token: Launch; index: number }) {
       </div>
       <Meter token={token} />
       <dl className="room-card-metrics">
-        {roomMetrics(token).map((metric) => <div key={metric.label}><dt>{metric.label}</dt><dd className={metric.tone}>{metric.value}</dd></div>)}
+        {roomMetrics(token).map((metric) => <div key={metric.label}><dt>{metric.label}</dt><dd className={metricClass(metric)}>{metric.value}</dd></div>)}
       </dl>
       <div className="room-card-footer">
         <span>{cardFooter(token)}</span>
@@ -105,7 +111,7 @@ function RoomRow({ token, index }: { token: Launch; index: number }) {
       <span className="room-row-name"><strong>{token.name}</strong><small>${token.symbol}</small></span>
       <span className={badgeClass(token)}>{roomBadge(token)}</span>
       <span className="room-row-meter" aria-hidden="true"><span style={{ width: `${meter?.percent ?? 0}%` }} /></span>
-      {roomMetrics(token).map((metric) => <span key={metric.label} className="room-row-metric"><small>{metric.label}</small><strong className={metric.tone}>{metric.value}</strong></span>)}
+      {roomMetrics(token).map((metric) => <span key={metric.label} className="room-row-metric"><small>{metric.label}</small><strong className={metricClass(metric)}>{metric.value}</strong></span>)}
       <span className="room-row-arrow" aria-hidden="true">→</span>
     </Link>
   );
@@ -115,10 +121,9 @@ function FeaturedRoom({ token }: { token: Launch }) {
   return (
     <Link href={`/room/${token.address}`} className="featured-room" style={{ "--hue": roomHue(token.address) } as HueStyle}>
       <div className="featured-visual" aria-hidden="true">
-        <span className="featured-orb" />
+        <span className="featured-orb"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} /></span>
         <span className="featured-ring ring-a" />
         <span className="featured-ring ring-b" />
-        <span className="featured-logo">{token.logo}</span>
       </div>
       <div className="featured-copy">
         <div className="featured-tags">
@@ -129,7 +134,7 @@ function FeaturedRoom({ token }: { token: Launch }) {
         <p>{token.description}</p>
         <Meter token={token} />
         <dl className="featured-metrics">
-          {roomMetrics(token).map((metric) => <div key={metric.label}><dt>{metric.label}</dt><dd className={metric.tone}>{metric.value}</dd></div>)}
+          {roomMetrics(token).map((metric) => <div key={metric.label}><dt>{metric.label}</dt><dd className={metricClass(metric)}>{metric.value}</dd></div>)}
         </dl>
         <span className="primary-button featured-cta">Enter room <span aria-hidden="true">→</span></span>
       </div>

@@ -5,6 +5,7 @@ import "./trade.css";
 import "./discover.css";
 import "./consumer.css";
 import "./growth.css";
+import "./polish.css";
 import { NavigationProgress } from "@/components/navigation-progress";
 
 const sans = Manrope({ subsets: ["latin"], variable: "--font-sans", display: "swap" });

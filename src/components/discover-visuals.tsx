@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Launch } from "@/lib/types";
 import { roomBadge, roomHue, roomKind, roomTickerValue } from "@/lib/room-display";
+import { TokenArt, tokenGlyph } from "./token-art";
 
 type HueStyle = React.CSSProperties & { "--hue"?: number; "--angle"?: string };
 
 export function RoomAvatar({ token, size = "md" }: { token: Launch; size?: "sm" | "md" | "lg" | "xl" }) {
-  return <span className={`room-avatar is-${size}`} style={{ "--hue": roomHue(token.address) } as HueStyle} aria-hidden="true">{token.logo}</span>;
+  return <span className={`room-avatar is-${size}`} style={{ "--hue": roomHue(token.address) } as HueStyle} aria-hidden="true"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} /></span>;
 }
 
 export function Constellation({ launches, totalRooms }: { launches: Launch[]; totalRooms: number }) {

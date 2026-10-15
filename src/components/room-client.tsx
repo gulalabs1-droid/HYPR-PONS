@@ -19,9 +19,15 @@ import { ShareRoom } from "./share-room";
 import { PilotConsent } from "./pilot-consent";
 import { useGrowth } from "@/lib/use-growth";
 import { SaveRoom } from "./save-room";
+import { TokenArt, tokenGlyph } from "./token-art";
 
 type RoomSection = "chat" | "trade" | "about";
 const sectionLabels: Record<RoomSection, string> = { chat: "Chat", trade: "Trade", about: "About" };
+const sectionIcons: Record<RoomSection, React.ReactNode> = {
+  chat: <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" />,
+  trade: <><path d="M7 4v16M7 4 3 8M7 4l4 4" /><path d="M17 20V4m0 16-4-4m4 4 4-4" /></>,
+  about: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
+};
 function feePercent(value?: string) { return value && Number.isFinite(Number(value)) ? `${(Number(value) / 100).toFixed(2)}%` : "—"; }
 
 export function RoomClient({ token: initialToken, source }: { token: Launch; source?: CombinedLaunchDataSource }) {
@@ -45,7 +51,7 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
     <div className="room-shell room-aura" style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
       <Link href="/" className="back-link">← Discover rooms</Link>
       <section className="room-header room-header-compact">
-        <div className="room-token-identity"><span className="room-logo" aria-hidden="true">{token.logo}</span><div>
+        <div className="room-token-identity"><span className="room-logo" aria-hidden="true"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} /></span><div>
           <span className="eyebrow">{isNative ? "HYPR COMMUNITY ROOM" : "PONS COMMUNITY ROOM"}</span>
           <h1>{creatorProfile?.displayName || token.name} <span>{creatorProfile?.displayName ? "Community room" : `$${token.symbol}`}</span></h1>
         </div></div>
@@ -56,7 +62,7 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
       <div className="room-experience" ref={sectionsRef}>
         <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} />{isNative && <CreatorGrowth roomId={token.address} creator={token.deployer} live={token.broadcastStatus === "live"} growth={growth} />}</div>
         <nav className="room-section-nav" aria-label="Room sections">
-          {(Object.keys(sectionLabels) as RoomSection[]).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={`room-${key}`} onClick={() => chooseSection(key)}>{sectionLabels[key]}{key === "trade" && <small>${token.symbol}</small>}</button>)}
+          {(Object.keys(sectionLabels) as RoomSection[]).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={`room-${key}`} onClick={() => chooseSection(key)}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{sectionIcons[key]}</svg><span>{sectionLabels[key]}{key === "trade" && <small> ${token.symbol}</small>}</span></button>)}
         </nav>
         <section className="room-chat-section" id="room-chat" data-mobile-active={section === "chat"} aria-label="Room chat"><CommunityPanel roomId={token.address} creator={token.deployer} reportsEnabled={growth.state?.enabled === true} /></section>
         <section className="room-trade-section" id="room-trade" data-mobile-active={section === "trade"} aria-label={`Trade ${token.symbol}`}>

@@ -22,6 +22,15 @@ export default async function ProtocolPage() {
   const explorer = snapshot.network === "testnet" ? "https://explorer.testnet.chain.robinhood.com" : "https://robinhoodchain.blockscout.com";
   return <main><Header active="protocol" /><div className="page-shell protocol-shell">
     <section className="protocol-hero"><div className="eyebrow"><span className="pulse" /> TESTNET PROTOCOL</div><h1>HYPR accounting,<br /><em>in the open.</em></h1><p>A read-only view of native HYPR state. Values come from confirmed Robinhood Chain testnet reads and have no economic value.</p></section>
+    <section className="how-flow" aria-label="How HYPR works">
+      <ol>
+        <li><span className="how-step">01</span><span className="how-icon" aria-hidden="true">✦</span><strong>Create a coin & room</strong><p>Name your coin and approve one testnet transaction. Its permanent room link is ready right away.</p></li>
+        <li><span className="how-step">02</span><span className="how-icon" aria-hidden="true">◉</span><strong>Go live & gather</strong><p>The creator broadcasts from the room studio. Watching needs no wallet; chatting takes one free signature.</p></li>
+        <li><span className="how-step">03</span><span className="how-icon" aria-hidden="true">⇅</span><strong>Trade on the curve</strong><p>Buys push the price up and sells push it down. Each trade pays a small fee split between the creator and HYPR.</p></li>
+        <li><span className="how-step">04</span><span className="how-icon" aria-hidden="true">◎</span><strong>Graduate to a pool</strong><p>When the reserve target is reached, the contract migrates liquidity to a Uniswap v4 pool.</p></li>
+      </ol>
+    </section>
+    <div className="section-heading protocol-heading"><div><span className="eyebrow">LIVE TESTNET STATE</span><h2>The numbers, straight from the chain.</h2></div></div>
     {unavailable && <div className="data-notice" role="status">{snapshot.source === "unconfigured" ? "Native HYPR factory is not configured; no protocol totals are being invented." : "Native HYPR RPC state is unavailable; totals are withheld until reads succeed."}</div>}
     <section className="protocol-grid" aria-label="Protocol metrics">
       <div className="protocol-card"><span>LAUNCHES IN WINDOW</span><strong>{snapshot.launchCount.toLocaleString()}</strong><small>2,500-block bounded read</small></div>

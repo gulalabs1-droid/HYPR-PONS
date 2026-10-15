@@ -64,28 +64,30 @@ begin
 end;
 $$;
 
-create function public.hypr_read_community_feed(p_chain_id bigint, p_token_address text, p_wallet_address text default null, p_before uuid default null)
+create function public.hypr_read_community_feed(p_chain_id bigint, p_token_address text, p_wallet_address text default null, p_before uuid default null, p_limit integer default 50)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare v_room_id uuid; v_before timestamptz; v_messages jsonb; v_following boolean; v_follower_count bigint; v_pinned jsonb; v_has_more boolean;
 begin
   if auth.role() is distinct from 'service_role' then raise exception 'service role required'; end if;
+  if p_limit is null or p_limit < 50 or p_limit > 500 then raise exception 'invalid message limit'; end if;
   select r.room_id into v_room_id from public.hypr_rooms r join public.hypr_tokens t on t.token_id = r.token_id
     where t.chain_id = p_chain_id and lower(t.address) = lower(p_token_address) and t.data_status <> 'demo';
   if v_room_id is null then raise exception 'indexed room missing'; end if;
   if p_before is not null then
     select created_at into v_before from public.hypr_community_messages where message_id = p_before and room_id = v_room_id;
+    if v_before is null then raise exception 'invalid message cursor'; end if;
   end if;
-  select coalesce(jsonb_agg(row_to_json(m) order by m.created_at), '[]'::jsonb) into v_messages from (
+  select coalesce(jsonb_agg(row_to_json(m) order by m.created_at, m.id), '[]'::jsonb) into v_messages from (
     select c.message_id as id, w.address as wallet, c.body, c.created_at
     from public.hypr_community_messages c join public.hypr_wallets w on w.wallet_id = c.wallet_id
-    where c.room_id = v_room_id and c.deleted_at is null and (v_before is null or c.created_at < v_before)
-    order by c.created_at desc limit 50
+    where c.room_id = v_room_id and c.deleted_at is null and (v_before is null or (c.created_at, c.message_id) < (v_before, p_before))
+    order by c.created_at desc, c.message_id desc limit p_limit
   ) m;
   select exists(
     select 1 from public.hypr_community_messages c
-    where c.room_id = v_room_id and c.deleted_at is null and (v_before is null or c.created_at < v_before)
-    order by c.created_at desc
-    offset 50
+    where c.room_id = v_room_id and c.deleted_at is null and (v_before is null or (c.created_at, c.message_id) < (v_before, p_before))
+    order by c.created_at desc, c.message_id desc
+    offset p_limit
   ) into v_has_more;
   select count(*) into v_follower_count from public.hypr_community_follows f where f.room_id = v_room_id;
   select exists(select 1 from public.hypr_community_follows f join public.hypr_wallets w on w.wallet_id = f.wallet_id
@@ -169,6 +171,6 @@ begin
 end;
 $$;
 
-revoke all on function public.hypr_flag_operator_room_report(), public.hypr_read_community_feed(bigint,text,text,uuid), public.hypr_read_operator_reports(bigint,boolean) from public, anon, authenticated;
-grant execute on function public.hypr_write_community(bigint,text,text,text,text,boolean,uuid), public.hypr_read_community_feed(bigint,text,text,uuid), public.hypr_read_operator_reports(bigint,boolean), public.hypr_growth_metrics(bigint,text,text,boolean) to service_role;
+revoke all on function public.hypr_flag_operator_room_report(), public.hypr_read_community_feed(bigint,text,text,uuid,integer), public.hypr_read_operator_reports(bigint,boolean) from public, anon, authenticated;
+grant execute on function public.hypr_write_community(bigint,text,text,text,text,boolean,uuid), public.hypr_read_community_feed(bigint,text,text,uuid,integer), public.hypr_read_operator_reports(bigint,boolean), public.hypr_growth_metrics(bigint,text,text,boolean) to service_role;
 commit;

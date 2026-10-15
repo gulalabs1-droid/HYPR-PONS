@@ -18,9 +18,12 @@ export async function GET(request: NextRequest) {
   const session = decodeAuthorization(request.cookies.get(COMMUNITY_SESSION_COOKIE)?.value, requestOrigin(request), "session");
   const before = request.nextUrl.searchParams.get("before");
   if (before && !UUID.test(before)) return NextResponse.json({ error: "Invalid message cursor." }, { status: 400, headers });
+  const rawLimit = request.nextUrl.searchParams.get("limit") ?? "50";
+  const limit = Number(rawLimit);
+  if (!/^\d+$/.test(rawLimit) || !Number.isInteger(limit) || limit < 50 || limit > 500) return NextResponse.json({ error: "Message limit must be between 50 and 500." }, { status: 400, headers });
   try {
-    const args = { p_chain_id: HYPR_NETWORKS[getHyprNetwork()].id, p_token_address: roomId, p_wallet_address: session?.wallet || null, p_before: before };
-    const state = before
+    const args = { p_chain_id: HYPR_NETWORKS[getHyprNetwork()].id, p_token_address: roomId, p_wallet_address: session?.wallet || null, p_before: before, p_limit: limit };
+    const state = before || limit !== 50
       ? await client.rpc<Record<string, unknown>>("hypr_read_community_feed", args)
       : await client.rpc<Record<string, unknown>>("hypr_read_community_feed", args).catch(() => client.rpc<Record<string, unknown>>("hypr_read_community", { p_chain_id: args.p_chain_id, p_token_address: args.p_token_address, p_wallet_address: args.p_wallet_address }));
     return NextResponse.json({ ...state, wallet: session?.wallet || null, checkedAt: new Date().toISOString() }, { headers });

@@ -51,6 +51,11 @@ test("community routes require a same-origin verified session and consume sign-i
     const older = await readCommunity(new NextRequest(`https://hypr.test/api/community?roomId=${roomId}&before=${messageId}`));
     assert.equal(older.status, 200);
     assert.ok(reads.some(read => read.url.endsWith("hypr_read_community_feed") && read.body.p_before === messageId));
+    for (const limit of ["0", "49", "501", "NaN", "50.5", ""]) {
+      assert.equal((await readCommunity(new NextRequest(`https://hypr.test/api/community?roomId=${roomId}&limit=${limit}`))).status, 400);
+    }
+    assert.equal((await readCommunity(new NextRequest(`https://hypr.test/api/community?roomId=${roomId}&limit=100`))).status, 200);
+    assert.equal(reads.at(-1)?.body.p_limit, 100);
   } finally {
     globalThis.fetch = originalFetch;
     for (const [key, value] of Object.entries(saved)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }

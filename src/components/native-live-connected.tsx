@@ -27,9 +27,9 @@ function LiveReactions({ roomId, live }: { roomId?: string; live: boolean }) {
     function received(payload: Uint8Array, participant?: { identity: string }, _kind?: unknown, topic?: string) {
       if (topic !== LIVE_SIGNAL_TOPIC) return;
       const signal = decodeLiveSignal(payload);
-      if (!signal) return;
+      if (!signal || !remote.current.allow(participant?.identity || "unknown")) return;
       if (signal.type === "chat") { if (roomId) window.dispatchEvent(new CustomEvent(LIVE_CHAT_PING_EVENT, { detail: { roomId: roomId.toLowerCase() } })); return; }
-      if (remote.current.allow(participant?.identity || "unknown")) show(signal.reaction, false);
+      show(signal.reaction, false);
     }
     room.on(RoomEvent.DataReceived, received);
     return () => { room.off(RoomEvent.DataReceived, received); };

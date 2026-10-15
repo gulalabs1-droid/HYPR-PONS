@@ -60,8 +60,8 @@ function useWatchedLiveRooms() {
       try {
         const response = await fetch("/api/launches", { cache: "no-store", signal: AbortSignal.timeout(15000) });
         const data = await response.json() as { launches?: Launch[] };
-        if (active && response.ok && Array.isArray(data.launches)) setLaunches(data.launches);
-      } catch { /* keep the last snapshot; alerts are best-effort */ } finally { pending = false; }
+        if (active) setLaunches(response.ok && Array.isArray(data.launches) ? data.launches : []);
+      } catch { if (active) setLaunches([]); } finally { pending = false; }
     }
     void load();
     const timer = window.setInterval(() => void load(), 45000);
@@ -127,6 +127,6 @@ export function LiveAlertsToggle() {
       <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
       {state === "on" ? "Live alerts on" : "Turn on live alerts"}
     </button>
-    <small>{state === "unsupported" ? "This browser can’t show notifications. The live banner still appears while you browse." : state === "denied" ? "Notifications are blocked for HYPR in your browser settings." : "Get a notification when a room you follow or saved goes live, while HYPR is open in a tab or installed on your home screen."}</small>
+    <small>{state === "unsupported" ? "This browser can’t show notifications. The live banner still appears while you browse." : state === "denied" ? "Notifications are blocked for HYPR in your browser settings." : "Best-effort alerts for followed or saved rooms while HYPR is open. Installing HYPR does not enable alerts when the app is closed."}</small>
   </div>;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { getEthereum, shortAddress } from "@/lib/wallet";
 import { WALLET_CHANGED_EVENT, walletErrorMessage } from "@/lib/wallet-discovery";
 import { awaitCommunityReset, resetCommunitySession, signInCommunity } from "@/lib/community-client";
@@ -36,7 +36,7 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
   const [now, setNow] = useState(() => Date.now());
   const log = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
-  const extended = useRef(false);
+  const historyLimit = useRef(50);
   const pending = useRef(false);
   const active = useRef(true);
   const generation = useRef(0);
@@ -46,19 +46,15 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
     const current = generation.current;
     try {
       await awaitCommunityReset();
-      const response = await fetch(`/api/community?roomId=${encodeURIComponent(roomId)}${before ? `&before=${encodeURIComponent(before)}` : ""}`, { cache: "no-store", signal: AbortSignal.timeout(10000) });
+      const response = await fetch(`/api/community?roomId=${encodeURIComponent(roomId)}&limit=${before ? 50 : historyLimit.current}${before ? `&before=${encodeURIComponent(before)}` : ""}`, { cache: "no-store", signal: AbortSignal.timeout(10000) });
       const data = await response.json() as Community & { error?: string };
       if (!response.ok || !Array.isArray(data.messages)) throw new Error(data.error || "Shared chat is unavailable.");
       if (active.current && generation.current===current) {
         setState(existing => {
           if (before && existing) {
-            extended.current = true;
+            historyLimit.current = Math.min(500, historyLimit.current + 50);
             pinned.current = false;
             return { ...data, messages: [...data.messages, ...existing.messages.filter(message => !data.messages.some(item => item.id === message.id))], hasMore: data.hasMore };
-          }
-          if (extended.current && existing) {
-            const known = new Set(existing.messages.map(message => message.id));
-            return { ...data, messages: [...existing.messages, ...data.messages.filter(message => !known.has(message.id))], hasMore: existing.hasMore };
           }
           return data;
         });
@@ -134,7 +130,7 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
     <button className="secondary-button" disabled={busy || !state} aria-pressed={state?.following || false} onClick={() => void update("follow", { following: !state?.following })}>{state?.following ? "✓ Following" : "Follow room"}</button>
     {state?.wallet ? <p className="accounting-copy">Signed in as {shortAddress(state.wallet)} <button className="claim-link" disabled={busy} onClick={async () => { await fetch("/api/community/session", { method: "DELETE" }); await refresh(); }}>Sign out</button></p> : <p className="accounting-copy">One free wallet signature enables shared chat and follows. No transaction or token approval.</p>}
     <div className="chat-messages" ref={log} onScroll={(event) => { const element = event.currentTarget; pinned.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80; }} role="log" aria-label="Shared room messages" aria-live="polite" aria-relevant="additions">
-      {state?.hasMore && <button type="button" className="claim-link" disabled={busy} onClick={() => void refresh(state.messages[0]?.id)}>Load earlier messages</button>}
+      {state?.hasMore && (historyLimit.current < 500 ? <button type="button" className="claim-link" disabled={busy} onClick={() => void refresh(state.messages[0]?.id)}>Load earlier messages</button> : <p className="accounting-copy">Showing up to 500 recent messages.</p>)}
       {state?.pinned && <div className="message is-pinned"><span className="avatar" aria-hidden="true"><TokenArt seed={state.pinned.wallet} /></span><div><strong>Pinned · {speakerName(state.pinned.wallet, creator, creatorName)}</strong><p>{state.pinned.body}</p>{state.wallet === creator.toLowerCase() && <button className="claim-link" disabled={busy} onClick={() => void update("unpin", {})}>Unpin</button>}</div></div>}
       {state && state.messages.length === 0 && <div className="chat-empty"><span aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /><path d="M8.5 12h.01M12 12h.01M15.5 12h.01" /></svg></span><strong>No messages yet</strong><span>Be the first to say gm. Messages are shared with everyone in this room.</span></div>}
       {!state && <p className="accounting-copy">Loading shared messages…</p>}
@@ -144,7 +140,7 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
     <form className="chat-form" onSubmit={(event) => { event.preventDefault(); void update("message", { body: text.trim() }); }}><input aria-label="Shared room message" value={text} onChange={(event) => setText(event.target.value)} maxLength={280} disabled={busy || !state} placeholder="Say hello to the room" /><button aria-label="Send shared message" disabled={busy || !state || !text.trim()}>↑</button></form>
     {!state?.wallet && state && <button className="claim-link" disabled={busy} onClick={() => void authorize()}>{busy ? "Check your wallet…" : "Sign in to chat"}</button>}
     <span className="chat-footnote">Public, saved messages · the creator’s display name is shown when they have one; everyone else’s wallet address still appears. You and the creator can hide your messages.</span>
-    {reportsEnabled && <button className="claim-link" onClick={() => setReport(null)}>Report this room to its creator</button>}
+    {reportsEnabled && <button className="claim-link" onClick={() => setReport(null)}>Report this room</button>}
     {reportsEnabled && report !== undefined && <ReportContent roomId={roomId} messageId={report} onClose={() => setReport(undefined)} />}
     {error && <p className="live-notice" role="alert">{error}</p>}
   </div>;

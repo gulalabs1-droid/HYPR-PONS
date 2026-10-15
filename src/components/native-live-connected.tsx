@@ -6,8 +6,10 @@ import { ConnectionState, Track, type Room } from "livekit-client";
 import { streamingErrorMessage } from "@/lib/creator-access";
 import { broadcastCopy, connectedBroadcastPhase, CREATOR_RETURN_GRACE_MS, shouldReleaseViewer, type BroadcastExit } from "@/lib/broadcast-lifecycle";
 import { Modal } from "./modal";
+import { analyticsAllowed, pilotEvent, ANALYTICS_PREFERENCE_EVENT } from "@/lib/pilot-analytics";
+import { BROADCAST_ENDED_EVENT } from "@/lib/growth";
 
-export type Session = { token: string; serverUrl: string; role: "host" | "viewer"; video?: boolean; audio?: boolean };
+export type Session = { token: string; serverUrl: string; role: "host" | "viewer"; video?: boolean; audio?: boolean; roomId?: string };
 
 function isHost(metadata?: string) {
   try { return JSON.parse(metadata || "{}").role === "host"; } catch { return false; }
@@ -15,7 +17,7 @@ function isHost(metadata?: string) {
 
 type ExitAction = (reason: BroadcastExit, room: Room) => Promise<void>;
 
-function BroadcastStage({ role, onExit }: { role: Session["role"]; onExit: ExitAction }) {
+function BroadcastStage({ role, onExit, roomId }: { role: Session["role"]; onExit: ExitAction; roomId?: string }) {
   const room = useRoomContext();
   const connection = useConnectionState();
   const participants = useParticipants();
@@ -33,6 +35,27 @@ function BroadcastStage({ role, onExit }: { role: Session["role"]; onExit: ExitA
   const localConnection = connection === ConnectionState.Connected ? "connected" : connection === ConnectionState.Reconnecting || connection === ConnectionState.SignalReconnecting ? "reconnecting" : "connecting";
   const phase = connectedBroadcastPhase({ connection: localConnection, hostPresent, hasMedia, seenMedia });
   const copy = broadcastCopy(phase);
+  const [playing, setPlaying] = useState(false);
+  const [measurement, setMeasurement] = useState(false);
+  const measured = useRef(false), seconds = useRef(0), threshold = useRef(false);
+  useEffect(() => {
+    const choice = () => setMeasurement(analyticsAllowed());
+    choice(); window.addEventListener(ANALYTICS_PREFERENCE_EVENT, choice);
+    return () => window.removeEventListener(ANALYTICS_PREFERENCE_EVENT, choice);
+  }, []);
+  useEffect(() => {
+    if (!measurement) { measured.current = false; seconds.current = 0; threshold.current = false; }
+    if (role !== "viewer" || !roomId || !measurement || !playing || phase !== "live") return;
+    if (!measured.current) { measured.current = true; void pilotEvent("stream_playback_started", roomId); }
+    let previous = Date.now();
+    const timer = window.setInterval(() => {
+      const now = Date.now(), elapsed = Math.min(now - previous, 1200); previous = now;
+      if (document.visibilityState !== "visible" || !analyticsAllowed()) return;
+      seconds.current += elapsed;
+      if (seconds.current >= 30000 && !threshold.current) { threshold.current = true; void pilotEvent("stream_watch_threshold_reached", roomId); }
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [role, roomId, measurement, playing, phase]);
 
   useEffect(() => { if (hasMedia) setSeenMedia(true); }, [hasMedia]);
   useEffect(() => {
@@ -48,7 +71,7 @@ function BroadcastStage({ role, onExit }: { role: Session["role"]; onExit: ExitA
     try { await onExit("host-ended", room); }
     catch { setEnding(false); }
   }
-  return <>
+  return <div onPlayingCapture={() => setPlaying(true)} onPauseCapture={() => setPlaying(false)} onWaitingCapture={() => setPlaying(false)}>
     <div className="native-live-toolbar" aria-live="polite">
       <span><span className={phase === "live" ? "pulse" : "status-dot inactive"} /> {phase === "live" ? `LIVE · ${viewers} viewer${viewers === 1 ? "" : "s"}` : copy.label}</span>
       <button type="button" className="live-control-button" onClick={() => {
@@ -67,7 +90,7 @@ function BroadcastStage({ role, onExit }: { role: Session["role"]; onExit: ExitA
       <p className="dialog-copy">The same link, saved chat and follows remain. You can start another broadcast here later. HYPR does not save a video replay.</p>
       <div className="dialog-actions"><button type="button" className="secondary-button" disabled={ending} onClick={() => setEndOpen(false)}>Keep broadcasting</button><button type="button" className="primary-button" disabled={ending} onClick={() => void endBroadcast()}>{ending ? "Stopping your devices…" : "End broadcast now"}</button></div>
     </Modal>}
-  </>;
+  </div>;
 }
 
 export function ConnectedRoom({ session, onLeave, onError, connect = true, room }: {
@@ -80,7 +103,8 @@ export function ConnectedRoom({ session, onLeave, onError, connect = true, room 
   const finish = useCallback((reason: BroadcastExit) => {
     if (left.current) return;
     left.current = true; onLeave(reason);
-  }, [onLeave]);
+    if (reason === "host-ended" && session.role === "host" && session.roomId) window.dispatchEvent(new CustomEvent(BROADCAST_ENDED_EVENT, { detail: { roomId:session.roomId } }));
+  }, [onLeave, session.role, session.roomId]);
   const exit = useCallback(async (reason: BroadcastExit, activeRoom: Room) => {
     if (left.current || disconnecting.current) return;
     disconnecting.current = true; requestedExit.current = reason;
@@ -101,7 +125,7 @@ export function ConnectedRoom({ session, onLeave, onError, connect = true, room 
   return <div className="native-live-connected" data-lk-theme="default">
     <LiveKitRoom room={room} token={session.token} serverUrl={session.serverUrl} connect={connect} video={session.role === "host" && session.video === true} audio={session.role === "host" && session.audio === true}
       onConnected={connected} onError={failedConnection} onMediaDeviceFailure={deviceFailure} onDisconnected={disconnected}>
-      <BroadcastStage role={session.role} onExit={exit} />
+      <BroadcastStage role={session.role} roomId={session.roomId} onExit={exit} />
       {failed && <button type="button" className="secondary-button" onClick={() => finish("connection-lost")}>Return to room and retry</button>}
     </LiveKitRoom>
   </div>;

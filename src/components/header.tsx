@@ -7,7 +7,7 @@ import { discoverWallets, OPEN_WALLET_EVENT, setWalletSessionDisconnected, walle
 import { useWalletStatus } from "@/lib/use-wallet-status";
 import { WalletPicker } from "./wallet-picker";
 
-export function Header({ active }: { active?: "discover" | "protocol" }) {
+export function Header({ active }: { active?: "discover" | "protocol" | "following" }) {
   const wallet = useWalletStatus();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -69,6 +69,7 @@ export function Header({ active }: { active?: "discover" | "protocol" }) {
       <Link href="/" className="brand" aria-label="HYPR home"><span className="brand-mark">H</span><span>HYPR</span></Link>
       <nav className="main-nav" aria-label="Main navigation">
         <Link className={active === "discover" ? "active" : ""} aria-current={active === "discover" ? "page" : undefined} href="/">Discover</Link>
+        <Link className={active === "following" ? "active" : ""} aria-current={active === "following" ? "page" : undefined} href="/following">Following</Link>
         <Link href="/#launch">Create</Link>
         <Link className={active === "protocol" ? "active" : ""} aria-current={active === "protocol" ? "page" : undefined} href="/protocol">How it works</Link>
       </nav>

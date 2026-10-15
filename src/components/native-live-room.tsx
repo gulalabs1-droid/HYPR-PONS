@@ -98,7 +98,7 @@ export function NativeLiveRoom({ token, onOpenChat }: { token: Launch; onOpenCha
       const data = await response.json() as Session & { error?: string };
       if (!response.ok) throw new Error(data.error || "Viewer access is unavailable.");
       if (!mounted.current) return;
-      setLastExit(null); sawCurrentMedia.current = true; setSeenLive(true); setSession(data);
+      setLastExit(null); sawCurrentMedia.current = true; setSeenLive(true); setSession({ ...data, roomId: token.address });
     } catch (error) { setNotice(error instanceof Error ? error.message : "Viewer access is unavailable."); }
     finally { setBusy(false); }
   }
@@ -123,7 +123,7 @@ export function NativeLiveRoom({ token, onOpenChat }: { token: Launch; onOpenCha
       const data = await response.json() as Session & { error?: string };
       if (!response.ok) throw new Error(data.error || "The creator wallet could not be authorized.");
       if (!mounted.current) return;
-      stopPreview(); setLastExit(null); sawCurrentMedia.current = false; setSeenLive(false); setSession({ ...data, video: shareVideo, audio: shareAudio }); setStudioOpen(false); await refreshStatus();
+      stopPreview(); setLastExit(null); sawCurrentMedia.current = false; setSeenLive(false); setSession({ ...data, roomId: token.address, video: shareVideo, audio: shareAudio }); setStudioOpen(false); await refreshStatus();
     } catch (error) { setNotice(streamingErrorMessage(error)); }
     finally { setBusy(false); }
   }

@@ -1,20 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { Launch } from "@/lib/types";
 import type { CombinedLaunchDataSource } from "@/lib/launch-data";
 import { Header } from "./header";
 import { LiveLaunchSurface } from "./live-launch-surface";
 import { NativeTradePanel } from "./native-trade-panel";
 import { SiteFooter } from "./site-footer";
-import { Toast } from "./toast";
 import { shortAddress } from "@/lib/wallet";
 import { formatCurveProgress } from "@/lib/curve-progress";
 import { formatEthExact } from "@/lib/format";
 import { roomHue } from "@/lib/room-display";
 import { useLiveLaunches } from "@/lib/use-live-launches";
 import { CommunityPanel } from "./community-panel";
+import { CreatorGrowth } from "./creator-growth";
+import { ShareRoom } from "./share-room";
+import { PilotConsent } from "./pilot-consent";
+import { useGrowth } from "@/lib/use-growth";
+import { SaveRoom } from "./save-room";
 
 type RoomSection = "chat" | "trade" | "about";
 const sectionLabels: Record<RoomSection, string> = { chat: "Chat", trade: "Trade", about: "About" };
@@ -24,20 +28,12 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
   const liveData = useLiveLaunches([initialToken], source);
   const token = liveData.launches.find((launch) => launch.address.toLowerCase() === initialToken.address.toLowerCase()) || initialToken;
   const isNative = token.origin === "hypr";
+  const growth = useGrowth(token.address);
+  const creatorProfile = growth.state?.rooms[0];
   const [section, setSection] = useState<RoomSection>("chat");
-  const [notice, setNotice] = useState("");
   const sectionsRef = useRef<HTMLDivElement>(null);
-  const dismissNotice = useCallback(() => setNotice(""), []);
   const explorer = isNative && process.env.NEXT_PUBLIC_HYPR_NETWORK !== "mainnet" ? "https://explorer.testnet.chain.robinhood.com" : "https://robinhoodchain.blockscout.com";
   const progress = formatCurveProgress(token.nativeRealQuoteReserve, token.nativeGraduationThreshold, token.curveProgressBps, token.curvePhase);
-
-  async function share() {
-    const url = window.location.href;
-    if (typeof navigator.share === "function" && window.matchMedia("(pointer: coarse)").matches) {
-      try { await navigator.share({ title: `${token.name} on HYPR`, url }); return; } catch (error) { if ((error as Error)?.name === "AbortError") return; }
-    }
-    try { await navigator.clipboard.writeText(url); setNotice("Room link copied."); } catch { setNotice("Copy the room URL from your browser to share it."); }
-  }
 
   function chooseSection(next: RoomSection) {
     setSection(next);
@@ -51,18 +47,18 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
       <section className="room-header room-header-compact">
         <div className="room-token-identity"><span className="room-logo" aria-hidden="true">{token.logo}</span><div>
           <span className="eyebrow">{isNative ? "HYPR COMMUNITY ROOM" : "PONS COMMUNITY ROOM"}</span>
-          <h1>{token.name} <span>${token.symbol}</span></h1>
+          <h1>{creatorProfile?.displayName || token.name} <span>{creatorProfile?.displayName ? "Community room" : `$${token.symbol}`}</span></h1>
         </div></div>
-        <button className="secondary-button" onClick={share}>Share room ↗</button>
+        <div className="share-controls"><SaveRoom roomId={token.address}/><ShareRoom roomId={token.address} name={creatorProfile?.displayName || token.name} /></div>
       </section>
       <p className="room-safety-note">{isNative ? "Testnet preview · Free test assets, not real money. Watch without a wallet." : token.dataStatus === "demo" ? "Demo room · Sample launch data, not a verified live market." : "Indexed Pons room · Trading availability depends on the launch’s network."}</p>
       {liveData.error && <p className="live-notice" role="status">{liveData.error} Last successful data is kept visible; it may be out of date.</p>}
       <div className="room-experience" ref={sectionsRef}>
-        <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} /></div>
+        <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} />{isNative && <CreatorGrowth roomId={token.address} creator={token.deployer} live={token.broadcastStatus === "live"} growth={growth} />}</div>
         <nav className="room-section-nav" aria-label="Room sections">
           {(Object.keys(sectionLabels) as RoomSection[]).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={`room-${key}`} onClick={() => chooseSection(key)}>{sectionLabels[key]}{key === "trade" && <small>${token.symbol}</small>}</button>)}
         </nav>
-        <section className="room-chat-section" id="room-chat" data-mobile-active={section === "chat"} aria-label="Room chat"><CommunityPanel roomId={token.address} creator={token.deployer} /></section>
+        <section className="room-chat-section" id="room-chat" data-mobile-active={section === "chat"} aria-label="Room chat"><CommunityPanel roomId={token.address} creator={token.deployer} reportsEnabled={growth.state?.enabled === true} /></section>
         <section className="room-trade-section" id="room-trade" data-mobile-active={section === "trade"} aria-label={`Trade ${token.symbol}`}>
           {isNative ? <NativeTradePanel curveAddress={token.pool} tokenAddress={token.address} tokenSymbol={token.symbol} /> : <div className="activity-panel"><h2>About this token’s trading</h2><p className="accounting-copy">HYPR’s in-room buy and sell controls currently support native HYPR testnet launches only. This indexed Pons token is not offered for trading here.</p><a className="claim-link" href={`${explorer}/address/${token.address}`} target="_blank" rel="noreferrer">View its contract ↗</a></div>}
         </section>
@@ -92,8 +88,8 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
           </details>}
         </section>
       </div>
+      {isNative && growth.state?.enabled === true && <PilotConsent roomId={token.address} />}
       <SiteFooter />
     </div>
-    <Toast message={notice} onDismiss={dismissNotice} />
   </main>;
 }

@@ -10,6 +10,7 @@ import { CommandPalette, Constellation, RoomAvatar, Ticker } from "./discover-vi
 import { Header } from "./header";
 import { SiteFooter } from "./site-footer";
 import { useLiveLaunches } from "@/lib/use-live-launches";
+import { GrowthDiscovery } from "./growth-discovery";
 
 const tabs = ["Live first", "Recent activity", "New", "Pool progress"] as const;
 type Tab = (typeof tabs)[number];
@@ -184,7 +185,7 @@ export function DiscoverClient({ initialLaunches: seed, source: initialSource, c
     }
     if (tab === "Pool progress") return [...filtered].sort((a, b) => roomCurvePercent(b) - roomCurvePercent(a) || byRank(a, b));
     if (tab === "Recent activity") return [...filtered].sort((a, b) => tradeCount(b) - tradeCount(a) || byRank(a, b));
-    return [...filtered].sort((a, b) => Number(b.broadcastStatus === "live") - Number(a.broadcastStatus === "live") || (b.viewerCount ?? 0) - (a.viewerCount ?? 0) || roomCurvePercent(b) - roomCurvePercent(a) || byRank(a, b));
+    return [...filtered].sort((a, b) => Number(b.broadcastStatus === "live") - Number(a.broadcastStatus === "live") || byRank(a, b));
   }, [filter, initialLaunches, query, tab]);
 
   const showFeatured = view === "grid" && !query.trim() && sorted.length > 2;
@@ -252,10 +253,11 @@ export function DiscoverClient({ initialLaunches: seed, source: initialSource, c
       </details>
       {source !== "rpc-partial" && (source === "native-rpc" || source === "native-empty") && <p className="discovery-safety">Testnet preview · Free test assets, not real money.</p>}
       {broadcastsChecked && <p className="accounting-copy">{broadcastCount ? `${broadcastCount} broadcast${broadcastCount === 1 ? "" : "s"} live now.` : "No creators are live right now. Explore a room or create your own."}</p>}
+      <GrowthDiscovery launches={initialLaunches} />
 
       <section id="discover" className="discover-section">
         <div className="section-heading">
-          <div><span className="eyebrow">THE SIGNAL BOARD</span><h2>Discover rooms</h2></div>
+          <div><span className="eyebrow">PERSISTENT COMMUNITIES</span><h2>Discover rooms</h2></div>
           <p className="section-sub">Open a room to watch, chat, or learn about its token. A coin can exist even while its creator is offline.</p>
         </div>
 

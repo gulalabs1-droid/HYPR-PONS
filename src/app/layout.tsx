@@ -4,6 +4,7 @@ import "./globals.css";
 import "./trade.css";
 import "./discover.css";
 import "./consumer.css";
+import "./growth.css";
 import { NavigationProgress } from "@/components/navigation-progress";
 
 const sans = Manrope({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
@@ -12,10 +13,10 @@ const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", displ
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: {
-    default: "HYPR — discover what is moving",
+    default: "HYPR — live creators, lasting communities",
     template: "%s · HYPR",
   },
-  description: "The live launchpad for Robinhood Chain communities. Create a coin, go live, trade, and gather in its room.",
+  description: "Watch creators, join lasting communities and return for the next show. Trading is optional. Robinhood Chain testnet preview.",
   applicationName: "HYPR",
   openGraph: {
     title: "HYPR — discover what is moving",

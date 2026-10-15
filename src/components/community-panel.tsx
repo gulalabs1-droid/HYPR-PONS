@@ -1,28 +1,36 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getEthereum, personalSignHex, shortAddress } from "@/lib/wallet";
-import { OPEN_WALLET_EVENT, WALLET_CHANGED_EVENT, walletErrorMessage } from "@/lib/wallet-discovery";
+import { getEthereum, shortAddress } from "@/lib/wallet";
+import { WALLET_CHANGED_EVENT, walletErrorMessage } from "@/lib/wallet-discovery";
+import { awaitCommunityReset, resetCommunitySession, signInCommunity } from "@/lib/community-client";
+import { COMMUNITY_UPDATED_EVENT } from "@/lib/growth";
+import { ReportContent } from "./report-content";
+import { analyticsAllowed, shareAttribution } from "@/lib/pilot-analytics";
 
 type Message = { id: string; wallet: string; body: string; created_at: string };
 type Community = { messages: Message[]; followers: number; following: boolean; wallet: string | null; checkedAt: string };
 
-export function CommunityPanel({ roomId, creator }: { roomId: string; creator: string }) {
+export function CommunityPanel({ roomId, creator, reportsEnabled = false }: { roomId: string; creator: string; reportsEnabled?: boolean }) {
   const [state, setState] = useState<Community | null>(null);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [report, setReport] = useState<string | null | undefined>();
   const pending = useRef(false);
   const active = useRef(true);
+  const generation = useRef(0);
   const refresh = useCallback(async () => {
     if (pending.current || document.visibilityState === "hidden") return;
     pending.current = true;
+    const current = generation.current;
     try {
+      await awaitCommunityReset();
       const response = await fetch(`/api/community?roomId=${encodeURIComponent(roomId)}`, { cache: "no-store", signal: AbortSignal.timeout(10000) });
       const data = await response.json() as Community & { error?: string };
       if (!response.ok || !Array.isArray(data.messages)) throw new Error(data.error || "Shared chat is unavailable.");
-      if (active.current) { setState(data); setError(""); }
-    } catch (failure) { if (active.current) setError(failure instanceof Error ? failure.message : "Shared chat is unavailable."); }
+      if (active.current && generation.current===current) { setState(data); setError(""); }
+    } catch (failure) { if (active.current && generation.current===current) setError(failure instanceof Error ? failure.message : "Shared chat is unavailable."); }
     finally { pending.current = false; }
   }, [roomId]);
 
@@ -32,8 +40,9 @@ export function CommunityPanel({ roomId, creator }: { roomId: string; creator: s
     const timer = window.setInterval(() => void refresh(), 5000);
     let provider = getEthereum();
     async function changedWallet() {
-      await fetch("/api/community/session", { method: "DELETE" }).catch(() => undefined);
+      generation.current++;
       if (active.current) setState((current) => current ? { ...current, wallet: null, following: false } : null);
+      await resetCommunitySession().catch(() => { if(active.current) setError("Sign-out could not finish. Private actions remain locked until it succeeds."); });
       void refresh();
     }
     provider?.on?.("accountsChanged", changedWallet);
@@ -43,33 +52,26 @@ export function CommunityPanel({ roomId, creator }: { roomId: string; creator: s
       void changedWallet();
     }
     window.addEventListener(WALLET_CHANGED_EVENT, selectedWalletChanged);
+    window.addEventListener(COMMUNITY_UPDATED_EVENT, refresh);
     document.addEventListener("visibilitychange", refresh);
-    return () => { active.current = false; window.clearInterval(timer); provider?.removeListener?.("accountsChanged", changedWallet); window.removeEventListener(WALLET_CHANGED_EVENT, selectedWalletChanged); document.removeEventListener("visibilitychange", refresh); };
+    return () => { active.current = false; window.clearInterval(timer); provider?.removeListener?.("accountsChanged", changedWallet); window.removeEventListener(WALLET_CHANGED_EVENT, selectedWalletChanged); window.removeEventListener(COMMUNITY_UPDATED_EVENT, refresh); document.removeEventListener("visibilitychange", refresh); };
   }, [refresh]);
 
   async function signIn() {
-    const wallet = getEthereum();
-    if (!wallet) { window.dispatchEvent(new Event(OPEN_WALLET_EVENT)); throw new Error("Choose a wallet to chat. Reading messages and watching need no wallet."); }
-    const accounts = await wallet.request({ method: "eth_requestAccounts" }) as string[];
-    if (!accounts[0]) throw new Error("No wallet account was returned.");
-    const challenge = await fetch("/api/community/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ wallet: accounts[0] }) });
-    const data = await challenge.json() as { message?: string; error?: string };
-    if (!challenge.ok || !data.message) throw new Error(data.error || "Sign-in is unavailable.");
-    const signature = await wallet.request({ method: "personal_sign", params: [personalSignHex(data.message), accounts[0]] });
-    const verification = await fetch("/api/community/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signature }) });
-    const verified = await verification.json() as { error?: string; wallet?: string };
-    if (!verification.ok || !verified.wallet) throw new Error(verified.error || "Wallet sign-in could not be verified.");
+    await signInCommunity();
   }
 
   async function update(action: "message" | "follow" | "hide", extra: Record<string, unknown>) {
     if (busy) return;
     setBusy(true); setError("");
     try {
+      await awaitCommunityReset();
       if (!state?.wallet) await signIn();
-      const response = await fetch("/api/community", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomId, action, ...extra }) });
+      const response = await fetch("/api/community", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomId, action, ...extra, shareId: shareAttribution(), analyticsConsent: analyticsAllowed() }) });
       const result = await response.json() as { error?: string };
       if (!response.ok) throw new Error(result.error || "Update could not be saved.");
       if (action === "message") setText("");
+      window.dispatchEvent(new Event(COMMUNITY_UPDATED_EVENT));
       await refresh();
     } catch (failure) { setError(walletErrorMessage(failure)); }
     finally { setBusy(false); }
@@ -89,11 +91,13 @@ export function CommunityPanel({ roomId, creator }: { roomId: string; creator: s
     <div className="chat-messages" role="log" aria-label="Shared room messages" aria-live="polite" aria-relevant="additions">
       {state && state.messages.length === 0 && <div className="chat-empty"><strong>No messages yet</strong><span>Be the first to say gm. Messages are shared with everyone in this room.</span></div>}
       {!state && <p className="accounting-copy">Loading shared messages…</p>}
-      {state?.messages.map((message) => <div className="message" key={message.id}><span className="avatar" aria-hidden="true">◐</span><div><strong>{shortAddress(message.wallet)}{message.wallet.toLowerCase() === creator.toLowerCase() ? " · creator" : ""}</strong><p>{message.body}</p><time dateTime={message.created_at}>{new Date(message.created_at).toLocaleString()}</time>{state.wallet && (state.wallet === message.wallet.toLowerCase() || state.wallet === creator.toLowerCase()) && <button className="claim-link" disabled={busy} onClick={() => void update("hide", { messageId: message.id })}>Hide message</button>}</div></div>)}
+      {state?.messages.map((message) => <div className="message" key={message.id}><span className="avatar" aria-hidden="true">◐</span><div><strong>{shortAddress(message.wallet)}{message.wallet.toLowerCase() === creator.toLowerCase() ? " · creator" : ""}</strong><p>{message.body}</p><time dateTime={message.created_at}>{new Date(message.created_at).toLocaleString()}</time>{state.wallet && (state.wallet === message.wallet.toLowerCase() || state.wallet === creator.toLowerCase()) && <button className="claim-link" disabled={busy} onClick={() => void update("hide", { messageId: message.id })}>Hide message</button>}{reportsEnabled && <button className="claim-link" onClick={() => setReport(message.id)}>Report message</button>}</div></div>)}
     </div>
     <form className="chat-form" onSubmit={(event) => { event.preventDefault(); void update("message", { body: text.trim() }); }}><input aria-label="Shared room message" value={text} onChange={(event) => setText(event.target.value)} maxLength={280} disabled={busy || !state} placeholder="Say hello to the room" /><button aria-label="Send shared message" disabled={busy || !state || !text.trim()}>↑</button></form>
     {!state?.wallet && state && <button className="claim-link" disabled={busy} onClick={() => void authorize()}>{busy ? "Check your wallet…" : "Sign in to chat"}</button>}
     <span className="chat-footnote">Public, saved messages · your wallet address appears beside your messages. You and the creator can hide your messages.</span>
+    {reportsEnabled && <button className="claim-link" onClick={() => setReport(null)}>Report this room to its creator</button>}
+    {reportsEnabled && report !== undefined && <ReportContent roomId={roomId} messageId={report} onClose={() => setReport(undefined)} />}
     {error && <p className="live-notice" role="alert">{error}</p>}
   </div>;
 }

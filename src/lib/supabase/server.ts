@@ -68,6 +68,7 @@ export function createSupabaseAdminClient(
         },
         body: JSON.stringify(args),
         cache: "no-store",
+        signal: AbortSignal.timeout(10000),
       });
       if (!response.ok) throw new Error(`Supabase RPC failed (${response.status})`);
       return await response.json() as T;

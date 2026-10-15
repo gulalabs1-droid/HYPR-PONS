@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { COMMUNITY_SESSION_COOKIE, decodeAuthorization, requestOrigin, sameOrigin } from "@/lib/community-auth";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
 import { getHyprNetwork, HYPR_NETWORKS } from "@/lib/integrations/hypr/constants";
+import { PILOT_COOKIE, permitsPilotRequest, readPilotConsent, recordPilotEvent } from "@/lib/pilot-analytics-server";
+import { UUID } from "@/lib/growth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) return NextResponse.json({ error: "Use HYPR to update this room." }, { status: 403, headers });
   const session = decodeAuthorization(request.cookies.get(COMMUNITY_SESSION_COOKIE)?.value, requestOrigin(request), "session");
   if (!session) return NextResponse.json({ error: "Sign in with your wallet to join the community." }, { status: 401, headers });
-  let body: { roomId?: string; action?: string; body?: string; following?: boolean; messageId?: string };
+  let body: { roomId?: string; action?: string; body?: string; following?: boolean; messageId?: string; shareId?: string; analyticsConsent?: boolean };
   try { body = await request.json(); if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("invalid body"); } catch { return NextResponse.json({ error: "Invalid request." }, { status: 400, headers }); }
   if (!validAddress(body.roomId) || !["message", "follow", "hide"].includes(body.action || "") ||
     (body.action === "message" && (typeof body.body !== "string" || !body.body.trim() || body.body.length > 280)) ||
@@ -33,7 +35,10 @@ export async function POST(request: NextRequest) {
   const client = getSupabaseAdminClient();
   if (!client) return NextResponse.json({ error: "Shared community is unavailable." }, { status: 503, headers });
   try {
+    const actor = body.analyticsConsent === true && permitsPilotRequest(request) ? readPilotConsent(request.cookies.get(PILOT_COOKIE)?.value) : null;
+    const before = actor && body.action === "follow" ? await client.rpc<{ following: boolean }>("hypr_read_community", { p_chain_id: session.chainId, p_token_address: body.roomId, p_wallet_address: session.wallet }).catch(() => null) : null;
     await client.rpc("hypr_write_community", { p_chain_id: session.chainId, p_token_address: body.roomId, p_wallet_address: session.wallet, p_action: body.action, p_body: body.body?.trim() || null, p_follow: body.following ?? null, p_message_id: body.messageId || null });
+    if (actor && before && before.following !== body.following) await recordPilotEvent(actor, body.following ? "creator_followed" : "creator_unfollowed", body.roomId!, crypto.randomUUID(), body.shareId && UUID.test(body.shareId) ? body.shareId : null).catch(() => undefined);
     return NextResponse.json({ saved: true }, { headers });
   } catch { return NextResponse.json({ error: "Update not saved. Try again in a few seconds. Messages are limited to ten per minute; only you or the room creator can hide a message." }, { status: 503, headers }); }
 }

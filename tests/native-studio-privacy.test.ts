@@ -24,7 +24,7 @@ test("opening the studio leaves devices off; only explicit private preview reque
     await act(async () => { renderer = create(createElement(NativeLiveRoom, { token: { address: `0x${"1".repeat(40)}`, deployer: `0x${"2".repeat(40)}` } as Launch })); });
     await act(async () => renderer!.root.findAllByType("button").find((button) => button.props.children === "Open creator studio")!.props.onClick());
     const inputs = renderer!.root.findAllByType("input");
-    assert.equal(inputs.length, 2); assert.equal(inputs[0].props.checked, false); assert.equal(inputs[1].props.checked, false);
+    assert.equal(inputs.length, 3); assert.equal(inputs[0].props.checked, false); assert.equal(inputs[1].props.checked, false); assert.equal(inputs[2].props.checked, false);
     assert.equal(requests, 0);
     assert.equal(renderer!.root.findAllByType("button").find((button) => button.props.children === "Authorize & start broadcast")!.props.disabled, true);
     await act(async () => inputs[0].props.onChange({ target: { checked: true } }));

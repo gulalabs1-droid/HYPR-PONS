@@ -134,6 +134,8 @@ test("a failed end action preserves the session and allows retry instead of clai
 
 test("studio HUD names the live session without a second chat control", () => {
   const source = readFileSync(new URL("../src/components/native-live-connected.tsx", import.meta.url), "utf8");
-  assert.match(source, /You.re live · not recording/);
+  assert.match(source, /You.re live ·/);
+  assert.match(source, /recording a private draft/);
+  assert.match(source, /await stopCapture.current\?\.\(\)/);
   assert.doesNotMatch(source, /aria-label="Open room chat"/);
 });

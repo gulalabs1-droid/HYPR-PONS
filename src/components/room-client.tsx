@@ -23,11 +23,13 @@ import { useGrowth } from "@/lib/use-growth";
 import { SaveRoom } from "./save-room";
 import { TokenArt, tokenGlyph } from "./token-art";
 import { RoomFaq } from "./room-faq";
+import { RoomMediaLibrary } from "./room-media-library";
 
-type RoomSection = "chat" | "trade" | "about";
-const sectionLabels: Record<RoomSection, string> = { chat: "Chat", trade: "Trade", about: "About" };
+type RoomSection = "chat" | "videos" | "trade" | "about";
+const sectionLabels: Record<RoomSection, string> = { chat: "Chat", videos: "Videos", trade: "Trade", about: "About" };
 const sectionIcons: Record<RoomSection, React.ReactNode> = {
   chat: <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" />,
+  videos: <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m10 8 6 4-6 4Z" /></>,
   trade: <><path d="M7 4v16M7 4 3 8M7 4l4 4" /><path d="M17 20V4m0 16-4-4m4 4 4-4" /></>,
   about: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
 };
@@ -69,8 +71,9 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
       <div className="room-experience" ref={sectionsRef}>
         <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} showTitle={creatorProfile?.show?.title} /></div>
         <nav className="room-section-nav" aria-label="Room sections">
-          {(Object.keys(sectionLabels) as RoomSection[]).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={`room-${key}`} onClick={() => chooseSection(key)}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{sectionIcons[key]}</svg><span>{sectionLabels[key]}{key === "trade" && <small> ${token.symbol}</small>}</span></button>)}
+          {(Object.keys(sectionLabels) as RoomSection[]).filter(key => isNative || key !== "videos").map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={`room-${key}`} onClick={() => chooseSection(key)}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{sectionIcons[key]}</svg><span>{sectionLabels[key]}{key === "trade" && <small> ${token.symbol}</small>}</span></button>)}
         </nav>
+        {isNative && <section className="room-media-section" id="room-videos" data-mobile-active={section === "videos"}><RoomMediaLibrary roomId={token.address} /></section>}
         <section className="room-chat-section" id="room-chat" data-mobile-active={section === "chat"} aria-label="Room chat"><CommunityPanel roomId={token.address} creator={token.deployer} creatorName={creatorProfile?.displayName || token.name} reportsEnabled={growth.state?.enabled === true} /></section>
         <section className="room-trade-section" id="room-trade" data-mobile-active={section === "trade"} aria-label={`Trade ${token.symbol}`}>
           {isNative ? <NativeTradePanel curveAddress={token.pool} tokenAddress={token.address} tokenSymbol={token.symbol} /> : <div className="activity-panel"><h2>About this token’s trading</h2><p className="accounting-copy">HYPR’s in-room buy and sell controls currently support native HYPR testnet launches only. This indexed Pons token is not offered for trading here.</p><a className="claim-link" href={`${explorer}/address/${token.address}`} target="_blank" rel="noreferrer">View its contract ↗</a></div>}
@@ -79,7 +82,7 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
           <div className="activity-panel room-about-card"><span className="eyebrow">ABOUT ${token.symbol}</span><h2>A coin and a community room</h2>
             <p className="accounting-copy">{token.description}</p>
             <p className="accounting-copy">{isNative ? "This ERC-20 token belongs to this launch. It is not company ownership, a promise of income, or a requirement to watch. Only the wallet that created it can broadcast in this room." : "This launch is indexed from Pons. A room listing does not endorse the token or guarantee its value."}</p>
-            {isNative && <div className="room-after-live"><h3>What happens after a broadcast?</h3><p>The audio/video session stops, but this same room link, saved chat, follows and token remain. The creator can broadcast here again. Trading depends on the contract’s status, not whether someone is streaming.</p><p>HYPR does not automatically record broadcasts or save video replays. Saved messages are different from saved video.</p></div>}
+            {isNative && <div className="room-after-live"><h3>What happens after a broadcast?</h3><p>The audio/video session stops, but this same room link, saved chat, follows and token remain. The creator can broadcast here again. Trading depends on the contract’s status, not whether someone is streaming.</p><p>Recording is opt-in. Creators can save up to 10 minutes as a private replay draft and allow 30-second viewer clips. Creator-published recordings appear in Replays & clips. There is no always-on cloud DVR; saved chat is separate from saved video.</p></div>}
             <div className="room-contract-links"><a href={`${explorer}/address/${token.address}`} target="_blank" rel="noreferrer">Token {shortAddress(token.address)} ↗</a><a href={`${explorer}/address/${token.deployer}`} target="_blank" rel="noreferrer">Creator {shortAddress(token.deployer)} ↗</a>{token.launchTxHash && <a href={`${explorer}/tx/${token.launchTxHash}`} target="_blank" rel="noreferrer">Creation transaction ↗</a>}</div>
           </div>
           {isNative && <details className="room-details"><summary>Trading details <span>Price rules, fees & live contract data</span></summary>

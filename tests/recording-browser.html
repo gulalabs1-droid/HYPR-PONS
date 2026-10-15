@@ -1,0 +1,21 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HYPR synthetic recording verification</title>
+<style>body{background:#101217;color:#f0f3f5;font:16px/1.5 system-ui;margin:32px;max-width:900px}button,a{display:inline-block;padding:14px 20px;border-radius:10px;background:#c7f36b;color:#111;border:0;margin:8px 8px 8px 0}video,canvas{width:min(100%,640px);display:block;border-radius:16px;margin:16px 0}pre{white-space:pre-wrap}</style>
+<h1>HYPR recorder · synthetic-only check</h1><p>This fixture creates animated canvas frames and a quiet generated tone. It never calls getUserMedia, reads a camera, microphone, screen, or wallet.</p>
+<button id="start">Run synthetic recording check</button><canvas width="640" height="360" id="pattern"></canvas><video id="playback" controls playsinline></video><a id="download" hidden>Download synthetic recording</a><pre id="result" role="status">Ready. No media devices requested.</pre>
+<script type="module">
+import {recordPublishedStream} from '/recording.js';
+const canvas=document.querySelector('#pattern'),ctx=canvas.getContext('2d'),result=document.querySelector('#result'),video=document.querySelector('#playback');
+document.querySelector('#start').onclick=async()=>{
+  const button=document.querySelector('#start');button.disabled=true;let frame=0;
+  let animation;const draw=()=>{ctx.fillStyle=`hsl(${frame*3%360} 35% 18%)`;ctx.fillRect(0,0,640,360);ctx.fillStyle='#c7f36b';ctx.font='bold 40px system-ui';ctx.fillText('HYPR SYSTEM VIDEO TEST',36,125);ctx.font='24px system-ui';ctx.fillStyle='#fff';ctx.fillText('Generated frames + tone · no camera / mic',36,185);ctx.fillText(`Frame ${frame++}`,36,235);animation=requestAnimationFrame(draw);};draw();
+  const audio=new AudioContext();await audio.resume();const oscillator=audio.createOscillator(),gain=audio.createGain(),destination=audio.createMediaStreamDestination();gain.gain.value=.015;oscillator.frequency.value=440;oscillator.connect(gain).connect(destination);oscillator.start();
+  const source=canvas.captureStream(15);source.addTrack(destination.stream.getAudioTracks()[0]);
+  try{
+    const capture=recordPublishedStream(source,'clip',{onState:(seconds,bytes)=>{result.textContent=`Recording generated content: ${seconds.toFixed(1)}s / ${bytes} bytes`;}});
+    setTimeout(()=>capture.stop(),3000);const recorded=await capture.result;
+    const url=URL.createObjectURL(recorded.blob);video.src=url;
+    document.querySelector('#download').href=url;document.querySelector('#download').download='hypr-synthetic-recording.webm';document.querySelector('#download').hidden=false;
+    video.onloadedmetadata=()=>{result.textContent=JSON.stringify({passed:Number.isFinite(video.duration)&&video.duration>2,bytes:recorded.blob.size,mime:recorded.mime,duration:recorded.durationSeconds,playableDuration:video.duration,sourceTracksStillLive:source.getTracks().every(track=>track.readyState==='live'),cameraMicrophoneRequests:0},null,2);};
+  }catch(error){result.textContent=`FAILED: ${error.message}`;}finally{cancelAnimationFrame(animation);oscillator.stop();await audio.close();button.disabled=false;}
+};
+</script></html>

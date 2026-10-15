@@ -35,7 +35,7 @@ test("the actual room component distinguishes pause, stop, unavailable status an
     await act(async () => tick!()); assert.match(text(), /The creator is live/);
     await act(async () => renderer!.root.findAllByType("button").find((button) => button.props["aria-label"] === "Open room chat")!.props.onClick());
     assert.equal(chatOpens, 1); assert.equal(mediaRequests, 0);
-    assert.match(text(), /Video replay: not saved/);
+    assert.match(text(), /Video: opt-in recordings, published by the creator/);
     assert.equal(calls, statuses.length);
   } finally {
     await act(async () => renderer?.unmount());

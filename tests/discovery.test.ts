@@ -75,9 +75,9 @@ test("Explore hides throwaway ticker names unless searched, without inventing ca
   assert.equal(selectDiscoveryRooms([junk], "", "all", [], "live", true).length, 1, "explicit test-room reveal preserves indexed data");
   assert.equal(selectDiscoveryRooms([junk], "", "live", [], "live", true).length, 0, "revealing test rooms cannot invent a live broadcast");
 });
-test("FAQ explicitly explains clipping is unavailable, wallet-free watching, and persistent rooms", () => {
+test("FAQ explains real opt-in recording limits, wallet-free playback, and persistent rooms", () => {
   const html = renderToStaticMarkup(createElement(RoomFaq));
-  assert.match(html, /Not yet/); assert.match(html, /not video/); assert.match(html, /does not automatically record/);
+  assert.match(html, /next 30 seconds/); assert.match(html, /not video/); assert.match(html, /private drafts/); assert.match(html, /10 minutes/); assert.match(html, /not an always-on cloud DVR/);
   assert.match(html, /Buying a coin is optional/); assert.match(html, /permanent room link stays available/);
   assert.equal((html.match(/<details /g) || []).length, 6);
 });

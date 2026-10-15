@@ -12,6 +12,7 @@ import { broadcastCopy, broadcastExitNotice, publicBroadcastPhase, type Broadcas
 import { RoomContinuity } from "./room-continuity";
 import { TokenArt, tokenGlyph } from "./token-art";
 import { roomHue } from "@/lib/room-display";
+import { signInCommunity } from "@/lib/community-client";
 
 // LiveKit is large; load it only once a viewer joins or a creator starts broadcasting.
 const ConnectedRoom = dynamic(() => import("./native-live-connected-styled"), {
@@ -35,6 +36,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
   const [notice, setNotice] = useState("");
   const [shareVideo, setShareVideo] = useState(false);
   const [shareAudio, setShareAudio] = useState(false);
+  const [saveReplay, setSaveReplay] = useState(false);
   const [preview, setPreview] = useState<MediaStream | null>(null);
   const previewStream = useRef<MediaStream | null>(null);
   const previewVideo = useRef<HTMLVideoElement>(null);
@@ -118,6 +120,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
       if (chainId !== ROBINHOOD_TESTNET_CHAIN_ID && await switchToRobinhoodTestnet(ethereum)) chainId = Number(await ethereum.request({ method: "eth_chainId" }));
       const accessProblem = creatorAccessProblem(address, chainId, token.deployer);
       if (accessProblem) throw new Error(accessProblem);
+      if (saveReplay) await signInCommunity();
       const timestamp = Date.now();
       const message = signedHostMessage(token.address, address, timestamp);
       const signature = await ethereum.request({ method: "personal_sign", params: [personalSignHex(message), address] }) as `0x${string}`;
@@ -125,7 +128,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
       const data = await response.json() as Session & { error?: string };
       if (!response.ok) throw new Error(data.error || "The creator wallet could not be authorized.");
       if (!mounted.current) return;
-      stopPreview(); setLastExit(null); sawCurrentMedia.current = false; setSeenLive(false); setSession({ ...data, roomId: token.address, video: shareVideo, audio: shareAudio, showTitle }); setStudioOpen(false); await refreshStatus();
+      stopPreview(); setLastExit(null); sawCurrentMedia.current = false; setSeenLive(false); setSession({ ...data, roomId: token.address, video: shareVideo, audio: shareAudio, showTitle, recordReplay: saveReplay }); setStudioOpen(false); await refreshStatus();
     } catch (error) { setNotice(streamingErrorMessage(error)); }
     finally { setBusy(false); }
   }
@@ -137,7 +140,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
       sawCurrentMedia.current = false; setSeenLive(false);
       setStatus((current) => current ? { ...current, live: false, hostConnected: false, viewerCount: undefined } : null);
     }
-    stopPreview(); setShareVideo(false); setShareAudio(false); void refreshStatus();
+    stopPreview(); setShareVideo(false); setShareAudio(false); setSaveReplay(false); void refreshStatus();
   }, [refreshStatus, stopPreview]);
 
   if (session) return <section aria-label="Broadcast player"><ConnectedRoom session={session} onLeave={leaveRoom} onError={setNotice} /><RoomContinuity onOpenChat={onOpenChat} />{notice && <div className="live-notice" role="alert">{notice}</div>}</section>;
@@ -163,8 +166,9 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
       {studioOpen && <div className="live-studio-card"><strong>Creator studio · not live yet</strong>
         <ol className="studio-steps"><li>Choose your devices.</li><li>Preview privately on this device.</li><li>Sign with your creator wallet, then broadcast.</li></ol>
         <span>Preview requests access but does not publish or record. “Start broadcast” shares your selected devices live through LiveKit. Authorization is a free signature, not a transaction.</span>
-        <p className="studio-retention-note">Live-only session · no automatic recording or replay. Ending the broadcast stops this session, not your community room. Reopen this same room for your next broadcast.</p>
+        <p className="studio-retention-note">Recording starts off. Once live, choose Record replay to save up to 10 minutes, or enable viewer clips of up to 30 seconds. Captures finish as private drafts for your review; keeping this tab open is required. Ending the broadcast does not close your room.</p>
         <div className="studio-device-options"><label><input type="checkbox" checked={shareVideo} onChange={(event) => setShareVideo(event.target.checked)} disabled={busy} /> Camera</label><label><input type="checkbox" checked={shareAudio} onChange={(event) => setShareAudio(event.target.checked)} disabled={busy} /> Microphone</label></div>
+        <label className="media-consent"><input type="checkbox" checked={saveReplay} disabled={busy} onChange={event => setSaveReplay(event.target.checked)} />Save a private replay when I go live. I have rights to record and upload my published media. Up to 10 min / 40 MB; keep this tab open until upload finishes.</label>
         <small>{!shareVideo && !shareAudio ? "Both devices are off. Choose at least one to preview; microphone-only is supported." : "You are not live. Preview first, then choose whether to broadcast."}</small>
         {preview && <div className="studio-preview">{shareVideo ? <video ref={previewVideo} autoPlay playsInline muted aria-label="Private camera preview" /> : <strong>Microphone ready · private preview</strong>}<span>Only on this device · not broadcasting</span><button className="secondary-button" onClick={stopPreview} disabled={busy}>Stop preview</button></div>}
         <button className="secondary-button" onClick={() => void preparePreview()} disabled={busy || (!shareVideo && !shareAudio)}>{busy ? "Preparing…" : preview ? "Refresh private preview" : "Preview selected devices"}</button>

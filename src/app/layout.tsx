@@ -9,6 +9,8 @@ import "./polish.css";
 import "./discovery-hub.css";
 import { NavigationProgress } from "@/components/navigation-progress";
 import { PwaRegister } from "@/components/pwa-register";
+import { MediaUploadProvider } from "@/components/media-upload-provider";
+import "./media.css";
 
 const sans = Manrope({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
@@ -49,7 +51,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <a className="skip-link" href="#content">Skip to content</a>
         <NavigationProgress />
         <PwaRegister />
-        <div id="content">{children}</div>
+        <MediaUploadProvider><div id="content">{children}</div></MediaUploadProvider>
       </body>
     </html>
   );

@@ -33,7 +33,7 @@ export function decodeAuthorization(value: string | undefined, origin: string, k
 }
 
 export function authorizationMessage(value: Authorization) {
-  return ["HYPR community sign-in", `Website: ${value.origin}`, `Wallet: ${value.wallet}`, `Chain ID: ${value.chainId}`, `Nonce: ${value.nonce}`, `Expires: ${new Date(value.expiresAt).toISOString()}`, "Authorize community actions for two hours: chat, follows, reports, and your own creator profile/shows. No transaction, token approval, or funds transfer."].join("\n");
+  return ["HYPR community sign-in", `Website: ${value.origin}`, `Wallet: ${value.wallet}`, `Chain ID: ${value.chainId}`, `Nonce: ${value.nonce}`, `Expires: ${new Date(value.expiresAt).toISOString()}`, "Authorize community actions for two hours: chat, follows, reports, your own creator profile/shows, and permitted recording drafts. Only a room creator can publish its recordings. Recording and clipping require separate explicit consent. No transaction, token approval, or funds transfer."].join("\n");
 }
 
 export function createCommunityChallenge(wallet: string, origin: string): Authorization {

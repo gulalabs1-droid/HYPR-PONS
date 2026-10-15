@@ -43,6 +43,16 @@ function getRoomService() {
   return new RoomServiceClient(host, process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET);
 }
 
+/** A participant SID changes between broadcasts, unlike a creator's reusable identity. */
+export async function getLiveCaptureSession(roomName: string): Promise<string | null> {
+  if (!isLiveKitConfigured()) return null;
+  const service = getRoomService();
+  if (!(await service.listRooms([roomName])).length) return null;
+  const participants = await service.listParticipants(roomName);
+  const host = participants.find(participant => participantRole(participant.metadata) === "host" && participant.tracks.some(track => !track.muted));
+  return host?.sid || null;
+}
+
 export function participantRole(metadata?: string) {
   if (!metadata) return "";
   try { return (JSON.parse(metadata) as { role?: string }).role || ""; } catch { return ""; }

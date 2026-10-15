@@ -1,5 +1,18 @@
 # HYPR
 
+## Native clips and replay pilot — October 15, 2026
+
+Creators can opt into saving a private replay when starting a broadcast, or start
+recording from the connected studio. Viewers can record the **next** 30 seconds
+only when the creator enables clipping for that broadcast. Every capture becomes
+a private draft; only the room creator can publish it. Published recordings have
+permanent HYPR playback/share pages and do not require a wallet to watch.
+
+This is browser recording, **not** full-length cloud DVR. Pilot limits are 10
+minutes / 40 MiB per replay, 30 seconds / 8 MiB per clip, and 256 MiB total stored
+or reserved capacity. No LiveKit cloud-egress jobs or paid plan changes are used.
+See [recording architecture, permissions, tests, and operator limits](docs/HYPR_NATIVE_VIDEO.md).
+
 ## Current review materials — October 13, 2026
 
 Start with the [dated product review guide](docs/HYPR_REVIEW_GUIDE_20261013.md)

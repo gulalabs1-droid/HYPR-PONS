@@ -1,0 +1,35 @@
+.media-library,.media-capture,.recording-player { min-width:0; padding:24px; border:1px solid var(--line-strong); border-radius:22px; background:rgba(17,19,24,.85); }
+.media-library h2,.media-capture h3,.recording-player h1 { margin:6px 0 14px; overflow-wrap:anywhere; }
+.media-capture { margin:18px 0 0; }
+.media-consent { display:flex; align-items:flex-start; gap:10px; font-size:14px; line-height:1.6; margin:16px 0; }
+.media-consent input { flex:0 0 auto; width:20px; height:20px; margin-top:2px; accent-color:var(--lime); }
+.media-title { display:grid; gap:8px; font-size:14px; }
+.media-title input { min-width:0; width:100%; padding:12px; border:1px solid var(--line-strong); border-radius:12px; color:var(--text); background:#101216; }
+.media-actions { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:14px 0; }
+.media-actions button,.media-actions a { min-height:44px; display:inline-flex; align-items:center; overflow-wrap:anywhere; }
+.media-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:14px; margin:20px 0; }
+.media-card { min-width:0; border:1px solid var(--line-strong); border-radius:16px; padding:18px; background:linear-gradient(145deg,#212331,#13151c); }
+.media-card h3 { overflow-wrap:anywhere; margin:14px 0; }
+.media-card p,.media-card time { font-size:13px; color:var(--text-soft); }
+.media-kind { font-size:11px; color:var(--lime); letter-spacing:.08em; }
+.media-empty { text-align:center; padding:28px 16px; border:1px dashed var(--line-strong); border-radius:16px; margin:20px 0; }
+.media-empty>span { display:block; font-size:38px; color:var(--lime); }
+.media-empty p,.media-empty small { color:var(--text-soft); line-height:1.7; }
+.media-upload-tray { position:fixed; z-index:80; right:20px; bottom:20px; width:min(440px,calc(100vw - 32px)); max-height:60vh; overflow:auto; display:grid; gap:10px; }
+.media-upload-job { padding:18px; border:1px solid var(--lime); border-radius:16px; background:#171a20; box-shadow:0 12px 50px #000b; display:grid; gap:10px; }
+.media-upload-job strong,.media-upload-job p { overflow-wrap:anywhere; }
+.media-upload-job span,.media-upload-job a,.media-upload-job button { font-size:13px; }
+.media-upload-job a,.media-upload-job button { color:var(--lime); background:transparent; border:0; cursor:pointer; text-decoration:underline; }
+.media-upload-job progress { width:100%; accent-color:var(--lime); }
+.recording-page .page-shell { max-width:1100px; padding-top:30px; }
+.recording-player { margin:24px 0; }
+.recording-player video { width:100%; max-height:75vh; display:block; border-radius:14px; background:#000; }
+.room-media-section { grid-area:media; min-width:0; scroll-margin-top:100px; }
+.room-experience { grid-template-areas:"watch chat" "media trade" "about trade" "creator creator"; }
+@media(max-width:760px) {
+  .media-library,.media-capture,.recording-player { padding:18px; border-radius:18px; }
+  .room-media-section[data-mobile-active="false"] { display:none; }
+  .room-section-nav { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .media-upload-tray { right:16px; bottom:calc(96px + env(safe-area-inset-bottom)); max-height:45vh; }
+  .media-actions>.secondary-button,.media-actions>.primary-button { width:100%; justify-content:center; }
+}

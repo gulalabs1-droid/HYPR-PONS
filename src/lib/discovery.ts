@@ -36,14 +36,14 @@ export function isThrowawayRoom(room: Pick<DiscoveryRoom, "token" | "creator" | 
   return false;
 }
 
-export function selectDiscoveryRooms(rooms: DiscoveryRoom[], query: string, filter: DiscoveryFilter, saved: string[], sort: DiscoverySort) {
+export function selectDiscoveryRooms(rooms: DiscoveryRoom[], query: string, filter: DiscoveryFilter, saved: string[], sort: DiscoverySort, includeTestRooms = false) {
   const needle = query.trim().toLocaleLowerCase();
   const savedSet = new Set(saved.map(address => address.toLowerCase()));
   return rooms.filter(room => {
     if (filter === "live" && room.token.broadcastStatus !== "live") return false;
     if (filter === "upcoming" && !room.upcoming) return false;
     if (filter === "saved" && !savedSet.has(room.token.address.toLowerCase())) return false;
-    if (filter === "all" && !needle && isThrowawayRoom(room)) return false;
+    if (filter === "all" && !needle && !includeTestRooms && isThrowawayRoom(room)) return false;
     return `${room.title} ${room.description} ${room.token.name} ${room.token.symbol} ${room.token.address} ${room.creator?.show?.title || ""}`.toLocaleLowerCase().includes(needle);
   }).sort((a, b) => {
     if (sort === "name") return a.title.localeCompare(b.title) || a.token.address.localeCompare(b.token.address);

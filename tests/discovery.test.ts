@@ -72,6 +72,8 @@ test("Explore hides throwaway ticker names unless searched, without inventing ca
   assert.equal(selectDiscoveryRooms([junk, named], "", "all", [], "live").map(room => room.token.rank).join(), "1");
   assert.equal(selectDiscoveryRooms([junk], "kkk", "all", [], "live").length, 1);
   assert.equal(selectDiscoveryRooms([junk], "", "saved", [junk.token.address], "live").length, 1);
+  assert.equal(selectDiscoveryRooms([junk], "", "all", [], "live", true).length, 1, "explicit test-room reveal preserves indexed data");
+  assert.equal(selectDiscoveryRooms([junk], "", "live", [], "live", true).length, 0, "revealing test rooms cannot invent a live broadcast");
 });
 test("FAQ explicitly explains clipping is unavailable, wallet-free watching, and persistent rooms", () => {
   const html = renderToStaticMarkup(createElement(RoomFaq));

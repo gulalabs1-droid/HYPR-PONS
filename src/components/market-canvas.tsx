@@ -1,7 +1,7 @@
 "use client";
 import React,{useEffect,useMemo,useRef,useState} from "react";
-import {createChart,AreaSeries,CandlestickSeries,HistogramSeries,createSeriesMarkers,ColorType,CrosshairMode,LineStyle,type IChartApi,type ISeriesApi,type IPriceLine,type UTCTimestamp,type SeriesMarker,type Time} from "lightweight-charts";
-import {marketCandles,marketPrice,type MarketTrade} from "@/lib/market";
+import {createChart,AreaSeries,CandlestickSeries,HistogramSeries,createSeriesMarkers,ColorType,CrosshairMode,LineStyle,type IChartApi,type ISeriesApi,type IPriceLine,type UTCTimestamp,type SeriesMarker,type Time,type AutoscaleInfo} from "lightweight-charts";
+import {marketCandles,marketPrice,includeFillPrices,type MarketTrade} from "@/lib/market";
 
 export default function MarketCanvas({trades,markers,interval,style,selected,onSelect}:{trades:MarketTrade[];markers:MarketTrade[];interval:number;style:"line"|"candles";selected:string|null;onSelect:(id:string)=>void}) {
   const root=useRef<HTMLDivElement>(null),chart=useRef<IChartApi|null>(null),series=useRef<ISeriesApi<"Area"|"Candlestick">|null>(null),priceLine=useRef<IPriceLine|null>(null);
@@ -12,7 +12,13 @@ export default function MarketCanvas({trades,markers,interval,style,selected,onS
     if(!root.current)return;
     const api=createChart(root.current,{autoSize:true,height:330,layout:{background:{type:ColorType.Solid,color:"#101419"},textColor:"#aab4c3",fontFamily:"system-ui, sans-serif",attributionLogo:true},grid:{vertLines:{color:"#ffffff06"},horzLines:{color:"#ffffff09"}},crosshair:{mode:CrosshairMode.Normal},rightPriceScale:{borderColor:"#ffffff14",minimumWidth:86,scaleMargins:{top:.2,bottom:.26}},timeScale:{borderColor:"#ffffff14",timeVisible:true,secondsVisible:interval===1,rightOffset:4},handleScroll:{vertTouchDrag:false},localization:{priceFormatter:(price:number)=>marketPrice(price)}});
     const main=style==="candles"?api.addSeries(CandlestickSeries,{upColor:"#b8f36b",downColor:"#ff8496",wickUpColor:"#b8f36b",wickDownColor:"#ff8496",borderVisible:false}):api.addSeries(AreaSeries,{lineColor:"#c7f36b",topColor:"#c7f36b2a",bottomColor:"#c7f36b00",lineWidth:2});
-    main.applyOptions({priceFormat:{type:"custom",formatter:(price:number)=>marketPrice(price),minMove:1e-12}});
+    main.applyOptions({priceFormat:{type:"custom",formatter:(price:number)=>marketPrice(price),minMove:1e-12},autoscaleInfoProvider:(base:()=>AutoscaleInfo|null)=>{
+      const range=base();if(!range?.priceRange)return range;
+      // Fees put actual fills above/below the fee-exclusive market line. Price
+      // lines/marker icon padding alone do not include those prices in scaling.
+      range.priceRange=includeFillPrices(range.priceRange,dataRef.current.markers);
+      return range;
+    }});
     const volume=api.addSeries(HistogramSeries,{priceScaleId:"volume",priceFormat:{type:"volume"},priceLineVisible:false,lastValueVisible:false});
     volume.priceScale().applyOptions({scaleMargins:{top:.84,bottom:0},visible:false});
     chart.current=api;series.current=main;
@@ -53,7 +59,8 @@ export default function MarketCanvas({trades,markers,interval,style,selected,onS
     const trade=dataRef.current.trades.find(item=>item.id===selected);if(!trade)return;
     priceLine.current=main.createPriceLine({price:Number(trade.fillPrice),color:trade.side==="buy"?"#c7f36b":"#ff8496",lineStyle:LineStyle.Dashed,lineWidth:1,axisLabelVisible:true,title:`${trade.side.toUpperCase()} fill`});
     const index=dataRef.current.bars.findIndex(bar=>bar.time===Math.floor(trade.time/interval)*interval);
-    if(index>=0)api.timeScale().setVisibleLogicalRange({from:index-12,to:index+12});
+    if(dataRef.current.bars.length<=24)api.timeScale().fitContent();
+    else if(index>=0)api.timeScale().setVisibleLogicalRange({from:index-12,to:index+12});
   },[selected,interval,style]);
   return <div className="market-canvas-wrap"><div className="market-hover" aria-live="off">{hover||"Drag to explore · pinch to zoom · tap a trade marker"}</div><div className="market-canvas" ref={root} aria-label="Interactive token price chart" role="img"/><button className="market-fit" type="button" onClick={()=>chart.current?.timeScale().fitContent()}>Fit chart</button></div>;
 }

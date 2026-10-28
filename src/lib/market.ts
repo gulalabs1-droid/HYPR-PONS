@@ -48,3 +48,8 @@ export function marketCandles(trades:MarketTrade[], interval:number):MarketCandl
 export function marketPrice(value:string|number) {
   const n=Number(value);return Number.isFinite(n)&&n>0?n.toLocaleString("en-US",{maximumSignificantDigits:8,useGrouping:false}):"—";
 }
+export function includeFillPrices(range:{minValue:number;maxValue:number},trades:MarketTrade[]) {
+  const result={...range};
+  for(const trade of trades){const price=Number(trade.fillPrice);result.minValue=Math.min(result.minValue,price);result.maxValue=Math.max(result.maxValue,price);}
+  return result;
+}

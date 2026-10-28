@@ -1,5 +1,18 @@
 # HYPR
 
+## Native market chart — October 28, 2026
+
+Native rooms now include interactive confirmed price history, volume, line/candle
+views and wallet-specific buy/sell fill markers. Select a trade to inspect its
+time, exact token/ETH amounts, fee and explorer receipt. Watching needs no wallet.
+The market line excludes trading fees; markers show actual fee-adjusted wallet
+fills. This is historical native-curve data—not a live quote, USD feed, P&L or
+post-graduation pool chart. See [data, precision and performance boundaries](docs/HYPR_MARKET_CHART.md).
+
+Use the public [product overview](https://hypr-pons.vercel.app/about) for current
+features and testnet limits. Later work is separate from the locked October 12
+contest submission and is not backdated to its deadline.
+
 ## Native clips and replay pilot — October 15, 2026
 
 Creators can opt into saving a private replay when starting a broadcast, or start

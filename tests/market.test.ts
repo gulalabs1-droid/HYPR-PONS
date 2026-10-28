@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
 import {encodeAbiParameters,encodeEventTopics,parseAbiParameters,parseEther} from "viem";
-import {decodeMarketTrade,TRADE_EVENT,quotePerToken,orderedTrades,marketCandles,marketPrice} from "../src/lib/market";
+import {decodeMarketTrade,TRADE_EVENT,quotePerToken,orderedTrades,marketCandles,marketPrice,includeFillPrices} from "../src/lib/market";
 import {GET} from "../src/app/api/market/route";
 const curve=`0x${"1".repeat(40)}`,trader=`0x${"2".repeat(40)}` as const;
 function log(buy=true,extra:Record<string,unknown>={}) {
@@ -20,6 +20,12 @@ test("chart divisions preserve small prices and raw amounts without integer over
   assert.equal(quotePerToken(1000n,1n),"1000");assert.equal(quotePerToken(0n,1n),"0");
   assert.throws(()=>quotePerToken(1n,0n));assert.throws(()=>quotePerToken(-1n,2n));
   assert.notEqual(marketPrice("0.000000000001"),"0");
+});
+test("actual fee-adjusted fills remain within the visible chart scale",()=>{
+  const buy=decodeMarketTrade(log(true),curve,200)!,sell=decodeMarketTrade(log(false),curve,200)!;
+  const bounds=includeFillPrices({minValue:0.099,maxValue:0.0995},[buy,sell]);
+  assert.deepEqual(bounds,{minValue:0.09875,maxValue:0.1});
+  assert.deepEqual(includeFillPrices({minValue:1,maxValue:2},[]),{minValue:1,maxValue:2});
 });
 test("chart rejects wrong contracts, malformed identities and missing timestamps; unconfirmed trades are omitted",()=>{
   assert.throws(()=>decodeMarketTrade(log(),`0x${"3".repeat(40)}`,200),/address mismatch/);

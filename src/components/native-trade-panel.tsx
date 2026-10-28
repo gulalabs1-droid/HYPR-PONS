@@ -11,6 +11,7 @@ import { minimumTradeOutput, reviewIsCurrent, pendingTradeKey, parsePendingTrade
 import { OPEN_WALLET_EVENT, walletErrorMessage, walletSessionDisconnected } from "@/lib/wallet-discovery";
 import { useWalletStatus } from "@/lib/use-wallet-status";
 import { Modal } from "./modal";
+import { TRADE_CONFIRMED_EVENT } from "@/lib/market";
 
 type CurveReadClient = { call(args: { to: `0x${string}`; data: `0x${string}` }): Promise<{ data?: `0x${string}` }> };
 const publicCurveReader = createPublicClient({ chain: ROBINHOOD_TESTNET, transport: http(ROBINHOOD_TESTNET.rpcUrl) });
@@ -217,6 +218,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
         clearPending(from);
       }
       setStatus("Confirmed. Refreshing the onchain quote…");
+      window.dispatchEvent(new Event(TRADE_CONFIRMED_EVENT));
       await readQuote();
       setAmount("");
       setReview(null); void wallet.refresh();

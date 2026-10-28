@@ -24,10 +24,12 @@ import { SaveRoom } from "./save-room";
 import { TokenArt, tokenGlyph } from "./token-art";
 import { RoomFaq } from "./room-faq";
 import { RoomMediaLibrary } from "./room-media-library";
+import { NativeMarketChart } from "./native-market-chart";
 
-type RoomSection = "chat" | "videos" | "trade" | "about";
-const sectionLabels: Record<RoomSection, string> = { chat: "Chat", videos: "Videos", trade: "Trade", about: "About" };
+type RoomSection = "chart" | "chat" | "videos" | "trade" | "about";
+const sectionLabels: Record<RoomSection, string> = { chart:"Chart", chat: "Chat", videos: "Videos", trade: "Trade", about: "About" };
 const sectionIcons: Record<RoomSection, React.ReactNode> = {
+  chart:<><path d="M3 3v18h18"/><path d="m6 15 4-5 4 2 6-7"/></>,
   chat: <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" />,
   videos: <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m10 8 6 4-6 4Z" /></>,
   trade: <><path d="M7 4v16M7 4 3 8M7 4l4 4" /><path d="M17 20V4m0 16-4-4m4 4 4-4" /></>,
@@ -41,7 +43,7 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
   const isNative = token.origin === "hypr";
   const growth = useGrowth(token.address);
   const creatorProfile = growth.state?.rooms[0];
-  const [section, setSection] = useState<RoomSection>("chat");
+  const [section, setSection] = useState<RoomSection>(isNative?"chart":"chat");
   const sectionsRef = useRef<HTMLDivElement>(null);
   const explorer = isNative && process.env.NEXT_PUBLIC_HYPR_NETWORK !== "mainnet" ? "https://explorer.testnet.chain.robinhood.com" : "https://robinhoodchain.blockscout.com";
   const progress = formatCurveProgress(token.nativeRealQuoteReserve, token.nativeGraduationThreshold, token.curveProgressBps, token.curvePhase);
@@ -68,11 +70,12 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
       {(liveNow || creatorProfile?.show) && <p className={`room-now is-${phase}`}><span className="room-now-badge">{liveNow ? <><span className="pulse" />LIVE NOW</> : phase === "upcoming" ? "NEXT SHOW" : phase === "awaiting-creator" ? "WAITING ON CREATOR" : "SCHEDULED"}</span>{creatorProfile?.show && <><strong>{creatorProfile.show.title}</strong>{phase !== "live" && <ShowTime iso={creatorProfile.show.startsAt} />}</>}</p>}
       <p className="room-safety-note">{isNative ? "Testnet preview · Free test assets, not real money. Watch without a wallet." : token.dataStatus === "demo" ? "Demo room · Sample launch data, not a verified live market." : "Indexed Pons room · Trading availability depends on the launch’s network."}</p>
       {liveData.error && <p className="live-notice" role="status">{liveData.error} Last successful data is kept visible; it may be out of date.</p>}
-      <div className="room-experience" ref={sectionsRef}>
+      <div className={`room-experience${isNative?" has-market":""}`} ref={sectionsRef}>
         <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} showTitle={creatorProfile?.show?.title} /></div>
-        <nav className="room-section-nav" aria-label="Room sections">
-          {(Object.keys(sectionLabels) as RoomSection[]).filter(key => isNative || key !== "videos").map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={`room-${key}`} onClick={() => chooseSection(key)}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{sectionIcons[key]}</svg><span>{sectionLabels[key]}{key === "trade" && <small> ${token.symbol}</small>}</span></button>)}
+        <nav className="room-section-nav" aria-label="Room sections" data-native={isNative}>
+          {(Object.keys(sectionLabels) as RoomSection[]).filter(key => isNative || (key !== "videos"&&key!=="chart")).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={`room-${key}`} onClick={() => chooseSection(key)}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{sectionIcons[key]}</svg><span>{sectionLabels[key]}{key === "trade" && <small> ${token.symbol}</small>}</span></button>)}
         </nav>
+        {isNative&&<section className="room-chart-section" id="room-chart" data-mobile-active={section==="chart"}><NativeMarketChart tokenAddress={token.address} symbol={token.symbol}/></section>}
         {isNative && <section className="room-media-section" id="room-videos" data-mobile-active={section === "videos"}><RoomMediaLibrary roomId={token.address} /></section>}
         <section className="room-chat-section" id="room-chat" data-mobile-active={section === "chat"} aria-label="Room chat"><CommunityPanel roomId={token.address} creator={token.deployer} creatorName={creatorProfile?.displayName || token.name} reportsEnabled={growth.state?.enabled === true} /></section>
         <section className="room-trade-section" id="room-trade" data-mobile-active={section === "trade"} aria-label={`Trade ${token.symbol}`}>

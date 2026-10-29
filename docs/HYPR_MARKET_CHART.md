@@ -1,6 +1,6 @@
 # Confirmed market chart and execution markers — October 28, 2026
 
-Native HYPR rooms now expose a dedicated Chart view on mobile and a chart beside the trade panel on desktop. The default native mobile room section is Chart; viewing and historical wallet observation need no signature, camera or microphone. Live video remains above the market.
+Native HYPR rooms expose a dedicated Chart view on mobile and, as of October 29, a chart spanning the room grid on desktop. The default native mobile room section is Chart; viewing and historical wallet observation need no signature, camera or microphone. Live video remains above the market.
 
 ## Data and precision
 
@@ -23,3 +23,11 @@ Only native curve activity is charted. Post-graduation pool trading, Pons charts
 The public `/about` page and sitemap give creators, reviewers and prospective partners a stable factual product overview. Funding/application materials remain local under `output/hypr-growth-20261028/`, excluded from Git and Vercel uploads. No program agreements or paid plans are accepted by this release.
 
 The framework is updated to the supported Next.js 15.5.28 patch, keeping the existing major version. Chart attribution remains visible, including the upstream TradingView copyright notice.
+
+## October 29 chart presentation revision
+
+The room chart spans the desktop room grid instead of sharing a narrow row with the trade panel. Mobile retains its Chart tab. The plot has compact axis prices, a visible buy/sell legend, actual price dots, an expandable height, and a Reset view control. Full fill precision and exact raw amounts remain in selected trade details; closing details also clears the selected marker line.
+
+Sparse histories use an explicit logical range after the first layout frame. This prevents consecutive mount effects from restoring the default range and bunching two real trades at the right edge. Subsequent history refreshes preserve the viewer's zoom. No extra trades, time buckets, current quotes, or quiet-period candles are created to fill space. A sparse-history note explains the lack of activity.
+
+Verified locally against the two actual historical demo trades: fresh-load phone layout at 390 px, no horizontal overflow, selection and receipt amounts, close, candles/1m controls, and expand to 520 px. The isolated local review route used for this check was removed before deployment. Live-room acceptance is verified separately after deployment.

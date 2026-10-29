@@ -48,6 +48,14 @@ export function marketCandles(trades:MarketTrade[], interval:number):MarketCandl
 export function marketPrice(value:string|number) {
   const n=Number(value);return Number.isFinite(n)&&n>0?n.toLocaleString("en-US",{maximumSignificantDigits:8,useGrouping:false}):"—";
 }
+/** Short axis labels; exact amounts and higher precision remain in trade details. */
+export function marketAxisPrice(value:number) {
+  return Number.isFinite(value)&&value>0?value.toLocaleString("en-US",{maximumSignificantDigits:4,useGrouping:false}):"—";
+}
+/** Sparse markets need explicit spacing: fitContent otherwise bunches a few bars at the edge. */
+export function sparseMarketRange(count:number) {
+  return count>0&&count<=12?{from:-.5,to:count-.5}:null;
+}
 export function includeFillPrices(range:{minValue:number;maxValue:number},trades:MarketTrade[]) {
   const result={...range};
   for(const trade of trades){const price=Number(trade.fillPrice);result.minValue=Math.min(result.minValue,price);result.maxValue=Math.max(result.maxValue,price);}

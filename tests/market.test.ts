@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
 import {encodeAbiParameters,encodeEventTopics,parseAbiParameters,parseEther} from "viem";
-import {decodeMarketTrade,TRADE_EVENT,quotePerToken,orderedTrades,marketCandles,marketPrice,includeFillPrices} from "../src/lib/market";
+import {decodeMarketTrade,TRADE_EVENT,quotePerToken,orderedTrades,marketCandles,marketPrice,marketAxisPrice,sparseMarketRange,includeFillPrices} from "../src/lib/market";
 import {GET} from "../src/app/api/market/route";
 const curve=`0x${"1".repeat(40)}`,trader=`0x${"2".repeat(40)}` as const;
 function log(buy=true,extra:Record<string,unknown>={}) {
@@ -26,6 +26,13 @@ test("actual fee-adjusted fills remain within the visible chart scale",()=>{
   const bounds=includeFillPrices({minValue:0.099,maxValue:0.0995},[buy,sell]);
   assert.deepEqual(bounds,{minValue:0.09875,maxValue:0.1});
   assert.deepEqual(includeFillPrices({minValue:1,maxValue:2},[]),{minValue:1,maxValue:2});
+});
+test("sparse chart views center actual bars with readable nonzero axis prices",()=>{
+  assert.deepEqual(sparseMarketRange(1),{from:-.5,to:.5});
+  assert.deepEqual(sparseMarketRange(2),{from:-.5,to:1.5});
+  assert.equal(sparseMarketRange(0),null);assert.equal(sparseMarketRange(13),null);
+  assert.equal(marketAxisPrice(0.000062500926),"0.0000625");
+  assert.notEqual(marketAxisPrice(1e-24),"0");
 });
 test("chart rejects wrong contracts, malformed identities and missing timestamps; unconfirmed trades are omitted",()=>{
   assert.throws(()=>decodeMarketTrade(log(),`0x${"3".repeat(40)}`,200),/address mismatch/);

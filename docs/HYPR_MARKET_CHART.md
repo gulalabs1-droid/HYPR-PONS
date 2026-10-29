@@ -26,7 +26,7 @@ The framework is updated to the supported Next.js 15.5.28 patch, keeping the exi
 
 ## October 29 chart presentation revision
 
-The room chart spans the desktop room grid instead of sharing a narrow row with the trade panel. Mobile retains its Chart tab. The plot has compact axis prices, a visible buy/sell legend, actual price dots, an expandable height, and a Reset view control. Full fill precision and exact raw amounts remain in selected trade details; closing details also clears the selected marker line.
+The room chart spans the desktop room grid instead of sharing a narrow row with the trade panel. Mobile retains its Chart tab. The plot has compact axis prices, a visible buy/sell legend, actual price dots, an expandable height, and a Reset view control. Full fill precision and exact raw amounts remain in selected trade details; closing details also clears the selected marker line. Room-tab anchors use the existing document header offset, rather than adding a second offset that leaves excess space above the chart.
 
 Sparse histories use an explicit logical range after the first layout frame. This prevents consecutive mount effects from restoring the default range and bunching two real trades at the right edge. Subsequent history refreshes preserve the viewer's zoom. No extra trades, time buckets, current quotes, or quiet-period candles are created to fill space. A sparse-history note explains the lack of activity.
 

@@ -1,4 +1,5 @@
 import { AccessToken, RoomServiceClient, TrackSource } from "livekit-server-sdk";
+import { revokeStaleGuests, type GuestService } from "./live-guests-server";
 
 const ADDRESS = /^0x[a-fA-F0-9]{40}$/;
 
@@ -23,24 +24,26 @@ export function roomNameForLaunch(address: string) {
   return `hypr-${address.toLowerCase()}`;
 }
 
-export async function createLiveKitToken({ roomName, identity, name, role, launchAddress }: { roomName: string; identity: string; name: string; role: "host" | "viewer"; launchAddress: string }) {
+export async function createLiveKitToken({ roomName, identity, name, role, launchAddress, wallet, controlId }: { roomName: string; identity: string; name: string; role: "host" | "viewer"; launchAddress: string; wallet?: string; controlId?: string }) {
   if (!isLiveKitConfigured()) throw new Error("Native live streaming is not configured");
-  const token = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, { identity, name, ttl: "2h", metadata: JSON.stringify({ role, launchAddress }) });
+  const metadata = { role, launchAddress, ...(wallet && role === "viewer" ? { wallet: wallet.toLowerCase(), guestState: "audience" } : {}), ...(controlId && role === "host" ? { controlId } : {}) };
+  const token = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, { identity, name, ttl: wallet ? "10m" : "2h", metadata: JSON.stringify(metadata) });
   token.addGrant({
     room: roomName,
     roomJoin: true,
     roomCreate: role === "host",
     canPublish: role === "host",
     canSubscribe: true,
+    canUpdateOwnMetadata: false,
     // Viewers send only reactions and chat pings; receivers validate and throttle every packet.
     canPublishData: true,
   });
   return token.toJwt();
 }
 
-function getRoomService() {
+export function getRoomService() {
   const host = getLiveKitServerUrl().replace(/^wss:/, "https:").replace(/^ws:/, "http:");
-  return new RoomServiceClient(host, process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET);
+  return new RoomServiceClient(host, process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, { requestTimeout: 5 });
 }
 
 /** A participant SID changes between broadcasts, unlike a creator's reusable identity. */
@@ -76,6 +79,9 @@ export async function getLiveRoomStatus(roomName: string) {
   const rooms = await service.listRooms([roomName]);
   if (!rooms[0]) return statusFromParticipants([]);
   const participants = await service.listParticipants(roomName);
+  // A creator may leave without pressing End. Retire permissions from that
+  // earlier connection when the next status check reaches LiveKit.
+  await revokeStaleGuests(service as unknown as GuestService, roomName, participants).catch(() => undefined);
   return statusFromParticipants(participants);
 }
 

@@ -136,14 +136,14 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
   const leaveRoom = useCallback((reason: BroadcastExit) => {
     statusGeneration.current++;
     setLastExit(reason); setNotice(broadcastExitNotice(reason)); setSession(null); setStudioOpen(false);
-    if (reason === "host-ended" || reason === "creator-offline") {
+    if (reason === "host-ended" || reason === "creator-offline" || reason === "session-ended") {
       sawCurrentMedia.current = false; setSeenLive(false);
       setStatus((current) => current ? { ...current, live: false, hostConnected: false, viewerCount: undefined } : null);
     }
     stopPreview(); setShareVideo(false); setShareAudio(false); setSaveReplay(false); void refreshStatus();
   }, [refreshStatus, stopPreview]);
 
-  if (session) return <section aria-label="Broadcast player"><ConnectedRoom session={session} onLeave={leaveRoom} onError={setNotice} /><RoomContinuity onOpenChat={onOpenChat} />{notice && <div className="live-notice" role="alert">{notice}</div>}</section>;
+  if (session) return <section aria-label="Broadcast player"><ConnectedRoom key={session.token} session={session} onLeave={leaveRoom} onError={setNotice} onSessionChange={setSession} /><RoomContinuity onOpenChat={onOpenChat} />{notice && <div className="live-notice" role="alert">{notice}</div>}</section>;
 
   const creatorConnected = wallet.account?.toLowerCase() === token.deployer.toLowerCase();
   const phase = publicBroadcastPhase(status, statusError, seenLive, lastExit);

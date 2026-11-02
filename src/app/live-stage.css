@@ -1,0 +1,42 @@
+/* The creator remains the focus while approved guests have their own tiles. */
+.hypr-broadcast-stage { position:relative; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:4px; min-height:220px; aspect-ratio:auto; background:#080b0d; }
+.hypr-broadcast-stage .live-stage-host { position:relative; min-width:0; min-height:220px; aspect-ratio:16 / 9; overflow:hidden; }
+.hypr-broadcast-stage .live-stage-host .lk-participant-tile { width:100%; height:100%; min-height:220px; aspect-ratio:16 / 9; }
+.hypr-broadcast-stage .live-stage-pip { position:absolute; right:12px; bottom:12px; width:clamp(88px,24%,180px); overflow:hidden; border:2px solid #ffffffaa; border-radius:10px; box-shadow:0 4px 16px #0009; }
+.hypr-broadcast-stage .live-stage-pip .lk-participant-tile { min-height:0; aspect-ratio:16 / 9; }
+.hypr-broadcast-stage.has-guests { grid-template-columns:minmax(0,1.8fr) minmax(150px,.75fr); align-items:stretch; }
+.live-stage-guests { display:grid; grid-template-columns:minmax(0,1fr); align-content:center; gap:6px; padding:8px; min-width:0; }
+.live-stage-guests[data-many=true] { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.live-stage-guest { min-width:0; overflow:hidden; border-radius:10px; background:#13191d; }
+.hypr-broadcast-stage .live-stage-guest .lk-participant-tile { width:100%; height:100%; min-height:0; aspect-ratio:1 / 1; }
+.live-stage-audio { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:7px; min-height:110px; padding:12px; text-align:center; }
+.live-stage-audio > span { display:grid; place-items:center; width:40px; height:40px; border-radius:14px; color:#c7f36b; background:#c7f36b17; font-size:21px; }
+.live-stage-audio strong { font-size:12px; }.live-stage-audio small { color:#a8b3c3; font-size:10px; line-height:1.4; }
+.hypr-broadcast-stage.has-guests .live-reaction-bar { top:12px; bottom:auto; }
+.native-live-toolbar { flex-wrap:wrap; gap:8px 12px; padding:12px 16px; background:#111820; }
+.native-live-toolbar .studio-live-hud { color:#b8c4d0; font-size:12px; }
+.live-viewing-note { margin:0; padding:12px 18px; color:#aebac8; font-size:12px; line-height:1.6; }
+.live-guests { display:grid; gap:12px; padding:20px; border-top:1px solid #ffffff10; background:linear-gradient(145deg,#182027,#11171c); }
+.live-guests-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.live-guests-heading h3 { margin:6px 0 0; font-size:18px; line-height:1.25; }
+.live-guests-heading > span { flex:none; padding:6px 9px; border:1px solid #c7f36b33; border-radius:99px; color:#d7f69e; font-size:10px; letter-spacing:.04em; }
+.live-guests p { margin:0; color:#b5c1ce; font-size:13px; line-height:1.65; }
+.live-guests .live-guests-muted { color:#8796a5; font-size:11px; }
+.live-guests .live-guests-empty { padding:13px 14px; border:1px dashed #ffffff1b; border-radius:12px; color:#91a0af; }
+.live-guests > .secondary-button { justify-self:start; min-height:44px; }
+.live-guest-list { display:grid; gap:8px; padding:0; margin:0; list-style:none; }
+.live-guest-list li { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border:1px solid #ffffff10; border-radius:12px; background:#090e12aa; }
+.live-guest-list li > div:first-child { display:grid; gap:4px; min-width:0; }
+.live-guest-list strong { color:#edf4f3; font-size:13px; }.live-guest-list small { color:#99a9b8; font-size:11px; }
+.live-guest-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; }
+.live-guest-actions button { min-height:44px; padding:8px 13px; font-size:12px; }
+.live-guests .lk-control-bar { justify-content:flex-start; padding:0; background:transparent; }
+.live-guests .live-notice { padding:10px 12px; color:#e6d3a9; }
+@media(max-width:760px) {
+  .hypr-broadcast-stage.has-guests { grid-template-columns:minmax(0,1fr); }
+  .live-stage-guests { padding:8px; }
+  .hypr-broadcast-stage .live-stage-guest .lk-participant-tile { aspect-ratio:16 / 10; }
+  .hypr-broadcast-stage.has-guests .live-reaction-bar { top:10px; }
+  .live-guests { padding:17px 15px; }.live-guests-heading h3 { font-size:16px; }
+  .live-guest-list li { align-items:flex-start; flex-wrap:wrap; }.live-guest-actions { width:100%; justify-content:flex-start; }
+}

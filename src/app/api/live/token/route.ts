@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { recoverMessageAddress } from "viem";
 import { getCombinedLaunchData } from "@/lib/launch-data";
 import { createLiveKitToken, getLiveKitClientUrl, getLiveRoomStatus, isLiveKitConfigured, roomNameForLaunch } from "@/lib/livekit";
+import { requestOrigin, sameOrigin } from "@/lib/community-auth";
+import { createHostCapability, encodeHostCapability, liveHostCookieName } from "@/lib/live-host-auth";
 
 export const runtime = "nodejs";
 
@@ -24,6 +26,7 @@ export async function POST(request: Request) {
   if (launch.origin !== "hypr" || launch.dataStatus === "demo") return NextResponse.json({ error: "Native streaming is available only for real HYPR launches." }, { status: 403 });
 
   if (body.role === "host") {
+    if (!sameOrigin(request)) return NextResponse.json({ error: "Use HYPR to start the broadcast." }, { status: 403 });
     const address = body.address || "";
     const timestamp = Number(body.timestamp);
     if (!/^0x[a-fA-F0-9]{40}$/.test(address) || !Number.isSafeInteger(timestamp) || !body.signature) return NextResponse.json({ error: "Wallet authorization is incomplete." }, { status: 400 });
@@ -33,8 +36,11 @@ export async function POST(request: Request) {
       const recovered = await recoverMessageAddress({ message: hostMessage(roomName, address, timestamp), signature: body.signature });
       if (recovered.toLowerCase() !== address.toLowerCase()) throw new Error("signature mismatch");
     } catch { return NextResponse.json({ error: "Wallet signature could not be verified." }, { status: 401 }); }
-    const token = await createLiveKitToken({ roomName, identity: `host-${address.toLowerCase()}`, name: `${launch.name} creator`, role: "host", launchAddress: roomId.toLowerCase() });
-    return NextResponse.json({ token, serverUrl: getLiveKitClientUrl(), roomName, role: "host" }, { headers: { "Cache-Control": "no-store" } });
+    const capability = createHostCapability(roomId, address, requestOrigin(request));
+    const token = await createLiveKitToken({ roomName, identity: `host-${address.toLowerCase()}`, name: `${launch.name} creator`, role: "host", launchAddress: roomId.toLowerCase(), controlId: capability.controlId });
+    const response = NextResponse.json({ token, serverUrl: getLiveKitClientUrl(), roomName, role: "host" }, { headers: { "Cache-Control": "no-store" } });
+    response.cookies.set(liveHostCookieName(roomId), encodeHostCapability(capability), { httpOnly: true, secure: new URL(request.url).protocol === "https:", sameSite: "strict", path: "/api/live", maxAge: 12 * 60 * 60 });
+    return response;
   }
 
   try {

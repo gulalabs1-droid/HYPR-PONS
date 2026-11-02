@@ -12,6 +12,7 @@ import { PwaRegister } from "@/components/pwa-register";
 import { MediaUploadProvider } from "@/components/media-upload-provider";
 import "./media.css";
 import "./market.css";
+import "./live-stage.css";
 
 const sans = Manrope({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });

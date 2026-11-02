@@ -79,5 +79,6 @@ test("FAQ explains real opt-in recording limits, wallet-free playback, and persi
   const html = renderToStaticMarkup(createElement(RoomFaq));
   assert.match(html, /next 30 seconds/); assert.match(html, /not video/); assert.match(html, /private drafts/); assert.match(html, /10 minutes/); assert.match(html, /not an always-on cloud DVR/);
   assert.match(html, /Buying a coin is optional/); assert.match(html, /permanent room link stays available/);
-  assert.equal((html.match(/<details /g) || []).length, 6);
+  assert.match(html, /creator can approve or decline/); assert.match(html, /decide when to turn on your camera or microphone/);
+  assert.equal((html.match(/<details /g) || []).length, 7);
 });

@@ -2,6 +2,8 @@
 
 HYPR live guests are a small-pilot feature. A signed-in viewer requests a spot, and only the current room creator may approve it. A guest's camera and microphone remain off until the guest enables them. The creator can remove guests or end the broadcast; the normal interface supports up to four guests.
 
+The current wallet sign-in authorizes community actions and starting the wallet owner's broadcasts for up to two hours on the same site and browser. An older chat-only session must sign once more before hosting. Camera/microphone use, recording and onchain transactions still require their own user actions. Recording APIs are available under `/api/community/media` so the community-scoped sign-in cookie reaches them.
+
 ## Connect disconnect notifications
 
 After the release containing `/api/live/webhook` has been deployed, open the HYPR project in LiveKit Cloud and choose **Settings → Webhooks → Create new webhook**. Use the public production origin followed by `/api/live/webhook`, and select the same signing API key configured as `LIVEKIT_API_KEY` in the HYPR deployment. Do not put the secret into the URL or a browser field. Use LiveKit's test-event action and confirm a successful delivery; a successful test event verifies the signature path, but does not replace a real host-and-guest disconnect test.

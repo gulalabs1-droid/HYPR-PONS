@@ -27,7 +27,7 @@ for await(const line of createInterface({input:process.stdin})) {
     } else if(command.action==="upload") {
       if(!command.path||!command.id) throw new Error("path and id required");
       const bytes=await readFile(command.path);
-      const authorized=await request("/api/media",{roomId,action:"upload",id:command.id});const upload=await authorized.json();
+      const authorized=await request("/api/community/media",{roomId,action:"upload",id:command.id});const upload=await authorized.json();
       if(!authorized.ok) throw new Error(`upload authorization ${authorized.status}: ${upload.error}`);
       const originalFetch=globalThis.fetch, originalWindow=Object.getOwnPropertyDescriptor(globalThis,"window");
       globalThis.fetch=(input,options)=>{
@@ -37,13 +37,13 @@ for await(const line of createInterface({input:process.stdin})) {
       Object.defineProperty(globalThis,"window",{configurable:true,value:{dispatchEvent:()=>true}});
       try { await uploadCapturedMedia(roomId,upload,{blob:new Blob([bytes],{type:"video/webm"}),mime:"video/webm",durationSeconds:command.durationSeconds||3},()=>{}); }
       finally { globalThis.fetch=originalFetch;if(originalWindow) Object.defineProperty(globalThis,"window",originalWindow);else Reflect.deleteProperty(globalThis,"window"); }
-      const privatePlayback=await request(`/api/media/playback?roomId=${roomId}&id=${command.id}`);const playback=await privatePlayback.json();
+      const privatePlayback=await request(`/api/community/media/playback?roomId=${roomId}&id=${command.id}`);const playback=await privatePlayback.json();
       if(!privatePlayback.ok) throw new Error(`private playback ${privatePlayback.status}`);
       const stored=await fetch(playback.url);const received=Buffer.from(await stored.arrayBuffer());
       if(createHash("sha256").update(bytes).digest("hex")!==createHash("sha256").update(received).digest("hex")) throw new Error("downloaded media bytes differ");
-      const anonymous=await fetch(`${base}/api/media/playback?roomId=${roomId}&id=${command.id}`);
-      const deniedPublish=await request("/api/media",{roomId,action:"publish",id:command.id});
-      const retry=await request("/api/media",{roomId,action:"complete",id:command.id,durationSeconds:command.durationSeconds||3});
+      const anonymous=await fetch(`${base}/api/community/media/playback?roomId=${roomId}&id=${command.id}`);
+      const deniedPublish=await request("/api/community/media",{roomId,action:"publish",id:command.id});
+      const retry=await request("/api/community/media",{roomId,action:"complete",id:command.id,durationSeconds:command.durationSeconds||3});
       console.log(JSON.stringify({uploaded:true,bytes:bytes.length,byteIdenticalPlayback:true,privateOwnerPlayback:privatePlayback.status,anonymousDraftDenied:anonymous.status,nonCreatorPublishDenied:deniedPublish.status,completionRetry:retry.status}));
     } else if(command.action==="exit") break;
     else throw new Error("unknown action");

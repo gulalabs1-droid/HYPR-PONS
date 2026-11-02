@@ -33,6 +33,7 @@ test("community routes require a same-origin verified session and consume sign-i
     assert.equal(signed.status, 200);
     assert.match(signed.headers.get("set-cookie")!, /HttpOnly/);
     assert.match(signed.headers.get("set-cookie")!, /SameSite=strict/i);
+    assert.match(signed.headers.get("set-cookie")!, /Path=\/api\/community/i);
     assert.equal((await signIn(request("/api/community/session", { signature }, cookie))).status, 401);
     const sessionCookie = signed.headers.get("set-cookie")!.split(";")[0];
     assert.equal((await writeCommunity(request("/api/community", { roomId, action: "message", body: "hello" }, sessionCookie))).status, 200);

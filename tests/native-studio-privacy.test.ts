@@ -26,7 +26,7 @@ test("opening the studio leaves devices off; only explicit private preview reque
     const inputs = renderer!.root.findAllByType("input");
     assert.equal(inputs.length, 3); assert.equal(inputs[0].props.checked, false); assert.equal(inputs[1].props.checked, false); assert.equal(inputs[2].props.checked, false);
     assert.equal(requests, 0);
-    assert.equal(renderer!.root.findAllByType("button").find((button) => button.props.children === "Authorize & start broadcast")!.props.disabled, true);
+    assert.equal(renderer!.root.findAllByType("button").find((button) => button.props.children === "Start broadcast")!.props.disabled, true);
     await act(async () => inputs[0].props.onChange({ target: { checked: true } }));
     assert.equal(requests, 0);
     await act(async () => renderer!.root.findAllByType("button").find((button) => button.props.children === "Preview selected devices")!.props.onClick());

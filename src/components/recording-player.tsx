@@ -12,7 +12,7 @@ export function RecordingPlayer({ roomId, id }: { roomId: string; id: string }) 
   const load = useCallback(async () => {
     const current = ++generation.current; setLoading(true); setError("");
     try {
-      const response = await fetch(`/api/media/playback?roomId=${encodeURIComponent(roomId)}&id=${encodeURIComponent(id)}`, { cache: "no-store", signal: AbortSignal.timeout(12000) });
+      const response = await fetch(`/api/community/media/playback?roomId=${encodeURIComponent(roomId)}&id=${encodeURIComponent(id)}`, { cache: "no-store", signal: AbortSignal.timeout(12000) });
       const data = await response.json();
       if (!response.ok || typeof data.url !== "string") throw new Error(data.error || "This recording is unavailable.");
       if (current === generation.current) setAsset(data);

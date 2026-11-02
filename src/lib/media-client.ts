@@ -14,7 +14,7 @@ export function subscribeMediaWalletChange(changed: () => void) {
 
 export async function mediaAction(roomId: string, action: string, data: Record<string, unknown> = {}) {
   await awaitCommunityReset();
-  const response = await fetch("/api/media", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomId, action, ...data }), signal: AbortSignal.timeout(15000) });
+  const response = await fetch("/api/community/media", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomId, action, ...data }), signal: AbortSignal.timeout(15000) });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || "The recording action failed.");
   return result;

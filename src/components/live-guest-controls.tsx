@@ -6,6 +6,7 @@ import { ConnectionState, Track } from "livekit-client";
 import { GUEST_LIMIT, guestMetadata } from "@/lib/live-guests";
 import { getEthereum, shortAddress } from "@/lib/wallet";
 import { WALLET_CHANGED_EVENT } from "@/lib/wallet-discovery";
+import { COMMUNITY_SIGNED_OUT_EVENT } from "@/lib/growth";
 
 async function changeGuest(path: string, data: Record<string, string>) {
   const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data), signal: AbortSignal.timeout(12000) });
@@ -55,9 +56,11 @@ export function LiveGuestControls({ roomId, role, live, hostSid, authenticated, 
     };
     provider?.on?.("accountsChanged", leaveForWalletChange);
     window.addEventListener(WALLET_CHANGED_EVENT, selectedWalletChanged);
+    window.addEventListener(COMMUNITY_SIGNED_OUT_EVENT, leaveForWalletChange);
     return () => {
       provider?.removeListener?.("accountsChanged", leaveForWalletChange);
       window.removeEventListener(WALLET_CHANGED_EVENT, selectedWalletChanged);
+      window.removeEventListener(COMMUNITY_SIGNED_OUT_EVENT, leaveForWalletChange);
     };
   }, [actor, authenticated, onWalletChange, role, stopDevices]);
 

@@ -2,6 +2,7 @@ export type Show = { id: string; title: string; description: string; startsAt: s
 export type GrowthRoom = { address: string; creator: string; name: string; displayName: string | null; bio: string | null; avatar: string; followers: number; following: boolean; owned: boolean; show: Show | null; moment: string | null };
 export type GrowthState = { rooms: GrowthRoom[]; wallet: string | null; checkedAt: string; enabled: boolean };
 export const COMMUNITY_UPDATED_EVENT = "hypr-community-updated";
+export const COMMUNITY_SIGNED_OUT_EVENT = "hypr-community-signed-out";
 export const BROADCAST_ENDED_EVENT = "hypr-broadcast-ended";
 export const AVATARS = ["H", "★", "◉", "♫", "✦"] as const;
 export const ADDRESS = /^0x[a-fA-F0-9]{40}$/;

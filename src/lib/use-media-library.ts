@@ -12,7 +12,7 @@ export function useMediaLibrary(roomId: string) {
     pending.current = true; const current = generation.current;
     try {
       await awaitCommunityReset();
-      const response = await fetch(`/api/media?roomId=${encodeURIComponent(roomId)}`, { cache: "no-store", signal: AbortSignal.timeout(12000) });
+      const response = await fetch(`/api/community/media?roomId=${encodeURIComponent(roomId)}`, { cache: "no-store", signal: AbortSignal.timeout(12000) });
       const data = await response.json();
       if (!response.ok || !Array.isArray(data.assets)) throw new Error(data.error || "Video library unavailable.");
       if (active.current && current === generation.current) { setState(data); setError(""); }

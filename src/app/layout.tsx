@@ -13,6 +13,7 @@ import { MediaUploadProvider } from "@/components/media-upload-provider";
 import "./media.css";
 import "./market.css";
 import "./live-stage.css";
+import "./viewer-playback.css";
 
 const sans = Manrope({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });

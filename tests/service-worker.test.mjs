@@ -25,6 +25,8 @@ test("service worker never intercepts navigation, private APIs or video storage"
   for (const request of [
     {url:"https://hypr.test/room/real",method:"GET",mode:"navigate"},
     {url:"https://hypr.test/api/media/playback?id=private",method:"GET"},
+    {url:"https://hypr.test/api/community/media/playback?id=private",method:"GET"},
+    {url:"https://hypr.test/api/community/media",method:"POST"},
     {url:"https://project.supabase.co/storage/v1/object/sign/private?token=scoped",method:"GET"},
     {url:"https://hypr.test/api/media",method:"POST"},
   ]) handlers.fetch({request,respondWith(){assert.fail("dynamic requests must remain browser/network controlled");}});

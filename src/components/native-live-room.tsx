@@ -12,7 +12,7 @@ import { broadcastCopy, broadcastExitNotice, publicBroadcastPhase, type Broadcas
 import { RoomContinuity } from "./room-continuity";
 import { TokenArt, tokenGlyph } from "./token-art";
 import { roomHue } from "@/lib/room-display";
-import { signInCommunity } from "@/lib/community-client";
+import { CommunitySignInError, signInCommunity } from "@/lib/community-client";
 
 // LiveKit is large; load it only once a viewer joins or a creator starts broadcasting.
 const ConnectedRoom = dynamic(() => import("./native-live-connected-styled"), {
@@ -21,8 +21,7 @@ const ConnectedRoom = dynamic(() => import("./native-live-connected-styled"), {
 });
 
 function signedHostMessage(roomId: string, address: string, timestamp: number) {
-  const roomName = `hypr-${roomId.toLowerCase()}`;
-  return ["HYPR native live host authorization", `Room: ${roomName}`, `Wallet: ${address.toLowerCase()}`, `Timestamp: ${timestamp}`].join("\n");
+  return ["HYPR native live host authorization", `Room: hypr-${roomId.toLowerCase()}`, `Wallet: ${address.toLowerCase()}`, `Timestamp: ${timestamp}`].join("\n");
 }
 
 export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch; onOpenChat?: () => void; showTitle?: string }) {
@@ -37,6 +36,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
   const [shareVideo, setShareVideo] = useState(false);
   const [shareAudio, setShareAudio] = useState(false);
   const [saveReplay, setSaveReplay] = useState(false);
+  const [oneTimeAvailable, setOneTimeAvailable] = useState(false);
   const [preview, setPreview] = useState<MediaStream | null>(null);
   const previewStream = useRef<MediaStream | null>(null);
   const previewVideo = useRef<HTMLVideoElement>(null);
@@ -107,29 +107,34 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
     finally { setBusy(false); }
   }
 
-  async function startHost() {
+  async function startHost(oneTime = false) {
     setBusy(true); setNotice("");
     try {
       const ethereum = getEthereum();
       if (!shareVideo && !shareAudio) throw new Error("Choose a camera or microphone to broadcast. Audio-only is supported.");
       if (!previewStream.current) throw new Error("Preview your selected devices first. You are not broadcasting yet.");
       if (!ethereum) { window.dispatchEvent(new Event(OPEN_WALLET_EVENT)); throw new Error("Choose the wallet that created this room, then try starting again."); }
-      const accounts = await ethereum.request({ method: "eth_requestAccounts" }) as string[];
+      let accounts = await ethereum.request({ method: "eth_accounts" }) as string[];
+      if (!accounts[0]) accounts = await ethereum.request({ method: "eth_requestAccounts" }) as string[];
       const address = accounts[0];
       let chainId = Number(await ethereum.request({ method: "eth_chainId" }));
       if (chainId !== ROBINHOOD_TESTNET_CHAIN_ID && await switchToRobinhoodTestnet(ethereum)) chainId = Number(await ethereum.request({ method: "eth_chainId" }));
       const accessProblem = creatorAccessProblem(address, chainId, token.deployer);
       if (accessProblem) throw new Error(accessProblem);
-      if (saveReplay) await signInCommunity();
-      const timestamp = Date.now();
-      const message = signedHostMessage(token.address, address, timestamp);
-      const signature = await ethereum.request({ method: "personal_sign", params: [personalSignHex(message), address] }) as `0x${string}`;
-      const response = await fetch("/api/live/token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomId: token.address, role: "host", address, timestamp, signature }) });
+      if (oneTime && saveReplay) throw new Error("Turn off the private replay option to use one-time authorization. You can record later after HYPR sign-in is available.");
+      let signedInWallet = address, signature: `0x${string}` | undefined, timestamp: number | undefined;
+      if (oneTime) {
+        timestamp = Date.now();
+        signature = await ethereum.request({ method: "personal_sign", params: [personalSignHex(signedHostMessage(token.address, address, timestamp)), address] }) as `0x${string}`;
+      } else signedInWallet = await signInCommunity({ requireLiveHost: true });
+      const latest = await ethereum.request({ method: "eth_accounts" }) as string[];
+      if (getEthereum() !== ethereum || signedInWallet.toLowerCase() !== address.toLowerCase() || latest[0]?.toLowerCase() !== address.toLowerCase() || Number(await ethereum.request({ method: "eth_chainId" })) !== ROBINHOOD_TESTNET_CHAIN_ID) throw new Error("Your wallet or network changed. Reconnect your creator wallet and try again.");
+      const response = await fetch(oneTime ? "/api/live/token" : "/api/community/live-host", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(oneTime ? { roomId: token.address, role: "host", address, timestamp, signature } : { roomId: token.address }) });
       const data = await response.json() as Session & { error?: string };
       if (!response.ok) throw new Error(data.error || "The creator wallet could not be authorized.");
       if (!mounted.current) return;
-      stopPreview(); setLastExit(null); sawCurrentMedia.current = false; setSeenLive(false); setSession({ ...data, roomId: token.address, video: shareVideo, audio: shareAudio, showTitle, recordReplay: saveReplay }); setStudioOpen(false); await refreshStatus();
-    } catch (error) { setNotice(streamingErrorMessage(error)); }
+      stopPreview(); setOneTimeAvailable(false); setLastExit(null); sawCurrentMedia.current = false; setSeenLive(false); setSession({ ...data, roomId: token.address, video: shareVideo, audio: shareAudio, showTitle, recordReplay: saveReplay }); setStudioOpen(false); await refreshStatus();
+    } catch (error) { if (!oneTime && error instanceof CommunitySignInError && error.status >= 500) setOneTimeAvailable(true); setNotice(streamingErrorMessage(error)); }
     finally { setBusy(false); }
   }
 
@@ -164,15 +169,16 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
       <span className="live-state broadcast-status-announcement" role="status">{phaseLabel}</span>
       {!studioOpen && (creatorConnected ? <button className="secondary-button" onClick={() => setStudioOpen(true)} disabled={!status?.configured}>Open creator studio</button> : <details className="creator-entry"><summary>Are you the creator?</summary><p>Broadcasting requires the wallet that created this room: {token.deployer.slice(0, 6)}…{token.deployer.slice(-4)}.</p><button className="secondary-button" onClick={() => setStudioOpen(true)} disabled={!status?.configured}>Open creator studio</button></details>)}
       {studioOpen && <div className="live-studio-card"><strong>Creator studio · not live yet</strong>
-        <ol className="studio-steps"><li>Choose your devices.</li><li>Preview privately on this device.</li><li>Sign with your creator wallet, then broadcast.</li></ol>
-        <span>Preview requests access but does not publish or record. “Start broadcast” shares your selected devices live through LiveKit. Authorization is a free signature, not a transaction.</span>
+        <ol className="studio-steps"><li>Choose your devices.</li><li>Preview privately on this device.</li><li>Sign in if needed, then start broadcasting.</li></ol>
+        <span>Preview requests access but does not publish or record. “Start broadcast” shares your selected devices live through LiveKit. Your HYPR sign-in also works for chat and creator tools; it is a free signature, not a transaction.</span>
         <p className="studio-retention-note">Recording starts off. Once live, choose Record replay to save up to 10 minutes, or enable viewer clips of up to 30 seconds. Captures finish as private drafts for your review; keeping this tab open is required. Ending the broadcast does not close your room.</p>
         <div className="studio-device-options"><label><input type="checkbox" checked={shareVideo} onChange={(event) => setShareVideo(event.target.checked)} disabled={busy} /> Camera</label><label><input type="checkbox" checked={shareAudio} onChange={(event) => setShareAudio(event.target.checked)} disabled={busy} /> Microphone</label></div>
         <label className="media-consent"><input type="checkbox" checked={saveReplay} disabled={busy} onChange={event => setSaveReplay(event.target.checked)} />Save a private replay when I go live. I have rights to record and upload my published media. Up to 10 min / 40 MB; keep this tab open until upload finishes.</label>
         <small>{!shareVideo && !shareAudio ? "Both devices are off. Choose at least one to preview; microphone-only is supported." : "You are not live. Preview first, then choose whether to broadcast."}</small>
         {preview && <div className="studio-preview">{shareVideo ? <video ref={previewVideo} autoPlay playsInline muted aria-label="Private camera preview" /> : <strong>Microphone ready · private preview</strong>}<span>Only on this device · not broadcasting</span><button className="secondary-button" onClick={stopPreview} disabled={busy}>Stop preview</button></div>}
         <button className="secondary-button" onClick={() => void preparePreview()} disabled={busy || (!shareVideo && !shareAudio)}>{busy ? "Preparing…" : preview ? "Refresh private preview" : "Preview selected devices"}</button>
-        <button className="primary-button" onClick={() => void startHost()} disabled={busy || !preview}>{busy ? "Check your wallet…" : "Authorize & start broadcast"}</button>
+        <button className="primary-button" onClick={() => void startHost()} disabled={busy || !preview}>{busy ? "Check your wallet…" : "Start broadcast"}</button>
+        {oneTimeAvailable && <div className="live-notice"><p>HYPR sign-in is unavailable. You can still start live with a separate free creator signature. Private replay recording needs sign-in.</p><button className="secondary-button" disabled={busy || !preview} onClick={() => void startHost(true)}>Use one-time creator authorization</button></div>}
         <button className="claim-link" disabled={busy} onClick={() => { stopPreview(); setStudioOpen(false); setNotice(""); }}>Close studio</button>
       </div>}
       {notice && <div className="live-notice" role="status">{notice}</div>}

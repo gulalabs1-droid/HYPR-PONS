@@ -4,7 +4,7 @@ import { getHyprNetwork, HYPR_NETWORKS } from "./integrations/hypr/constants";
 
 export const COMMUNITY_SESSION_COOKIE = "hypr-community-session";
 export const COMMUNITY_CHALLENGE_COOKIE = "hypr-community-challenge";
-type Authorization = { wallet: string; chainId: number; origin: string; nonce: string; expiresAt: number; kind: "challenge" | "session" };
+type Authorization = { wallet: string; chainId: number; origin: string; nonce: string; expiresAt: number; kind: "challenge" | "session"; version?: 2 };
 
 function authKey() {
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
@@ -27,18 +27,21 @@ export function decodeAuthorization(value: string | undefined, origin: string, k
     const supplied = Buffer.from(mac, "base64url");
     if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) return null;
     const decoded = JSON.parse(Buffer.from(payload, "base64url").toString()) as Authorization;
-    if (decoded.kind !== kind || decoded.origin !== origin || decoded.chainId !== HYPR_NETWORKS[getHyprNetwork()].id || !/^0x[0-9a-f]{40}$/.test(decoded.wallet) || !Number.isSafeInteger(decoded.expiresAt) || decoded.expiresAt <= now || !/^[0-9a-f-]{36}$/.test(decoded.nonce)) return null;
+    if (decoded.kind !== kind || decoded.origin !== origin || decoded.chainId !== HYPR_NETWORKS[getHyprNetwork()].id || !/^0x[0-9a-f]{40}$/.test(decoded.wallet) || !Number.isSafeInteger(decoded.expiresAt) || decoded.expiresAt <= now || !/^[0-9a-f-]{36}$/.test(decoded.nonce) || (decoded.version !== undefined && decoded.version !== 2)) return null;
     return decoded;
   } catch { return null; }
 }
 
 export function authorizationMessage(value: Authorization) {
-  return ["HYPR community sign-in", `Website: ${value.origin}`, `Wallet: ${value.wallet}`, `Chain ID: ${value.chainId}`, `Nonce: ${value.nonce}`, `Expires: ${new Date(value.expiresAt).toISOString()}`, "Authorize community actions for two hours: chat, follows, reports, live guest requests, your own creator profile/shows, and permitted recording drafts. Only a room creator can publish its recordings. Joining a live stage requires creator approval and separate device choices. Recording and clipping require separate explicit consent. No transaction, token approval, or funds transfer."].join("\n");
+  const scope = value.version === 2
+    ? "Authorize HYPR for two hours: chat, follows, reports, live guest requests, your creator profile and shows, starting live broadcasts in rooms you created, and permitted recording drafts. Starting a broadcast and enabling your camera or microphone require your separate choices. Recording and clipping require separate consent. No transaction, token approval, or funds transfer."
+    : "Authorize community actions for two hours: chat, follows, reports, your own creator profile/shows, and permitted recording drafts. Only a room creator can publish its recordings. Recording and clipping require separate explicit consent. No transaction, token approval, or funds transfer.";
+  return ["HYPR community sign-in", `Website: ${value.origin}`, `Wallet: ${value.wallet}`, `Chain ID: ${value.chainId}`, `Nonce: ${value.nonce}`, `Expires: ${new Date(value.expiresAt).toISOString()}`, scope].join("\n");
 }
 
 export function createCommunityChallenge(wallet: string, origin: string): Authorization {
   if (!/^0x[a-fA-F0-9]{40}$/.test(wallet)) throw new Error("A valid public wallet address is required.");
-  return { wallet: wallet.toLowerCase(), origin, chainId: HYPR_NETWORKS[getHyprNetwork()].id, nonce: randomUUID(), expiresAt: Date.now() + 5 * 60_000, kind: "challenge" };
+  return { wallet: wallet.toLowerCase(), origin, chainId: HYPR_NETWORKS[getHyprNetwork()].id, nonce: randomUUID(), expiresAt: Date.now() + 5 * 60_000, kind: "challenge", version: 2 };
 }
 
 export async function verifyCommunitySignature(value: Authorization, signature: string) {

@@ -7,6 +7,8 @@ import { discoverWallets, OPEN_WALLET_EVENT, setWalletSessionDisconnected, walle
 import { useWalletStatus } from "@/lib/use-wallet-status";
 import { WalletPicker } from "./wallet-picker";
 import { LiveAlerts } from "./live-alerts";
+import { resetCommunitySession } from "@/lib/community-client";
+import { COMMUNITY_UPDATED_EVENT } from "@/lib/growth";
 
 export function Header({ active }: { active?: "discover" | "protocol" | "following" }) {
   const wallet = useWalletStatus();
@@ -61,8 +63,8 @@ export function Header({ active }: { active?: "discover" | "protocol" | "followi
 
   async function disconnect() {
     setMenuOpen(false); setWalletSessionDisconnected(true);
-    await fetch("/api/community/session", { method: "DELETE" }).catch(() => undefined);
-    setMessage("Disconnected from HYPR. To revoke the site’s wallet permission too, use your wallet’s connected-sites settings.");
+    try { await resetCommunitySession(); window.dispatchEvent(new Event(COMMUNITY_UPDATED_EVENT)); setMessage("Disconnected from HYPR. To revoke the site’s wallet permission too, use your wallet’s connected-sites settings."); }
+    catch { setMessage("Your wallet is disconnected, but HYPR sign-out did not finish. Reconnect or retry before using another wallet."); }
   }
 
   return <header className="site-header">

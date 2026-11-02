@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { AudioTrack, ControlBar, LiveKitRoom, ParticipantTile, StartAudio, useConnectionState, useParticipants, useRoomContext, useTracks } from "@livekit/components-react";
+import { ControlBar, LiveKitRoom, ParticipantTile, StartAudio, useConnectionState, useParticipants, useRoomContext, useTracks } from "@livekit/components-react";
 import { ConnectionState, DisconnectReason, RoomEvent, Track, type Room } from "livekit-client";
 import { decodeLiveSignal, encodeLiveSignal, LIVE_CHAT_PING_EVENT, LIVE_SIGNAL_SEND_EVENT, LIVE_SIGNAL_TOPIC, REACTIONS, SenderThrottle, sendLiveSignal, type LiveSignal } from "@/lib/live-signals";
 import { streamingErrorMessage } from "@/lib/creator-access";
@@ -14,6 +14,7 @@ import { LiveGuestControls } from "./live-guest-controls";
 import { guestMetadata, isApprovedGuest } from "@/lib/live-guests";
 import { signInCommunity } from "@/lib/community-client";
 import { shortAddress } from "@/lib/wallet";
+import { LivePlaybackAudio, LivePlaybackControls, useViewerPlayback } from "./live-playback-controls";
 
 type Floating = { id: number; reaction: number; x: number; mine: boolean };
 
@@ -72,6 +73,8 @@ function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Sess
   const { role, roomId, showTitle, recordReplay } = session;
   const room = useRoomContext();
   const connection = useConnectionState();
+  const playback = useViewerPlayback(room, role === "viewer");
+  const viewerPaused = role === "viewer" && playback.paused;
   const participants = useParticipants();
   const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare, Track.Source.Microphone, Track.Source.ScreenShareAudio], { onlySubscribed: true });
   const hostTracks = tracks.filter((track) => isHost(track.participant.metadata) && !track.publication.isMuted);
@@ -84,6 +87,7 @@ function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Sess
   const guestTracks = tracks.filter(track => isApprovedGuest(track.participant.metadata, hostSid) && !track.publication.isMuted);
   const guestVideos = guestTracks.filter(track => track.source === Track.Source.Camera);
   const approvedGuests = participants.filter(participant => isApprovedGuest(participant.metadata, hostSid));
+  const localGuestOnStage = role === "viewer" && isApprovedGuest(room.localParticipant.metadata, hostSid);
   const audioTracks = [...hostTracks, ...guestTracks].filter(track => !track.participant.isLocal && (track.source === Track.Source.Microphone || track.source === Track.Source.ScreenShareAudio));
   const viewers = participants.filter((participant) => {
     try { return JSON.parse(participant.metadata || "{}").role === "viewer"; } catch { return false; }
@@ -109,7 +113,7 @@ function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Sess
   }, []);
   useEffect(() => {
     if (!measurement) { measured.current = false; seconds.current = 0; threshold.current = false; }
-    if (role !== "viewer" || !roomId || !measurement || !playing || phase !== "live") return;
+    if (role !== "viewer" || !roomId || !measurement || !playing || phase !== "live" || viewerPaused) return;
     if (!measured.current) { measured.current = true; void pilotEvent("stream_playback_started", roomId); }
     let previous = Date.now();
     const timer = window.setInterval(() => {
@@ -119,7 +123,7 @@ function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Sess
       if (seconds.current >= 30000 && !threshold.current) { threshold.current = true; void pilotEvent("stream_watch_threshold_reached", roomId); }
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [role, roomId, measurement, playing, phase]);
+  }, [role, roomId, measurement, playing, phase, viewerPaused]);
 
   useEffect(() => { if (hasMedia) setSeenMedia(true); }, [hasMedia]);
   useEffect(() => {
@@ -144,17 +148,19 @@ function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Sess
         else void (async () => { await stopCapture.current?.(); await onExit("viewer-left", room); })().catch(() => undefined);
       }}>{role === "host" ? "End broadcast" : "Leave live"}</button>
     </div>
-    <div className={`hypr-broadcast-stage${phase === "live" && approvedGuests.length ? " has-guests" : ""}`}>
-      {phase === "live" && primaryVideo ? <div className="live-stage-host"><ParticipantTile trackRef={primaryVideo} />{creatorCamera && <div className="live-stage-pip" aria-label="Creator camera"><ParticipantTile trackRef={creatorCamera} /></div>}</div> : <div className="native-live-placeholder live-stage-host"><div className="native-live-mark"><span aria-hidden="true">H</span><strong>{phase === "live" ? "Audio broadcast" : copy.title}</strong><small>{phase === "live" ? "The creator is sharing audio. Video is off." : copy.detail}</small></div></div>}
-      {phase === "live" && approvedGuests.length > 0 && <div className="live-stage-guests" data-many={approvedGuests.length > 1} aria-label="Guests on stage">{approvedGuests.map(participant => {
+    <div className={`hypr-broadcast-stage${phase === "live" && !viewerPaused && approvedGuests.length ? " has-guests" : ""}`}>
+      {phase === "live" && !viewerPaused && primaryVideo ? <div className="live-stage-host"><ParticipantTile trackRef={primaryVideo} />{creatorCamera && <div className="live-stage-pip" aria-label="Creator camera"><ParticipantTile trackRef={creatorCamera} /></div>}</div> : <div className="native-live-placeholder live-stage-host"><div className="native-live-mark"><span aria-hidden="true">H</span><strong>{viewerPaused && phase === "live" ? "Playback paused" : phase === "live" ? "Audio broadcast" : copy.title}</strong><small>{viewerPaused && phase === "live" ? "The show continues. Resume jumps back to live; the missed part is not saved here." : phase === "live" ? "The creator is sharing audio. Video is off." : copy.detail}</small></div></div>}
+      {phase === "live" && !viewerPaused && approvedGuests.length > 0 && <div className="live-stage-guests" data-many={approvedGuests.length > 1} aria-label="Guests on stage">{approvedGuests.map(participant => {
         const video = guestVideos.find(track => track.participant.identity === participant.identity), info = guestMetadata(participant.metadata);
         return <div className="live-stage-guest" key={participant.sid}>{video ? <ParticipantTile trackRef={video} /> : <div className="live-stage-audio"><span aria-hidden="true">✦</span><strong>{info ? shortAddress(info.wallet) : "Guest"}</strong><small>Guest on stage · camera off</small></div>}</div>;
       })}</div>}
-      <LiveReactions roomId={roomId} live={phase === "live"} />
+      <LiveReactions roomId={roomId} live={phase === "live" && !viewerPaused} />
     </div>
+    {role === "viewer" && <LivePlaybackControls playback={{ ...playback, togglePause: () => { if (!playback.paused && recording) void stopCapture.current?.(); playback.togglePause(); } }} live={phase === "live"} />}
+    {viewerPaused && localGuestOnStage && <p className="live-notice" role="status">Your playback is paused, but you are still on stage. Your camera and microphone stay as you set them.</p>}
     {role === "host" ? <ControlBar controls={{ microphone: true, camera: true, screenShare: true, chat: false, leave: false }} saveUserChoices={false} /> : <p className="live-viewing-note">Watching is free. Your camera and microphone stay off until you choose to share.</p>}
-    <StartAudio label="Tap to hear the broadcast" />
-    {phase === "live" && <div style={{ display: "none" }}>{audioTracks.map(track => <AudioTrack key={`${track.participant.identity}-${track.publication.trackSid}`} trackRef={track} />)}</div>}
+    {(role === "host" || (!playback.muted && !viewerPaused && playback.volume > 0)) && <StartAudio label="Tap to hear the broadcast" />}
+    {phase === "live" && <div style={{ display: "none" }}>{audioTracks.map(track => <LivePlaybackAudio key={`${track.participant.identity}-${track.publication.trackSid}`} trackRef={track} volume={role === "viewer" ? playback.volume : undefined} muted={role === "viewer" && (playback.muted || viewerPaused || playback.volume === 0)} />)}</div>}
     {roomId && <LiveGuestControls roomId={roomId} role={role} live={phase === "live"} hostSid={hostSid} authenticated={session.authenticated} autoRequest={session.autoRequest} onSignInAndRequest={() => onSignInAndRequest(room)} onWalletChange={() => onExit("wallet-changed", room)} />}
     {roomId && <MediaCaptureControls roomId={roomId} host={role === "host"} tracks={recordingTracks} registerStop={registerStop} onRecordingChange={setRecording} autoRecord={recordReplay === true && role === "host"} />}
     {role === "host" && endOpen && <Modal title="End this broadcast?" onClose={() => { if (!ending) setEndOpen(false); }}>

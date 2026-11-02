@@ -9,7 +9,7 @@ function cookieOptions(request: Request, maxAge: number) { return { httpOnly: tr
 
 export async function GET(request: NextRequest) {
   const session = decodeAuthorization(request.cookies.get(COMMUNITY_SESSION_COOKIE)?.value, requestOrigin(request), "session");
-  return NextResponse.json({ wallet: session?.wallet || null }, { headers });
+  return NextResponse.json({ wallet: session?.wallet || null, canStartLive: session?.version === 2 }, { headers });
 }
 
 export async function POST(request: NextRequest) {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { getEthereum, ROBINHOOD_TESTNET_CHAIN_ID, shortAddress, switchToRobinhoodTestnet } from "@/lib/wallet";
-import { discoverWallets, OPEN_WALLET_EVENT, setWalletSessionDisconnected, walletErrorMessage } from "@/lib/wallet-discovery";
+import { discoverWallets, OPEN_WALLET_EVENT, rememberSelectedWallet, setWalletSessionDisconnected, walletErrorMessage } from "@/lib/wallet-discovery";
 import { useWalletStatus } from "@/lib/use-wallet-status";
 import { WalletPicker } from "./wallet-picker";
 import { LiveAlerts } from "./live-alerts";
@@ -42,6 +42,7 @@ export function Header({ active }: { active?: "discover" | "protocol" | "followi
       const accounts = await ethereum.request({ method: "eth_requestAccounts" }) as string[];
       if (!accounts[0]) throw new Error("No account was returned. Unlock your wallet and try again.");
       setWalletSessionDisconnected(false);
+      rememberSelectedWallet();
       if (Number(await ethereum.request({ method: "eth_chainId" })) !== ROBINHOOD_TESTNET_CHAIN_ID && !await switchToRobinhoodTestnet(ethereum)) {
         setMessage("Your wallet is connected, but not on HYPR’s testnet. Open your wallet to finish switching; no trade was sent.");
       }

@@ -5,18 +5,43 @@ const choices = new Map<string, WalletChoice>();
 let selected: WalletChoice | null = null;
 let discoveryWindow: Window | null = null;
 let disconnected = false;
+const WALLET_PREFERENCE_KEY = "hypr-wallet-preference-v1";
+export const WALLET_DISCONNECTED_KEY = "hypr-wallet-disconnected-v1";
 export const WALLET_CHANGED_EVENT = "hypr:wallet-changed";
 export const WALLETS_DISCOVERED_EVENT = "hypr:wallets-discovered";
 export const OPEN_WALLET_EVENT = "hypr:open-wallet";
 
-export function walletSessionDisconnected() { return disconnected; }
+function readWalletSetting(key: string) {
+  try { return typeof window === "undefined" ? null : window.localStorage.getItem(key); } catch { return null; }
+}
+function writeWalletSetting(key: string, value: string | null) {
+  try { if (typeof window !== "undefined") { if (value === null) window.localStorage.removeItem(key); else window.localStorage.setItem(key, value); } } catch { /* Private browsing can block storage. */ }
+}
+export function hasRememberedPhantom() { return readWalletSetting(WALLET_PREFERENCE_KEY) === "phantom"; }
+export function walletSessionDisconnected() { return disconnected || readWalletSetting(WALLET_DISCONNECTED_KEY) === "yes"; }
 export function setWalletSessionDisconnected(value: boolean) {
   disconnected = value;
+  writeWalletSetting(WALLET_DISCONNECTED_KEY, value ? "yes" : null);
+  if (value) writeWalletSetting(WALLET_PREFERENCE_KEY, null);
   if (typeof window !== "undefined") window.dispatchEvent(new Event(WALLET_CHANGED_EVENT));
 }
 
 export function selectedWalletProvider() {
-  return typeof window !== "undefined" && discoveryWindow === window ? selected?.provider || null : null;
+  if (typeof window === "undefined" || disconnected) return null;
+  if (discoveryWindow === window && selected) return selected.provider;
+  if (!hasRememberedPhantom() || walletSessionDisconnected()) return null;
+  const phantom = (window as Window & { phantom?: { ethereum?: EthereumProvider & { isPhantom?: boolean } } }).phantom?.ethereum;
+  if (phantom?.isPhantom && typeof phantom.request === "function") return phantom;
+  if (discoveryWindow === window) return [...choices.values()].find((choice) => (choice.provider as EthereumProvider & { isPhantom?: boolean }).isPhantom === true)?.provider || null;
+  return null;
+}
+
+// Remember only the wallet type after the user has connected it successfully.
+// Addresses, signatures, and wallet credentials never enter browser storage.
+export function rememberSelectedWallet() {
+  const provider = typeof window !== "undefined" && discoveryWindow === window ? selected?.provider as (EthereumProvider & { isPhantom?: boolean }) | undefined : undefined;
+  const direct = typeof window !== "undefined" ? (window as Window & { phantom?: { ethereum?: EthereumProvider & { isPhantom?: boolean } } }).phantom?.ethereum : undefined;
+  writeWalletSetting(WALLET_PREFERENCE_KEY, provider && (provider.isPhantom === true || (provider === direct && direct?.isPhantom === true)) ? "phantom" : null);
 }
 
 export function discoverWallets() {

@@ -1,4 +1,4 @@
-import { selectedWalletProvider } from "./wallet-discovery";
+import { hasRememberedPhantom, selectedWalletProvider, walletSessionDisconnected } from "./wallet-discovery";
 
 export const ROBINHOOD_CHAIN_ID = 4663;
 export const ROBINHOOD_TESTNET_CHAIN_ID = 46630;
@@ -22,7 +22,10 @@ export type EthereumProvider = {
 
 export function getEthereum(): EthereumProvider | null {
   if (typeof window === "undefined") return null;
-  return selectedWalletProvider() || (window as Window & { ethereum?: EthereumProvider }).ethereum || null;
+  const chosen = selectedWalletProvider();
+  if (chosen) return chosen;
+  if (hasRememberedPhantom() || walletSessionDisconnected()) return null;
+  return (window as Window & { ethereum?: EthereumProvider }).ethereum || null;
 }
 
 const TESTNET_PARAMS = {

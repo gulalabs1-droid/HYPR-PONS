@@ -26,12 +26,13 @@ function speakerName(wallet: string, creator: string, creatorName?: string) {
   return creatorName?.trim() || shortAddress(wallet);
 }
 
-export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = false }: { roomId: string; creator: string; creatorName?: string; reportsEnabled?: boolean }) {
+export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = false, chatActive = true }: { roomId: string; creator: string; creatorName?: string; reportsEnabled?: boolean; chatActive?: boolean }) {
   const [state, setState] = useState<Community | null>(null);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<string | null | undefined>();
+  const [openMessageId, setOpenMessageId] = useState<string | null>(null);
   const [pendingBody, setPendingBody] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const log = useRef<HTMLDivElement>(null);
@@ -40,6 +41,7 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
   const pending = useRef(false);
   const active = useRef(true);
   const generation = useRef(0);
+  const openMessage = useRef<HTMLDivElement>(null);
   const refresh = useCallback(async (before?: string) => {
     if (pending.current || document.visibilityState === "hidden") return;
     pending.current = true;
@@ -92,9 +94,37 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
 
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 30000); return () => window.clearInterval(timer); }, []);
   useEffect(() => {
+    if (!openMessageId) return;
+    const element = log.current;
+    const actions = openMessage.current?.querySelector<HTMLElement>(".message-actions");
+    if (element && actions) {
+      const viewport = element.getBoundingClientRect(), menu = actions.getBoundingClientRect();
+      if (menu.bottom > viewport.bottom) element.scrollTop += menu.bottom - viewport.bottom + 8;
+      else if (menu.top < viewport.top) element.scrollTop -= viewport.top - menu.top + 8;
+    }
+    function closeOutside(event: PointerEvent) { if (!openMessage.current?.contains(event.target as Node)) setOpenMessageId(null); }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      openMessage.current?.querySelector<HTMLButtonElement>(".message-more")?.focus();
+      setOpenMessageId(null);
+    }
+    document.addEventListener("pointerdown", closeOutside); document.addEventListener("keydown", closeOnEscape);
+    return () => { document.removeEventListener("pointerdown", closeOutside); document.removeEventListener("keydown", closeOnEscape); };
+  }, [openMessageId]);
+  useEffect(() => {
     const element = log.current;
     if (element && pinned.current) element.scrollTop = element.scrollHeight;
   }, [state?.messages.length, pendingBody]);
+  useEffect(() => {
+    if (chatActive && log.current && pinned.current) log.current.scrollTop = log.current.scrollHeight;
+  }, [chatActive]);
+  useEffect(() => {
+    const element = log.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => { if (pinned.current) element.scrollTop = element.scrollHeight; });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   async function signIn() {
     await signInCommunity();
@@ -131,11 +161,28 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
     {state?.wallet ? <p className="accounting-copy">Signed in as {shortAddress(state.wallet)} <button className="claim-link" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await resetCommunitySession(); window.dispatchEvent(new Event(COMMUNITY_UPDATED_EVENT)); await refresh(); } catch { setError("Sign-out could not finish. Try again before switching accounts."); } finally { setBusy(false); } }}>Sign out</button></p> : <p className="accounting-copy">Free wallet sign-in for chat and follows · up to 2 hours.</p>}
     <div className="chat-messages" ref={log} onScroll={(event) => { const element = event.currentTarget; pinned.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80; }} role="log" aria-label="Shared room messages" aria-live="polite" aria-relevant="additions">
       {state?.hasMore && (historyLimit.current < 500 ? <button type="button" className="claim-link" disabled={busy} onClick={() => void refresh(state.messages[0]?.id)}>Load earlier messages</button> : <p className="accounting-copy">Showing up to 500 recent messages.</p>)}
-      {state?.pinned && <div className="message is-pinned"><span className="avatar" aria-hidden="true"><TokenArt seed={state.pinned.wallet} /></span><div><strong>Pinned · {speakerName(state.pinned.wallet, creator, creatorName)}</strong><p>{state.pinned.body}</p>{state.wallet === creator.toLowerCase() && <button className="claim-link" disabled={busy} onClick={() => void update("unpin", {})}>Unpin</button>}</div></div>}
+      {state?.pinned && <div className="message is-pinned"><span className="avatar" aria-hidden="true"><TokenArt seed={state.pinned.wallet} /></span><div className="message-bubble"><div className="message-heading"><strong>{speakerName(state.pinned.wallet, creator, creatorName)}</strong><span className="message-role">Pinned</span></div><p>{state.pinned.body}</p>{state.wallet === creator.toLowerCase() && <div className="message-actions"><button type="button" disabled={busy} onClick={() => void update("unpin", {})}>Unpin</button></div>}</div></div>}
       {state && state.messages.length === 0 && <div className="chat-empty"><span aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /><path d="M8.5 12h.01M12 12h.01M15.5 12h.01" /></svg></span><strong>No messages yet</strong><span>Say hello to start the conversation.</span></div>}
       {!state && <p className="accounting-copy">Loading shared messages…</p>}
-      {state?.messages.map((message) => <div className={`message${message.wallet.toLowerCase() === creator.toLowerCase() ? " is-creator" : ""}${state.wallet === message.wallet.toLowerCase() ? " is-mine" : ""}`} key={message.id}><span className="avatar" aria-hidden="true"><TokenArt seed={message.wallet} /></span><div><strong>{speakerName(message.wallet, creator, creatorName)}{message.wallet.toLowerCase() === creator.toLowerCase() ? " · creator" : ""}</strong><p>{message.body}</p><time dateTime={message.created_at} title={new Date(message.created_at).toLocaleString()}>{timeAgo(message.created_at, now)}</time>{state.wallet && (state.wallet === message.wallet.toLowerCase() || state.wallet === creator.toLowerCase()) && <button className="claim-link" disabled={busy} onClick={() => void update("hide", { messageId: message.id })}>Hide message</button>}{state.wallet === creator.toLowerCase() && <button className="claim-link" disabled={busy} onClick={() => void update("pin", { messageId: message.id })}>Pin</button>}{reportsEnabled && <button className="claim-link" onClick={() => setReport(message.id)}>Report message</button>}</div></div>)}
-      {pendingBody && state?.wallet && <div className="message is-mine is-pending"><span className="avatar" aria-hidden="true"><TokenArt seed={state.wallet} /></span><div><strong>{speakerName(state.wallet, creator, creatorName)}</strong><p>{pendingBody}</p><time>Sending…</time></div></div>}
+      {state?.messages.map((message) => {
+        const creatorMessage = message.wallet.toLowerCase() === creator.toLowerCase();
+        const ownMessage = state.wallet === message.wallet.toLowerCase();
+        const creatorView = state.wallet === creator.toLowerCase();
+        const canHide = Boolean(state.wallet && (ownMessage || creatorView));
+        const hasOptions = canHide || creatorView || reportsEnabled;
+        const isOpen = openMessageId === message.id;
+        const name = speakerName(message.wallet, creator, creatorName);
+        const actionsId = `chat-actions-${message.id}`;
+        return <div className={`message${creatorMessage ? " is-creator" : ""}${ownMessage ? " is-mine" : ""}`} key={message.id}>
+          <span className="avatar" aria-hidden="true"><TokenArt seed={message.wallet} /></span>
+          <div className="message-bubble" ref={isOpen ? openMessage : undefined}>
+            <div className="message-heading"><strong title={name}>{name}</strong>{creatorMessage && <span className="message-role">Creator</span>}<time dateTime={message.created_at} title={new Date(message.created_at).toLocaleString()}>{timeAgo(message.created_at, now)}</time>{hasOptions && <button type="button" className="message-more" aria-label={`Message options for ${name}`} aria-expanded={isOpen} aria-controls={isOpen ? actionsId : undefined} onClick={() => setOpenMessageId(current => current === message.id ? null : message.id)}><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button>}</div>
+            <p>{message.body}</p>
+            {isOpen && <div className="message-actions" id={actionsId}>{canHide && <button type="button" disabled={busy} onClick={() => { setOpenMessageId(null); void update("hide", { messageId: message.id }); }}>Hide message</button>}{creatorView && <button type="button" disabled={busy} onClick={() => { setOpenMessageId(null); void update("pin", { messageId: message.id }); }}>Pin</button>}{reportsEnabled && <button type="button" onClick={() => { setOpenMessageId(null); setReport(message.id); }}>Report</button>}</div>}
+          </div>
+        </div>;
+      })}
+      {pendingBody && state?.wallet && <div className="message is-mine is-pending"><span className="avatar" aria-hidden="true"><TokenArt seed={state.wallet} /></span><div className="message-bubble"><div className="message-heading"><strong>{speakerName(state.wallet, creator, creatorName)}</strong><time>Sending…</time></div><p>{pendingBody}</p></div></div>}
     </div>
     <form className="chat-form" onSubmit={(event) => { event.preventDefault(); void update("message", { body: text.trim() }); }}><input aria-label="Shared room message" value={text} onChange={(event) => setText(event.target.value)} maxLength={280} disabled={busy || !state} placeholder="Say hello to the room" /><button aria-label="Send shared message" disabled={busy || !state || !text.trim()}>↑</button></form>
     {!state?.wallet && state && <button className="claim-link" disabled={busy} onClick={() => void authorize()}>{busy ? "Check your wallet…" : "Sign in to chat"}</button>}

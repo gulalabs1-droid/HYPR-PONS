@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getEthereum } from "./wallet";
 import { WALLET_CHANGED_EVENT, WALLET_DISCONNECTED_KEY, WALLETS_DISCOVERED_EVENT, walletSessionDisconnected } from "./wallet-discovery";
 
-type WalletState = { account: string | null; chainId: number | null; balance: bigint | null };
-const empty: WalletState = { account: null, chainId: null, balance: null };
+type WalletState = { account: string | null; chainId: number | null };
+const empty: WalletState = { account: null, chainId: null };
 
 // Read-only discovery: opening a page never requests wallet approval.
 export function useWalletStatus() {
@@ -20,11 +20,7 @@ export function useWalletStatus() {
         provider.request({ method: "eth_accounts" }) as Promise<string[]>,
         provider.request({ method: "eth_chainId" }),
       ]);
-      let balance: bigint | null = null;
-      if (accounts[0]) {
-        try { balance = BigInt(await provider.request({ method: "eth_getBalance", params: [accounts[0], "latest"] }) as string); } catch { /* Balance failure must not masquerade as zero funds. */ }
-      }
-      if (version.current === current) setState({ account: accounts[0] || null, chainId: Number(chain), balance });
+      if (version.current === current) setState({ account: accounts[0] || null, chainId: Number(chain) });
     } catch { if (version.current === current) setState(empty); }
   }, []);
   useEffect(() => {

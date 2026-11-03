@@ -16,7 +16,7 @@ test("a remembered Phantom restores read-only status and another tab can disconn
     methods.push(method);
     if (method === "eth_accounts") return [address];
     if (method === "eth_chainId") return "0xb626";
-    if (method === "eth_getBalance") return "0x0";
+    if (method === "eth_getBalance") return new Promise(() => {}); // A stalled balance lookup must not block connection status.
     throw new Error(`Unexpected wallet request: ${method}`);
   } };
   const other = { async request() { throw new Error("The default wallet must not be used"); } };
@@ -34,7 +34,7 @@ test("a remembered Phantom restores read-only status and another tab can disconn
     await act(async () => { renderer = create(createElement(Probe)); await new Promise<void>((resolve) => setImmediate(resolve)); });
     assert.equal(renderer!.root.findByType("span").children[0], address);
     assert.ok(methods.includes("eth_accounts"));
-    assert.ok(methods.every((method) => ["eth_accounts", "eth_chainId", "eth_getBalance"].includes(method)), "restoration must never prompt, sign, or send");
+    assert.ok(methods.every((method) => ["eth_accounts", "eth_chainId"].includes(method)), "restoration must never prompt, sign, or send");
 
     localStorage.setItem(WALLET_DISCONNECTED_KEY, "yes");
     const event = new Event("storage"); Object.assign(event, { key: WALLET_DISCONNECTED_KEY });

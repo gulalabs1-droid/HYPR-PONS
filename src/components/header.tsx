@@ -77,7 +77,7 @@ export function Header({ active }: { active?: "discover" | "protocol" | "followi
         <Link className={active === "protocol" ? "active" : ""} aria-current={active === "protocol" ? "page" : undefined} href="/protocol">How it works</Link>
       </nav>
       <div className="header-actions" ref={menuRef}>
-        <button className={`wallet-button${wrongChain ? " is-warning" : wallet.account ? " is-connected" : ""}`} onClick={() => wallet.account ? setMenuOpen(!menuOpen) : setPickerOpen(true)} disabled={busy} aria-expanded={wallet.account ? menuOpen : undefined} aria-controls={wallet.account ? "wallet-account-panel" : undefined} aria-label={wallet.account ? `Wallet ${shortAddress(wallet.account)}${wrongChain ? ", switch to testnet needed" : ""}` : undefined}>
+        <button className={`wallet-button${wrongChain ? " is-warning" : wallet.account ? " is-connected" : ""}`} onClick={() => wallet.account ? setMenuOpen(!menuOpen) : setPickerOpen(true)} disabled={busy} aria-expanded={wallet.account ? menuOpen : undefined} aria-controls={wallet.account ? "wallet-account-panel" : undefined} aria-label={busy ? "Waiting for wallet" : wallet.account ? `Wallet ${shortAddress(wallet.account)}${wrongChain ? ", switch to testnet needed" : ""}` : undefined}>
           <span className={wallet.account && !wrongChain ? "status-dot" : "status-dot inactive"} aria-hidden="true" />
           {busy ? "Check your wallet…" : wallet.account ? `${shortAddress(wallet.account)} ▾` : "Connect wallet"}
         </button>
@@ -92,7 +92,8 @@ export function Header({ active }: { active?: "discover" | "protocol" | "followi
       </div>
     </div>
     <LiveAlerts />
-    {wrongChain && !message && <div className="wallet-banner"><span>Wallet connected · switch to Robinhood testnet before creating or trading.</span><button className="wallet-switch" onClick={() => void switchNetwork()} disabled={busy}>Switch to testnet</button></div>}
+    {busy && <div className="wallet-banner" role="status"><span>Check your wallet for a connection or network request. If you don’t see it, open the wallet extension or app.</span></div>}
+    {wrongChain && !message && !busy && <div className="wallet-banner"><span>Wallet connected · switch to Robinhood testnet before creating or trading.</span><button className="wallet-switch" onClick={() => void switchNetwork()} disabled={busy}>Switch to testnet</button></div>}
     {message && <div className="wallet-banner" role="status"><span>{message}</span><button onClick={() => setMessage("")} aria-label="Dismiss wallet message">×</button></div>}
     {pickerOpen && <WalletPicker onSelect={() => void connect()} onClose={() => setPickerOpen(false)} />}
   </header>;

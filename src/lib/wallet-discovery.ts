@@ -38,8 +38,19 @@ export function discoverWallets() {
 
 export function getWalletChoices() {
   const result = [...choices.values()];
-  const injected = typeof window === "undefined" ? null : (window as Window & { ethereum?: EthereumProvider }).ethereum;
-  if (injected && !result.some((choice) => choice.provider === injected)) result.push({ id: "browser", name: "Browser wallet", provider: injected });
+  if (typeof window === "undefined") return result;
+  const browser = window as Window & {
+    ethereum?: EthereumProvider & { isPhantom?: boolean };
+    phantom?: { ethereum?: EthereumProvider & { isPhantom?: boolean } };
+  };
+  const phantom = browser.phantom?.ethereum;
+  const hasPhantom = () => result.some((choice) => choice.provider === phantom || (choice.provider as EthereumProvider & { isPhantom?: boolean }).isPhantom === true);
+  // Phantom exposes this provider even when a competing extension owns window.ethereum.
+  if (phantom?.isPhantom && typeof phantom.request === "function" && !hasPhantom()) result.push({ id: "phantom-direct", name: "Phantom", provider: phantom });
+  const injected = browser.ethereum;
+  if (injected && typeof injected.request === "function" && !result.some((choice) => choice.provider === injected) && !(injected.isPhantom && hasPhantom())) {
+    result.push({ id: "browser", name: injected.isPhantom ? "Phantom" : "Browser wallet", provider: injected });
+  }
   return result;
 }
 

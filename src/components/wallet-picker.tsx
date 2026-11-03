@@ -13,10 +13,16 @@ export function WalletPicker({ onSelect, onClose }: { onSelect: () => void; onCl
     discoverWallets(); update();
     return () => window.removeEventListener(WALLETS_DISCOVERED_EVENT, update);
   }, []);
+  const walletHelp = <>
+    <p>On a computer, open HYPR in Brave or Chrome where Phantom is installed and unlocked. Wallet extensions aren’t available in every browser.</p>
+    <p>On a phone, open HYPR inside Phantom’s browser. If Phantom is already installed, refresh the page and try again.</p>
+    <button type="button" className="secondary-button" onClick={async () => { try { await navigator.clipboard.writeText(window.location.href); setCopied(true); } catch { setCopied(false); } }}>{copied ? "Link copied" : "Copy HYPR link"}</button>
+    <p><a href="https://phantom.com/download" target="_blank" rel="noreferrer" className="claim-link">Get Phantom from its official site ↗</a></p>
+  </>;
   return <Modal title="Choose your wallet" onClose={onClose}>
     <p className="dialog-copy">Watching is free and needs no wallet. Chat uses a free signature; creating and trading use test ETH.</p>
     <div className="wallet-choices">{choices.map((choice) => <button type="button" className="secondary-button" key={choice.id} onClick={() => { selectWallet(choice); onSelect(); }}>{choice.name}<span aria-hidden="true">→</span></button>)}</div>
-    {!choices.length && <div className="wallet-help"><strong>No wallet found in this browser</strong><p>On your phone, open HYPR using your EVM wallet’s built-in browser. Ordinary Safari and Chrome do not expose a wallet connection here yet.</p><button type="button" className="secondary-button" onClick={async () => { try { await navigator.clipboard.writeText(window.location.href); setCopied(true); } catch { setCopied(false); } }}>{copied ? "Link copied — paste it in your wallet browser" : "Copy this page’s link"}</button><p>On desktop, install a trusted EVM wallet extension, then reload HYPR.</p><a href="https://metamask.io/download" target="_blank" rel="noreferrer" className="claim-link">Get MetaMask from its official site ↗</a></div>}
+    {!choices.length ? <div className="wallet-help"><strong>No wallet found in this browser</strong>{walletHelp}</div> : <details className="wallet-help"><summary>Can’t find Phantom?</summary>{walletHelp}</details>}
     <p className="dialog-copy">Choose the wallet you recognize. HYPR never asks for a recovery phrase or private key. Support for Robinhood testnet depends on your wallet.</p>
   </Modal>;
 }

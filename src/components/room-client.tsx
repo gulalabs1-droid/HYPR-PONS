@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Launch } from "@/lib/types";
 import type { CombinedLaunchDataSource } from "@/lib/launch-data";
 import { Header } from "./header";
@@ -43,15 +43,34 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
   const isNative = token.origin === "hypr";
   const growth = useGrowth(token.address);
   const creatorProfile = growth.state?.rooms[0];
-  const [section, setSection] = useState<RoomSection>(isNative?"chart":"chat");
+  const [section, setSection] = useState<RoomSection>(isNative && initialToken.broadcastStatus !== "live" ? "chart" : "chat");
   const sectionsRef = useRef<HTMLDivElement>(null);
+  const userSelectedSection = useRef(false);
   const explorer = isNative && process.env.NEXT_PUBLIC_HYPR_NETWORK !== "mainnet" ? "https://explorer.testnet.chain.robinhood.com" : "https://robinhoodchain.blockscout.com";
   const progress = formatCurveProgress(token.nativeRealQuoteReserve, token.nativeGraduationThreshold, token.curveProgressBps, token.curvePhase);
   const liveNow = token.broadcastStatus === "live";
   const phase = showPhase(creatorProfile?.show || null, liveNow);
   const roomName = creatorProfile?.displayName || token.name;
 
+  useEffect(() => {
+    function followSectionLink() {
+      const value = window.location.hash.replace(/^#room-/, "") as RoomSection;
+      if (!Object.prototype.hasOwnProperty.call(sectionLabels, value) || (!isNative && (value === "chart" || value === "videos"))) return;
+      userSelectedSection.current = true;
+      setSection(value);
+      if (window.matchMedia("(max-width: 760px)").matches) window.requestAnimationFrame(() => sectionsRef.current?.querySelector(`#room-${value}`)?.scrollIntoView({ behavior: "instant", block: "start" }));
+    }
+    followSectionLink();
+    window.addEventListener("hashchange", followSectionLink);
+    return () => window.removeEventListener("hashchange", followSectionLink);
+  }, [isNative, token.address]);
+
+  useEffect(() => {
+    if (liveNow && !userSelectedSection.current && !window.location.hash) setSection("chat");
+  }, [liveNow]);
+
   function chooseSection(next: RoomSection) {
+    userSelectedSection.current = true;
     setSection(next);
     if (window.matchMedia("(max-width: 760px)").matches) window.requestAnimationFrame(() => sectionsRef.current?.querySelector(`#room-${next}`)?.scrollIntoView({ behavior: "instant", block: "start" }));
   }
@@ -73,6 +92,7 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
       <div className={`room-experience${isNative?" has-market":""}`} ref={sectionsRef}>
         <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} showTitle={creatorProfile?.show?.title} /></div>
         <nav className="room-section-nav" aria-label="Room sections" data-native={isNative}>
+          <button type="button" aria-label="Back to broadcast" aria-controls="room-watch" onClick={() => sectionsRef.current?.querySelector("#room-watch")?.scrollIntoView({ behavior: "instant", block: "start" })}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m10 8 6 4-6 4Z" /></svg><span>Watch</span></button>
           {(Object.keys(sectionLabels) as RoomSection[]).filter(key => isNative || (key !== "videos"&&key!=="chart")).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={`room-${key}`} onClick={() => chooseSection(key)}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{sectionIcons[key]}</svg><span>{sectionLabels[key]}{key === "trade" && <small> ${token.symbol}</small>}</span></button>)}
         </nav>
         {isNative&&<section className="room-chart-section" id="room-chart" data-mobile-active={section==="chart"}><NativeMarketChart tokenAddress={token.address} symbol={token.symbol}/></section>}

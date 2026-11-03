@@ -19,7 +19,7 @@ test("message options stay available to the right people without crowding chat",
     navigator: {},
     fetch: async (_url: string, init?: RequestInit) => {
       if (init?.method === "POST") { posts.push(JSON.parse(String(init.body))); return Response.json({ ok: true }); }
-      return Response.json({ followers: 0, following: false, wallet: signedIn, messages, hasMore: false });
+      return Response.json({ followers: 0, following: false, wallet: signedIn, messages, pinned: messages[0], hasMore: false });
     },
   };
   const saved = Object.keys(values).map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const);
@@ -34,6 +34,7 @@ test("message options stay available to the right people without crowding chat",
     assert.equal(find("Hide message"), undefined);
     assert.equal(find("Pin"), undefined);
     assert.equal(find("Report"), undefined);
+    assert.ok(find("Unpin"));
     await act(async () => options()[0].props.onClick());
     assert.equal(options()[0].props["aria-expanded"], true);
     assert.ok(find("Hide message") && find("Pin") && find("Report"));
@@ -44,6 +45,7 @@ test("message options stay available to the right people without crowding chat",
 
     signedIn = viewer;
     await act(async () => documentEvents.dispatchEvent(new Event("visibilitychange")));
+    assert.equal(find("Unpin"), undefined);
     await act(async () => options()[0].props.onClick());
     assert.equal(find("Hide message"), undefined);
     assert.equal(find("Pin"), undefined);

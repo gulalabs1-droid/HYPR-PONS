@@ -1,5 +1,6 @@
 .live-mini-toggle { display:none; }
 .mobile-mini-player { display:none; }
+.hypr-broadcast-stage:focus-visible { outline:2px solid #c7f36b; outline-offset:2px; }
 
 @media (max-width:760px) {
   .live-playback-controls .live-mini-toggle { display:inline-flex; align-items:center; justify-content:center; }

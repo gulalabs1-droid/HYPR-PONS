@@ -69,3 +69,30 @@ test("mini player controls share playback actions and do not create audio or dev
     assert.ok(button("Resume watching live")); assert.ok(button("Unmute for me"));
   } finally { await act(async () => renderer?.unmount()); }
 });
+
+test("mini player still follows scroll when intersection observers are unavailable", async () => {
+  const savedWindow = Object.getOwnPropertyDescriptor(globalThis, "window"), savedDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
+  const listeners = new Map<string, () => void>(); let bottom = 250;
+  const mobile = { matches: true, addEventListener() {}, removeEventListener() {} };
+  Object.defineProperty(globalThis, "window", { configurable: true, value: {
+    matchMedia: () => mobile,
+    addEventListener(name: string, fn: () => void) { listeners.set(name, fn); },
+    removeEventListener(name: string) { listeners.delete(name); },
+  } });
+  Object.defineProperty(globalThis, "document", { configurable: true, value: { querySelector: () => ({ getBoundingClientRect: () => ({ bottom: 90 }) }) } });
+  const stageRef = { current: { getBoundingClientRect: () => ({ bottom }) } } as unknown as RefObject<HTMLElement>;
+  let current: ReturnType<typeof useMobileMiniPlayer>; let renderer: ReactTestRenderer | undefined;
+  function Harness() { current = useMobileMiniPlayer(stageRef, true); return null; }
+  try {
+    await act(async () => { renderer = create(createElement(Harness)); });
+    assert.equal(current!.visible, false);
+    bottom = 80; await act(async () => listeners.get("scroll")?.());
+    assert.equal(current!.visible, true);
+    await act(async () => renderer!.unmount()); renderer = undefined;
+    assert.equal(listeners.size, 0);
+  } finally {
+    await act(async () => renderer?.unmount());
+    if (savedWindow) Object.defineProperty(globalThis, "window", savedWindow); else Reflect.deleteProperty(globalThis, "window");
+    if (savedDocument) Object.defineProperty(globalThis, "document", savedDocument); else Reflect.deleteProperty(globalThis, "document");
+  }
+});

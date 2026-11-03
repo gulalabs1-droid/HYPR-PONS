@@ -66,7 +66,7 @@ export function MobileMiniPlayer({ playback, live, status, onStage, primaryVideo
   const paused = playback.paused;
   const muted = playback.muted || playback.volume === 0;
   return <section className={`mobile-mini-player${left ? " is-left" : ""}`} aria-label="Mini live player">
-    <div className="mini-player-header"><span>{onStage ? "ON STAGE" : live ? "LIVE" : "CONNECTING"}</span><div>
+    <div className="mini-player-header"><span>{onStage ? "ON STAGE" : live ? "LIVE" : "WAITING"}</span><div>
       <button type="button" onClick={() => setLeft(!left)} aria-label={`Move mini player to the ${left ? "right" : "left"}`} title="Move mini player">↔</button>
       <button type="button" onClick={onClose} aria-label="Close mini player and keep watching" title="Close mini player and keep watching">×</button>
     </div></div>

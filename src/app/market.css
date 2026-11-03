@@ -53,12 +53,12 @@
 .market-method{margin-top:12px}.market-footnote{font-size:10px;opacity:.85}
 @media(max-width:760px){
   .market-panel{padding:18px 14px}.market-heading{gap:10px;align-items:flex-start}.market-heading h2{display:block;font-size:20px}.market-heading h2 span{display:block;font-size:12px;margin-top:4px}
-  .market-health{font-size:10px;padding:6px 8px;white-space:normal;max-width:145px;line-height:1.5}
-  .market-price-row{margin:18px 0 14px}.market-price-row strong{font-size:29px}.market-price-row small{font-size:10px;max-width:30ch}.market-price-row>span{font-size:14px}
-  .market-controls{gap:8px;justify-content:space-between}.market-segments button{padding:8px 10px;min-height:40px}
-  .market-legend{gap:13px;font-size:10px;padding-bottom:10px}.market-legend .market-volume-label{display:none}
+  .market-health{font-size:11px;padding:6px 8px;white-space:normal;max-width:150px;line-height:1.5}
+  .market-price-row{margin:18px 0 14px}.market-price-row strong{font-size:29px}.market-price-row small{font-size:11px;max-width:30ch}.market-price-row>span{font-size:14px}
+  .market-controls{gap:8px;justify-content:space-between}.market-segments button{padding:8px 10px;min-height:44px}
+  .market-legend{gap:13px;font-size:11px;padding-bottom:10px}.market-legend .market-volume-label{display:none}
   .market-canvas{height:340px}.market-canvas-wrap.is-expanded .market-canvas{height:520px}
-  .market-canvas-toolbar{gap:6px;padding:6px 8px}.market-hover{font-size:10px;max-width:42%}.market-canvas-toolbar button{font-size:10px;padding:7px;min-height:36px}
+  .market-canvas-toolbar{gap:6px;padding:6px 8px}.market-hover{font-size:11px;max-width:42%}.market-canvas-toolbar button{font-size:11px;padding:7px;min-height:44px}
   .market-selected dl{grid-template-columns:1fr 1fr;gap:14px}.market-selected dd{font-size:12px}.market-selected>div>span{order:3;width:100%}
   .market-trade{grid-template-columns:minmax(58px,.8fr) minmax(95px,1.2fr) minmax(80px,1fr);gap:6px;font-size:11px;padding:14px 0}.market-trade small{font-size:10px}
 }

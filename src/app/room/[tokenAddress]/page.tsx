@@ -12,13 +12,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!ADDRESS.test(tokenAddress)) return { title: "Room not found", robots: { index: false, follow: false } };
   const token = (await findRoomLaunch(tokenAddress))?.token;
   if (!token) return { title: "Room not found" };
-  const verified = token.dataStatus === "verified";
-  const stateLabel = token.dataStatus === "demo" ? "demo" : token.dataStatus === "partial" ? "partial" : "verified";
   const room = await readGrowth(null, tokenAddress).then(rooms => rooms[0]).catch(() => null);
   const name = room?.displayName || token.name, url = canonicalRoomUrl(tokenAddress), image = `${url}/share-image`;
   const live = token.broadcastStatus === "live";
   return {
-    title: live ? `${name} is live · HYPR` : `${name} · Creator community${verified ? "" : ` · ${stateLabel}`}`,
+    title: live ? `${name} is live` : `${name} · ${token.dataStatus === "demo" ? "Demo room" : "Community room"}`,
     description: live ? `Watch ${name} live now. No wallet needed. This is a live session, not a saved replay.` : `${room?.bio || `Watch ${name}, join the conversation and return for the next show.`} Watching needs no wallet. Trading is optional; testnet assets have no real value.`,
     alternates: { canonical: url },
     openGraph: {

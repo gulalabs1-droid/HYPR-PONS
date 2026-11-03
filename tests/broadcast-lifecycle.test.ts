@@ -6,7 +6,7 @@ const offline = { configured: true, live: false, hostConnected: false };
 
 test("a fresh offline room is between broadcasts, not a claimed never-started or ended broadcast", () => {
   assert.equal(publicBroadcastPhase(offline, false, false, null), "offline");
-  assert.match(broadcastCopy("offline").detail, /saved chat and follows/);
+  assert.match(broadcastCopy("offline").detail, /creator is offline/i);
 });
 test("only observed or confirmed media exits show a stopped/ended state", () => {
   assert.equal(publicBroadcastPhase(offline, false, true, null), "stopped");

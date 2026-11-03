@@ -15,6 +15,12 @@
 .media-empty { text-align:center; padding:28px 16px; border:1px dashed var(--line-strong); border-radius:16px; margin:20px 0; }
 .media-empty>span { display:block; font-size:38px; color:var(--lime); }
 .media-empty p,.media-empty small { color:var(--text-soft); line-height:1.7; }
+.media-details { margin-top:20px; border-top:1px solid var(--line); padding-top:10px; }
+.media-details summary { min-height:44px; display:flex; align-items:center; color:var(--text-soft); font-size:13px; font-weight:700; cursor:pointer; }
+.media-details summary::after { content:"+"; margin-left:auto; font-size:20px; }
+.media-details[open] summary::after { content:"−"; }
+.media-details summary:focus-visible { outline:2px solid var(--lime); outline-offset:3px; }
+.media-details p { margin:0 0 10px; }
 .media-upload-tray { position:fixed; z-index:80; right:20px; bottom:20px; width:min(440px,calc(100vw - 32px)); max-height:60vh; overflow:auto; display:grid; gap:10px; }
 .media-upload-job { padding:18px; border:1px solid var(--lime); border-radius:16px; background:#171a20; box-shadow:0 12px 50px #000b; display:grid; gap:10px; }
 .media-upload-job strong,.media-upload-job p { overflow-wrap:anywhere; }

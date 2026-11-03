@@ -34,12 +34,12 @@ export function shouldReleaseViewer(role: "host" | "viewer", connection: "connec
 
 export function broadcastCopy(phase: BroadcastPhase) {
   const copy: Record<BroadcastPhase, { title: string; detail: string; label: string }> = {
-    checking: { title: "Checking the broadcast…", detail: "This community room stays open between broadcasts.", label: "CHECKING BROADCAST" },
-    unavailable: { title: "Broadcast status unavailable", detail: "We cannot confirm the stream right now. Your community room is still here.", label: "STATUS UNAVAILABLE" },
-    offline: { title: "Between broadcasts", detail: "The creator is offline. The room, saved chat and follows stay here—come back using this same link.", label: "ROOM OPEN · CREATOR OFFLINE" },
-    preparing: { title: "Creator in the studio", detail: "No live audio or video is being published yet. Chat stays open.", label: "STUDIO READY · NOT LIVE" },
-    live: { title: "The creator is live", detail: "Watch here without a wallet or token purchase. This is live-only, not a saved video.", label: "LIVE" },
-    paused: { title: "Broadcast paused", detail: "The creator is connected, but their audio and video are off. Stay here; playback can resume when they publish again.", label: "PAUSED · ROOM OPEN" },
+    checking: { title: "Checking the broadcast…", detail: "The room stays open.", label: "CHECKING" },
+    unavailable: { title: "Broadcast status unavailable", detail: "We can’t confirm the stream right now. Try again shortly.", label: "STATUS UNAVAILABLE" },
+    offline: { title: "Between broadcasts", detail: "The creator is offline. Check back for the next show.", label: "CREATOR OFFLINE" },
+    preparing: { title: "Creator in the studio", detail: "Waiting for audio or video. Chat is open.", label: "NOT LIVE YET" },
+    live: { title: "The creator is live", detail: "Watch free—no wallet needed. This is live, not a replay.", label: "LIVE" },
+    paused: { title: "Broadcast paused", detail: "The creator is connected, but no audio or video is playing.", label: "PAUSED" },
     stopped: { title: "Broadcast stopped. Room still open.", detail: "Stay in chat and return when the creator is live again. Check the room for any recordings the creator publishes.", label: "BROADCAST STOPPED · ROOM OPEN" },
     ended: { title: "Your broadcast has ended", detail: "You stopped this media session. Your community room, saved messages, follows and token remain here.", label: "BROADCAST ENDED · ROOM OPEN" },
     connecting: { title: "Connecting to the broadcast…", detail: "You are joining the live player, not leaving the community room.", label: "CONNECTING" },

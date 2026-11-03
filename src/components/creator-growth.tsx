@@ -135,12 +135,8 @@ function ViewerTips() {
   function close() { setOpen(false); try { window.localStorage.setItem(VIEWER_TIPS_KEY, "done"); } catch { /* private mode */ } }
   return <aside className="viewer-tips" aria-label="New to HYPR">
     <div className="viewer-tips-head"><span className="eyebrow">NEW HERE?</span><button type="button" className="live-alerts-close" aria-label="Dismiss tips" onClick={close}>×</button></div>
-    <ol>
-      <li><span aria-hidden="true">1</span><div><strong>Watch free</strong><small>No wallet, camera or sign-up needed.</small></div></li>
-      <li><span aria-hidden="true">2</span><div><strong>Save the room</strong><small>Find it again on this device in Following.</small></div></li>
-      <li><span aria-hidden="true">3</span><div><strong>Follow for the next show</strong><small>Then turn on live alerts in Following.</small></div></li>
-    </ol>
-    <button type="button" className="secondary-button" onClick={close}>Got it</button>
+    <p>Watch free—no wallet or sign-up needed. Save this room to find it again on this device.</p>
+    <Link href="/faq">How HYPR works ↗</Link>
   </aside>;
 }
 
@@ -213,7 +209,7 @@ export function CreatorGrowth({ roomId, creator, live, growth }: { roomId: strin
           <div className="growth-actions"><button className={`${room.following ? "secondary-button following" : "primary-button"}`} aria-pressed={room.following} disabled={busy} onClick={() => void follow()}>{busy ? "Saving…" : room.following ? "✓ Following with wallet" : "Follow with wallet"}</button><Link className="secondary-button" href="/following">Following →</Link></div>
         </div>
       </div>
-      <p className="creator-fineprint">Saving needs no wallet and stays in this browser. Wallet follows sync across devices; neither requires buying tokens. The associated token is unchanged by following.</p>
+      <p className="creator-fineprint">Saved rooms stay on this device. Wallet follows sync across devices.</p>
       <UpcomingShow room={room} live={live} />
       {room.moment && <div className="moment-share"><span className="eyebrow">MOMENT SHARE CARD · NOT VIDEO</span><h3>{room.moment}</h3><div className="growth-actions"><Link className="secondary-button" href={`/room/${room.address}/moment`}>Open share card →</Link><ShareRoom roomId={room.address} name={room.displayName || room.name} moment /></div></div>}
     </>}

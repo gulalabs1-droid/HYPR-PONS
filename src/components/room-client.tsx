@@ -72,7 +72,7 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
   function chooseSection(next: RoomSection) {
     userSelectedSection.current = true;
     setSection(next);
-    if (window.matchMedia("(max-width: 760px)").matches) window.requestAnimationFrame(() => sectionsRef.current?.querySelector(`#room-${next}`)?.scrollIntoView({ behavior: "instant", block: "start" }));
+    window.requestAnimationFrame(() => sectionsRef.current?.querySelector(`#room-${next}`)?.scrollIntoView({ behavior: "instant", block: "start" }));
   }
 
   return <main className="room-page">
@@ -120,7 +120,7 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
               <p>Fees available means unclaimed fees, not lifetime earnings. Claimed balances return to zero. Trading fees and network fees are different; all values here are testnet assets.</p>
               <h3>Progress toward liquidity-pool trading</h3><strong className="room-progress-value">{progress}</strong><p>{formatEthExact(token.nativeRealQuoteReserve)} of the {formatEthExact(token.nativeGraduationThreshold)} reserve target. Buys add to the reserve after fees; sells reduce it. Reaching the target triggers the contract’s Uniswap v4 migration. This is not a funding goal, a live-stream status, or a return guarantee.</p>
               <dl className="room-accounting-list"><div><dt>Trading status</dt><dd>{token.curvePhase === "Live" ? "Trading open" : token.curvePhase || "Unavailable"}</dd></div><div><dt>Trades in indexed window</dt><dd>{token.nativeTradeCount === undefined ? "Unavailable" : token.nativeTradeCount.toLocaleString()}</dd></div><div><dt>Gross trading volume in that window</dt><dd>{formatEthExact(token.nativeTradeVolume)}</dd></div></dl>
-              <p>Recent activity covers the confirmed 2,500-block scan, not lifetime activity or 24 hours. USD prices and historical charts are not available; we do not invent them.</p>
+              <p>Recent activity covers the confirmed 2,500-block scan, not lifetime activity or 24 hours. The price chart shows confirmed curve trades; it does not show USD prices or pool trades.</p>
               <a className="claim-link" href={`${explorer}/address/${token.pool}`} target="_blank" rel="noreferrer">View trading contract ↗</a>
               <p className="accounting-copy">{liveData.updatedAt ? `Live contract data checked ${new Date(liveData.updatedAt).toLocaleTimeString()} · refreshes every 15 seconds while visible.` : "Checking live contract data…"}</p>
             </div>

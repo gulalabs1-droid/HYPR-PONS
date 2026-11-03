@@ -133,16 +133,16 @@ export function LiveGuestControls({ roomId, role, live, hostSid, authenticated, 
   const onStage = guest?.guestState === "approved" && guest.hostSid === hostSid && permissions?.canPublish === true;
   const pending = guest?.guestState === "requested" && guest.hostSid === hostSid;
   return <section className="live-guests" aria-label="Join the live stage">
-    <div className="live-guests-heading"><div><span className="eyebrow">BE PART OF THE SHOW</span><h3>{onStage ? "You’re invited on stage" : pending ? "Your request is waiting" : "Want to join the creator?"}</h3></div><span>{onStage ? "APPROVED" : pending ? "REQUESTED" : "GUESTS"}</span></div>
+    <div className="live-guests-heading"><div><span className="eyebrow">JOIN THE SHOW</span><h3>{onStage ? "You’re invited on stage" : pending ? "Your request is waiting" : "Join the live"}</h3></div><span>{onStage ? "APPROVED" : pending ? "REQUESTED" : "GUESTS"}</span></div>
     {onStage ? <>
       <p>Turn on the camera or microphone when you’re ready. Everyone watching can see or hear what you share.</p>
       <ControlBar controls={{ microphone: true, camera: true, screenShare: false, chat: false, leave: false }} saveUserChoices={false} />
       <button className="secondary-button" type="button" disabled={busy} onClick={() => void viewerAction("leave")}>Leave stage · keep watching</button>
       <p className="live-guests-muted">HYPR’s built-in replays and clips capture the creator’s tracks; other people may still record the broadcast.</p>
     </> : pending ? <><p>The creator will decide whether to bring you on. Your camera and microphone are off.</p><button className="secondary-button" type="button" disabled={busy} onClick={() => void viewerAction("cancel")}>Cancel request</button></> : <>
-      <p>{guest?.guestState === "declined" ? "The creator didn’t accept this request. You can keep watching or ask again." : "Ask for a spot on stage. The creator approves each guest."} Your camera and microphone stay off until you choose to turn them on.</p>
+      <p>{guest?.guestState === "declined" ? "Your request was declined. You can ask again." : "The creator approves each guest."} Your camera and microphone stay off until you turn them on.</p>
       <button className="secondary-button" type="button" disabled={busy || !live} onClick={() => void request()}>{busy ? "Preparing request…" : authenticated ? "Request to join" : "Sign in & request to join"}</button>
-      {!authenticated && <p className="live-guests-muted">A free wallet signature signs you in. Your public wallet address is visible to people in the live room.</p>}
+      {!authenticated && <p className="live-guests-muted">Free wallet sign-in · Your public address is visible in the room.</p>}
     </>}
     {notice && <p role="status" className="live-notice">{notice}</p>}
   </section>;

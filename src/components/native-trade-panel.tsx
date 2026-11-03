@@ -245,7 +245,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
   return (
     <section className="activity-panel trade-panel">
       <div className="panel-heading"><div><span className="eyebrow">ROOM TOKEN · TESTNET</span><h2>Buy or sell ${tokenSymbol}</h2></div><span className="live-chip">{phaseLabel}</span></div>
-      <p className="trade-copy">You’re trading this room’s token—not ownership in HYPR or the creator. Watching is free. Test assets have no real value.</p>
+      <p className="trade-copy">Room tokens are not ownership. Test assets have no real value.</p>
       <p className="trade-fee-note">1.25% trading fee included · 0.30% creator / 0.95% HYPR. Network fees are extra.</p>
       <div className="trade-tabs"><button aria-pressed={direction === "buy"} className={direction === "buy" ? "selected" : ""} disabled={pending} onClick={() => { quoteVersion.current++; setQuote(null); setDirection("buy"); setAmount(""); setStatus(""); }}>Buy</button><button aria-pressed={direction === "sell"} className={direction === "sell" ? "selected" : ""} disabled={pending} onClick={() => { quoteVersion.current++; setQuote(null); setDirection("sell"); setAmount(""); setStatus(""); }}>Sell</button></div>
       <form className="trade-form" onSubmit={openReview}>
@@ -259,7 +259,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
           ))}
         </div>
         <button className="primary-button" type="submit" disabled={pending || Boolean(unresolvedHash) || phase !== 0 || !quote || quote.input !== parsedAmount || quote.direction !== direction}>{pending ? "Check your wallet…" : direction === "buy" ? "Review purchase →" : "Review sale →"}</button>
-        {phase === 0 && !quote && <p className="trade-copy">Enter a positive amount above to review a trade. Nothing is sent until you confirm in your wallet.</p>}
+        {phase === 0 && !quote && <p className="trade-copy">Nothing is sent until you confirm in your wallet.</p>}
         {phase !== null && phase !== 0 && <p className="trade-copy">Curve trading has ended for this token. This screen does not offer liquidity-pool trades.</p>}
         <a className="claim-link" href="https://faucet.testnet.chain.robinhood.com" target="_blank" rel="noreferrer">Need test ETH? Get it free ↗</a>
       </form>

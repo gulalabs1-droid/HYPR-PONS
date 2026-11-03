@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ControlBar, LiveKitRoom, ParticipantTile, StartAudio, useConnectionState, useParticipants, useRoomContext, useTracks } from "@livekit/components-react";
 import { ConnectionState, DisconnectReason, RoomEvent, Track, type Room } from "livekit-client";
 import { decodeLiveSignal, encodeLiveSignal, LIVE_CHAT_PING_EVENT, LIVE_SIGNAL_SEND_EVENT, LIVE_SIGNAL_TOPIC, REACTIONS, SenderThrottle, sendLiveSignal, type LiveSignal } from "@/lib/live-signals";
@@ -15,6 +16,7 @@ import { guestMetadata, isApprovedGuest } from "@/lib/live-guests";
 import { signInCommunity } from "@/lib/community-client";
 import { shortAddress } from "@/lib/wallet";
 import { LivePlaybackAudio, LivePlaybackControls, useViewerPlayback } from "./live-playback-controls";
+import { MobileMiniPlayer, useMobileMiniPlayer } from "./mobile-mini-player";
 
 type Floating = { id: number; reaction: number; x: number; mine: boolean };
 
@@ -97,12 +99,15 @@ function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Sess
   const [ending, setEnding] = useState(false);
   const [recording, setRecording] = useState(false);
   const stopCapture = useRef<(() => Promise<void>) | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const registerStop = useCallback((stop: (() => Promise<void>) | null) => { stopCapture.current = stop; }, []);
   const recordingVideo = primaryVideo;
   const recordingTracks = [recordingVideo, ...hostTracks.filter(track => track.source === Track.Source.Microphone || track.source === Track.Source.ScreenShareAudio)].flatMap(track => track?.publication.track?.mediaStreamTrack ? [track.publication.track.mediaStreamTrack] : []);
   const localConnection = connection === ConnectionState.Connected ? "connected" : connection === ConnectionState.Reconnecting || connection === ConnectionState.SignalReconnecting ? "reconnecting" : "connecting";
   const phase = connectedBroadcastPhase({ connection: localConnection, hostPresent, hasMedia, seenMedia });
   const copy = broadcastCopy(phase);
+  const miniPlayer = useMobileMiniPlayer(stageRef, role === "viewer" && (phase === "live" || seenMedia));
+  const viewerPlayback = { ...playback, togglePause: () => { if (!playback.paused && recording) void stopCapture.current?.(); playback.togglePause(); } };
   const [playing, setPlaying] = useState(false);
   const [measurement, setMeasurement] = useState(false);
   const measured = useRef(false), seconds = useRef(0), threshold = useRef(false);
@@ -139,7 +144,7 @@ function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Sess
     try { await stopCapture.current?.(); await onExit("host-ended", room); }
     catch { setEnding(false); }
   }
-  return <div onPlayingCapture={() => setPlaying(true)} onPauseCapture={() => setPlaying(false)} onWaitingCapture={() => setPlaying(false)}>
+  return <><div onPlayingCapture={() => setPlaying(true)} onPauseCapture={() => setPlaying(false)} onWaitingCapture={() => setPlaying(false)}>
     <div className="native-live-toolbar" aria-live="polite">
       <span><span className={phase === "live" ? "pulse" : "status-dot inactive"} /> {phase === "live" ? `LIVE · ${viewers} viewer${viewers === 1 ? "" : "s"}` : copy.label}</span>
       {role === "host" && phase === "live" && <span className="studio-live-hud">You’re live · {recording ? "recording a private draft" : "live only"}{showTitle ? ` · ${showTitle}` : ""}</span>}
@@ -148,7 +153,7 @@ function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Sess
         else void (async () => { await stopCapture.current?.(); await onExit("viewer-left", room); })().catch(() => undefined);
       }}>{role === "host" ? "End broadcast" : "Leave live"}</button>
     </div>
-    <div className={`hypr-broadcast-stage${phase === "live" && !viewerPaused && approvedGuests.length ? " has-guests" : ""}`}>
+    <div ref={stageRef} className={`hypr-broadcast-stage${phase === "live" && !viewerPaused && approvedGuests.length ? " has-guests" : ""}`}>
       {phase === "live" && !viewerPaused && primaryVideo ? <div className="live-stage-host"><ParticipantTile trackRef={primaryVideo} />{creatorCamera && <div className="live-stage-pip" aria-label="Creator camera"><ParticipantTile trackRef={creatorCamera} /></div>}</div> : <div className="native-live-placeholder live-stage-host"><div className="native-live-mark"><span aria-hidden="true">H</span><strong>{viewerPaused && phase === "live" ? "Playback paused" : phase === "live" ? "Audio broadcast" : copy.title}</strong><small>{viewerPaused && phase === "live" ? "The show continues. Resume jumps back to live; the missed part is not saved here." : phase === "live" ? "The creator is sharing audio. Video is off." : copy.detail}</small></div></div>}
       {phase === "live" && !viewerPaused && approvedGuests.length > 0 && <div className="live-stage-guests" data-many={approvedGuests.length > 1} aria-label="Guests on stage">{approvedGuests.map(participant => {
         const video = guestVideos.find(track => track.participant.identity === participant.identity), info = guestMetadata(participant.metadata);
@@ -156,7 +161,7 @@ function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Sess
       })}</div>}
       <LiveReactions roomId={roomId} live={phase === "live" && !viewerPaused} />
     </div>
-    {role === "viewer" && <LivePlaybackControls playback={{ ...playback, togglePause: () => { if (!playback.paused && recording) void stopCapture.current?.(); playback.togglePause(); } }} live={phase === "live"} />}
+    {role === "viewer" && <LivePlaybackControls playback={viewerPlayback} live={phase === "live"} miniPlayer={miniPlayer} />}
     {viewerPaused && localGuestOnStage && <p className="live-notice" role="status">Your playback is paused, but you are still on stage. Your camera and microphone stay as you set them.</p>}
     {role === "host" ? <ControlBar controls={{ microphone: true, camera: true, screenShare: true, chat: false, leave: false }} saveUserChoices={false} /> : <p className="live-viewing-note">Watching is free. Your camera and microphone stay off until you choose to share.</p>}
     {(role === "host" || (!playback.muted && !viewerPaused && playback.volume > 0)) && <StartAudio label="Tap to hear the broadcast" />}
@@ -168,7 +173,7 @@ function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Sess
       <p className="dialog-copy">The same link, saved chat and follows remain. If you started recording, it will finish as a private draft. Keep HYPR open until its upload completes; nothing is published without your review.</p>
       <div className="dialog-actions"><button type="button" className="secondary-button" disabled={ending} onClick={() => setEndOpen(false)}>Keep broadcasting</button><button type="button" className="primary-button" disabled={ending} onClick={() => void endBroadcast()}>{ending ? "Stopping your devices…" : "End broadcast now"}</button></div>
     </Modal>}
-  </div>;
+  </div>{miniPlayer.visible && typeof document !== "undefined" && createPortal(<MobileMiniPlayer playback={viewerPlayback} live={phase === "live"} status={copy.title} onStage={localGuestOnStage} primaryVideo={primaryVideo} creatorCamera={creatorCamera} guests={approvedGuests.map(participant => ({ id: participant.sid, video: guestVideos.find(track => track.participant.identity === participant.identity) }))} onReturn={() => document.querySelector("#room-watch")?.scrollIntoView({ behavior: "instant", block: "start" })} onClose={() => miniPlayer.setEnabled(false)} />, document.body)}</>;
 }
 
 export function ConnectedRoom({ session, onLeave, onError, onSessionChange, connect = true, room }: {

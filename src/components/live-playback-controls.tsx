@@ -41,10 +41,11 @@ export function useViewerPlayback(room: Room, enabled: boolean) {
   return { ...preference, paused, togglePause, toggleMute, setVolume };
 }
 
-export function LivePlaybackControls({ playback, live }: { playback: ReturnType<typeof useViewerPlayback>; live: boolean }) {
+export function LivePlaybackControls({ playback, live, miniPlayer }: { playback: ReturnType<typeof useViewerPlayback>; live: boolean; miniPlayer?: { enabled: boolean; setEnabled: (enabled: boolean) => void } }) {
   return <div className="live-playback-controls" role="group" aria-label="Live playback controls">
     <button type="button" onClick={playback.togglePause} disabled={!live && !playback.paused} aria-pressed={playback.paused}>{playback.paused ? "▶ Resume live" : "Ⅱ Pause"}</button>
     <button type="button" onClick={playback.toggleMute} aria-pressed={playback.muted || playback.volume === 0}>{playback.muted || playback.volume === 0 ? "🔇 Unmute" : "🔊 Mute"}</button>
+    {miniPlayer && <button type="button" className="live-mini-toggle" onClick={() => miniPlayer.setEnabled(!miniPlayer.enabled)} aria-pressed={miniPlayer.enabled}>{miniPlayer.enabled ? "Mini player on" : "Mini player off"}</button>}
     <label className="live-volume">Volume <input type="range" min="0" max="100" step="5" value={Math.round(playback.volume * 100)} aria-label="Broadcast volume" aria-valuetext={`${Math.round(playback.volume * 100)} percent`} onChange={event => playback.setVolume(Number(event.target.value) / 100)} /><span>{Math.round(playback.volume * 100)}%</span></label>
     <span className="live-volume-phone">On some phones, use your device’s volume buttons.</span>
   </div>;

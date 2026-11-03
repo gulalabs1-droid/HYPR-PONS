@@ -1,0 +1,29 @@
+.live-mini-toggle { display:none; }
+.mobile-mini-player { display:none; }
+
+@media (max-width:760px) {
+  .live-playback-controls .live-mini-toggle { display:inline-flex; align-items:center; justify-content:center; }
+  .mobile-mini-player { position:fixed; z-index:40; right:12px; bottom:calc(82px + env(safe-area-inset-bottom)); display:block; width:min(200px, 48vw); max-width:calc(100vw - 24px); overflow:hidden; border:1px solid #ffffff40; border-radius:15px; background:#10171d; color:#f5f8f6; box-shadow:0 12px 36px #000b; }
+  .mobile-mini-player.is-left { right:auto; left:12px; }
+  .mini-player-header { display:flex; align-items:center; justify-content:space-between; padding-left:12px; background:#172029; }
+  .mini-player-header > span { color:#e4f8ba; font-size:10px; font-weight:800; letter-spacing:.06em; }
+  .mini-player-header > div { display:flex; }
+  .mini-player-header button { width:44px; height:44px; padding:0; border:0; background:transparent; color:#f6f8f8; font:inherit; font-size:21px; cursor:pointer; }
+  .mini-player-picture { display:block; width:100%; aspect-ratio:16/9; padding:0; overflow:hidden; border:0; background:#080c0f; color:#edf4f3; cursor:pointer; }
+  .mini-player-stage { display:grid; width:100%; height:100%; grid-template-columns:minmax(0,1fr); }
+  .mini-player-stage.has-guests { grid-template-columns:minmax(0,2fr) minmax(42px,.8fr); gap:2px; }
+  .mini-player-host { position:relative; min-width:0; height:100%; overflow:hidden; }
+  .mini-player-stage video { display:block; width:100%; height:100%; object-fit:contain; pointer-events:none; }
+  .mini-player-camera { position:absolute; left:4px; bottom:4px; width:32%; aspect-ratio:16/9; overflow:hidden; border:1px solid #ffffffaa; border-radius:4px; background:#121a20; }
+  .mini-player-guests { display:grid; grid-auto-rows:minmax(0,1fr); gap:2px; min-width:0; min-height:0; }
+  .mini-player-guests > div { display:grid; place-items:center; min-width:0; min-height:0; overflow:hidden; background:#26313a; }
+  .mini-player-guests span { font-size:9px; color:#e7edee; }
+  .mini-player-placeholder { display:grid; place-items:center; width:100%; height:100%; padding:8px; color:#e2e9e8; font-size:12px; line-height:1.35; text-align:center; }
+  .mini-player-actions { display:grid; grid-template-columns:1fr 1fr; }
+  .mini-player-actions button { min-width:0; min-height:44px; padding:6px 2px; border:0; border-top:1px solid #ffffff1a; background:#172029; color:#f5f8f6; font:inherit; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .mini-player-actions button + button { border-left:1px solid #ffffff1a; }
+  .mini-player-actions button:disabled { opacity:.6; }
+  .mobile-mini-player p { margin:0; padding:7px 9px; color:#e4f8ba; font-size:10px; line-height:1.4; }
+  .mobile-mini-player button:focus-visible { position:relative; z-index:1; outline:2px solid #c7f36b; outline-offset:-3px; }
+}
+@media (max-width:760px) and (max-height:550px) { .mobile-mini-player { width:min(150px, 45vw); } }

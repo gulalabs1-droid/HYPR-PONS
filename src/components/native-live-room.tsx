@@ -13,6 +13,8 @@ import { RoomContinuity } from "./room-continuity";
 import { TokenArt, tokenGlyph } from "./token-art";
 import { roomHue } from "@/lib/room-display";
 import { CommunitySignInError, signInCommunity } from "@/lib/community-client";
+import { showDemoNews } from "@/lib/demo-news";
+import { DemoNewsFeed } from "./demo-news-feed";
 
 // LiveKit is large; load it only once a viewer joins or a creator starts broadcasting.
 const ConnectedRoom = dynamic(() => import("./native-live-connected-styled"), {
@@ -155,7 +157,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
   const copy = broadcastCopy(phase);
   const phaseLabel = phase === "live" && status?.viewerCount !== undefined ? `LIVE · ${status.viewerCount} viewer${status.viewerCount === 1 ? "" : "s"}` : copy.label;
   return <section className="native-live-surface native-live-watch-first" aria-label="Broadcast player">
-    <div className={`live-viewport native-live-placeholder stage-poster is-${phase}`} style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
+    {showDemoNews(token, phase) ? <DemoNewsFeed /> : <div className={`live-viewport native-live-placeholder stage-poster is-${phase}`} style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
       <div className="stage-backdrop" aria-hidden="true"><TokenArt seed={token.address} /></div>
       <div className="native-live-mark"><span className="stage-avatar" aria-hidden="true"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} /></span>
       <span className="broadcast-phase-label">{phase === "live" && <span className="pulse" />}{phaseLabel}</span>
@@ -164,7 +166,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
       <small>{copy.detail}</small>
       {status?.live && <button className="primary-button live-action" onClick={joinViewer} disabled={busy}>{busy ? "Joining…" : "Watch live →"}</button>}
       {phase === "unavailable" && <button className="secondary-button" onClick={() => void refreshStatus()}>Retry broadcast status</button>}
-    </div></div>
+    </div></div>}
     <div className="native-live-copy native-live-viewer-footer">
       <span className="live-state broadcast-status-announcement" role="status">{phaseLabel}</span>
       {!studioOpen && (creatorConnected ? <button className="secondary-button" onClick={() => setStudioOpen(true)} disabled={!status?.configured}>Open creator studio</button> : <details className="creator-entry"><summary>Are you the creator?</summary><p>Broadcasting requires the wallet that created this room: {token.deployer.slice(0, 6)}…{token.deployer.slice(-4)}.</p><button className="secondary-button" onClick={() => setStudioOpen(true)} disabled={!status?.configured}>Open creator studio</button></details>)}

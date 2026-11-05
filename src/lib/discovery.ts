@@ -1,5 +1,6 @@
 import type { Launch } from "./types";
 import type { GrowthRoom } from "./growth";
+import { isTestnetDemoRoom } from "./demo-news";
 
 export const discoveryFilters = ["all", "live", "upcoming", "saved"] as const;
 export type DiscoveryFilter = typeof discoveryFilters[number];
@@ -24,8 +25,7 @@ export function discoveryRooms(launches: Launch[], creators: GrowthRoom[], now =
 // This is an actual HYPR testnet launch, not a fixture or a claim of activity.
 // Only offer the tour when that exact room is present in the current index.
 export function introductoryDemoRoom(rooms: DiscoveryRoom[]) {
-  const demoAddress = "0xea3b5d2cf6eacd3dd6241736082b7698e519a675";
-  return rooms.find(room => room.token.origin === "hypr" && room.token.dataStatus !== "demo" && room.token.address.toLowerCase() === demoAddress);
+  return rooms.find(room => isTestnetDemoRoom(room.token));
 }
 
 const THROWAWAY = /^(test|demo|asdf|foo|bar|tmp|xxx+|kkk+|aaa+|hypr testnet demo)$/i;

@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Launch } from "@/lib/types";
 import type { CombinedLaunchDataSource } from "@/lib/launch-data";
 import { useLiveLaunches } from "@/lib/use-live-launches";
-import { discoveryRooms, selectDiscoveryRooms } from "@/lib/discovery";
+import { discoveryRooms, introductoryDemoRoom, selectDiscoveryRooms } from "@/lib/discovery";
 import { Header } from "./header";
 import { SiteFooter } from "./site-footer";
 import { CommandPalette, Constellation } from "./discover-visuals";
@@ -18,6 +18,7 @@ export function DiscoverClient({ initialLaunches, source, children }: { initialL
   const [paletteOpen, setPaletteOpen] = useState(false);
   const catalog = useMemo(() => discoveryRooms(live.launches, []), [live.launches]);
   const rooms = useMemo(() => selectDiscoveryRooms(catalog, "", "all", [], "live").slice(0, 3), [catalog]);
+  const introDemo = introductoryDemoRoom(catalog);
   const liveCount = catalog.filter(room => room.token.broadcastStatus === "live").length;
   return <main className="discover-page home-landing"><Header />
     <div className="aurora" aria-hidden="true"><span className="aurora-a" /><span className="aurora-b" /><span className="aurora-c" /></div>
@@ -31,10 +32,10 @@ export function DiscoverClient({ initialLaunches, source, children }: { initialL
       </div>{rooms.length > 0 && <Constellation launches={rooms.map(room => room.token)} totalRooms={discoveryRooms(live.launches, []).length} />}</section>
       <p className="discovery-safety">Robinhood Chain testnet preview · Test assets have no real value. No wallet needed to watch.</p>
       {live.error && <p className="discovery-service-notice" role="status">Live updates are unavailable. Displayed rooms may be out of date.</p>}
-      <section className="home-discovery-preview" aria-labelledby="home-discover-title"><div className="section-heading"><div><span className="eyebrow">THE DISCOVERY ROOM</span><h2 id="home-discover-title">Find your next favorite.</h2></div><div className="home-discovery-actions">{liveCount > 0 && <Link className="home-discovery-live" href="/discover?view=live">● {liveCount} live {liveCount === 1 ? "room" : "rooms"} ↗</Link>}<Link className="secondary-button" href="/discover">Explore all rooms ↗</Link></div></div>{rooms.length > 0 ? <div className="discovery-card-grid">{rooms.map(room => <DiscoveryRoomCard room={room} key={room.token.address} />)}</div> : <div className="home-discovery-empty"><h3>{liveCount === 1 ? "A room is live right now." : liveCount > 1 ? `${liveCount} rooms are live right now.` : "A dedicated home for discovery."}</h3><p>{liveCount ? "Live testnet rooms are available to watch, even when test names are hidden from Explore." : "Browse live rooms, planned shows, and your saved favorites—without wading through a trading dashboard."}</p><Link href={liveCount ? "/discover?view=live" : "/discover"} className="secondary-button">{liveCount ? "See live rooms ↗" : "Open Discover ↗"}</Link></div>}</section>
+      <section className="home-discovery-preview" aria-labelledby="home-discover-title"><div className="section-heading"><div><span className="eyebrow">THE DISCOVERY ROOM</span><h2 id="home-discover-title">Find your next favorite.</h2></div><div className="home-discovery-actions">{liveCount > 0 && <Link className="home-discovery-live" href="/discover?view=live">● {liveCount} live {liveCount === 1 ? "room" : "rooms"} ↗</Link>}<Link className="secondary-button" href="/discover">Explore all rooms ↗</Link></div></div>{rooms.length > 0 ? <div className="discovery-card-grid">{rooms.map(room => <DiscoveryRoomCard room={room} key={room.token.address} />)}</div> : <div className="home-discovery-empty"><h3>{liveCount === 1 ? "A room is live right now." : liveCount > 1 ? `${liveCount} rooms are live right now.` : introDemo ? "Explore a room between shows." : "A dedicated home for discovery."}</h3><p>{liveCount ? "Live testnet rooms are available to watch, even when test names are hidden from Explore." : introDemo ? "Visit our real testnet demo room to see how HYPR works. The creator may be offline; no wallet is needed to look around." : "Browse live rooms, planned shows, and your saved favorites—without wading through a trading dashboard."}</p><Link href={liveCount ? "/discover?view=live" : introDemo ? `/room/${introDemo.token.address}` : "/discover"} className="secondary-button">{liveCount ? "See live rooms ↗" : introDemo ? "Explore demo room ↗" : "Open Discover ↗"}</Link></div>}</section>
       {children}
       <RoomFaq compact />
-      <section id="rooms" className="rooms-callout"><div><span className="eyebrow">FOR CREATORS</span><h2>Don’t start over every time you go live.</h2><p>Your room, profile, chat, and next show stay in one place. Create a testnet coin & room, then open your studio. Creating a coin never turns your camera on.</p><a href="#launch" className="primary-button">Create your room →</a></div><div className="callout-orbit" aria-hidden="true"><span>watch</span><span>save</span><span>return</span><strong>HYPR</strong></div></section>
+      <section id="rooms" className="rooms-callout"><div><span className="eyebrow">FOR CREATORS</span><h2>Don’t start over every time you go live.</h2><p>Your room, profile, chat, and next show stay in one place. Create a testnet coin & room, then open your studio. Creating a coin never turns your camera on.</p><Link href="/creators" className="primary-button">See how it works →</Link></div><div className="callout-orbit" aria-hidden="true"><span>watch</span><span>save</span><span>return</span><strong>HYPR</strong></div></section>
       <SiteFooter />
     </div>
     <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} launches={live.launches.filter(token => token.dataStatus !== "demo")} />

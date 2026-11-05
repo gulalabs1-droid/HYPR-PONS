@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { Launch } from "@/lib/types";
 import type { CombinedLaunchDataSource } from "@/lib/launch-data";
-import { broadcastLabel, discoveryFilters, discoveryRooms, isThrowawayRoom, selectDiscoveryRooms, type DiscoveryFilter, type DiscoverySort } from "@/lib/discovery";
+import { broadcastLabel, discoveryFilters, discoveryRooms, introductoryDemoRoom, isThrowawayRoom, selectDiscoveryRooms, type DiscoveryFilter, type DiscoverySort } from "@/lib/discovery";
 import { useLiveLaunches } from "@/lib/use-live-launches";
 import { useGrowth } from "@/lib/use-growth";
 import { SAVED_ROOMS_EVENT, savedRooms } from "@/lib/saved-rooms";
@@ -41,6 +41,8 @@ export function DiscoveryDirectory({ initialLaunches, source }: { initialLaunche
   const hiddenLiveRooms = rooms.filter(room => isThrowawayRoom(room) && room.token.broadcastStatus === "live").length;
   const counts = { all: rooms.filter(room => includeTestRooms || !isThrowawayRoom(room)).length, live: rooms.filter(room => room.token.broadcastStatus === "live").length, upcoming: rooms.filter(room => room.upcoming).length, saved: rooms.filter(room => saved.includes(room.token.address.toLowerCase())).length };
   const spotlight = selectDiscoveryRooms(rooms, "", "all", saved, "live")[0];
+  const introDemo = introductoryDemoRoom(rooms);
+  const featured = spotlight || introDemo;
   const shows = rooms.filter(room => room.upcoming).sort((a, b) => Date.parse(a.creator!.show!.startsAt) - Date.parse(b.creator!.show!.startsAt)).slice(0, 4);
   function update(key: string, value: string) {
     const next = new URLSearchParams(params.toString());
@@ -61,10 +63,10 @@ export function DiscoveryDirectory({ initialLaunches, source }: { initialLaunche
         <header className="discovery-heading"><div><span className="eyebrow">CREATORS, NOT JUST TICKERS</span><h1>Find your next<br /><em>“I was there.”</em></h1><p>Live conversations. Familiar faces. A room to come back to.</p></div><span className="discovery-preview-tag">TESTNET PREVIEW</span></header>
         <div className="discovery-search-row"><label className="discovery-search"><span aria-hidden="true">⌕</span><span className="sr-only">Search creators, rooms, coins, or show titles</span><input aria-label="Search creators, rooms, coins, or show titles" type="search" value={query} maxLength={200} placeholder="Find a creator, room, or show…" onChange={event => update("q", event.target.value)} />{query && <button aria-label="Clear search" onClick={() => update("q", "")}>×</button>}</label><label className="discovery-sort"><span className="sr-only">Sort rooms</span><select value={sort} onChange={event => update("sort", event.target.value)}><option value="live">Live first</option><option value="new">Index order</option><option value="name">Name A–Z</option></select></label></div>
         {filter === "all" && !query && !includeTestRooms && hiddenLiveRooms > 0 && <div className="discovery-live-notice" role="status"><span className="discovery-live-notice-badge">LIVE NOW</span><p>{hiddenLiveRooms === 1 ? "A test-named room is live." : `${hiddenLiveRooms} test-named rooms are live.`} Watching is free.</p><button className="secondary-button" type="button" onClick={() => update("view", "live")}>See live rooms ↗</button></div>}
-        {filter === "all" && !query && <section className={`discovery-spotlight${spotlight ? "" : " is-empty"}`} aria-label="Room spotlight">
-          <div className="spotlight-art" aria-hidden="true"><TokenArt seed={spotlight?.token.address || "HYPR-discovery"} glyph={spotlight ? tokenGlyph(spotlight.token.logo, spotlight.token.symbol) : "H"} /><div className="spotlight-art-caption">{spotlight ? "GENERATIVE ROOM ARTWORK" : "YOUR NEXT COMMUNITY STARTS HERE"}</div></div>
-          <div className="spotlight-copy"><span className="eyebrow">{spotlight?.token.broadcastStatus === "live" ? "ON AIR NOW" : "BEYOND THE BROADCAST"}</span><h2>{spotlight ? spotlight.title : "The stream ends.\nThe room stays."}</h2><p>{spotlight ? spotlight.description : "Discover a creator, save their room, and have a place to return when they go live again. No token purchase needed."}</p>
-            {spotlight ? <><span className={`discovery-status${spotlight.token.broadcastStatus === "live" ? " is-live" : ""}`}>{broadcastLabel(spotlight.token)}</span><Link className="primary-button" href={`/room/${spotlight.token.address}`}>{spotlight.token.broadcastStatus === "live" ? "Watch now" : "Meet the room"} ↗</Link></> : <Link className="primary-button" href="/#launch">Create a coin & room ↗</Link>}
+        {filter === "all" && !query && <section className={`discovery-spotlight${!spotlight && introDemo ? " is-demo" : featured ? "" : " is-empty"}`} aria-label="Room spotlight">
+          <div className="spotlight-art" aria-hidden="true"><TokenArt seed={featured?.token.address || "HYPR-discovery"} glyph={featured ? tokenGlyph(featured.token.logo, featured.token.symbol) : "H"} /><div className="spotlight-art-caption">{featured ? "GENERATIVE ROOM ARTWORK" : "YOUR NEXT COMMUNITY STARTS HERE"}</div></div>
+          <div className="spotlight-copy"><span className="eyebrow">{!spotlight && introDemo ? "TESTNET DEMO ROOM" : spotlight?.token.broadcastStatus === "live" ? "ON AIR NOW" : "BEYOND THE BROADCAST"}</span><h2>{spotlight ? spotlight.title : introDemo ? "See how a room works." : "The stream ends.\nThe room stays."}</h2><p>{spotlight ? spotlight.description : introDemo ? "Explore a real testnet room, even between broadcasts. No wallet is needed to look around." : "Discover a creator, save their room, and have a place to return when they go live again. No token purchase needed."}</p>
+            {featured ? <><span className={`discovery-status${featured.token.broadcastStatus === "live" ? " is-live" : ""}`}>{broadcastLabel(featured.token)}</span><Link className="primary-button" href={`/room/${featured.token.address}`}>{!spotlight ? "Explore demo room" : featured.token.broadcastStatus === "live" ? "Watch now" : "Meet the room"} ↗</Link></> : <Link className="primary-button" href="/creators">Learn about creator rooms ↗</Link>}
             <small>Room artwork, not recorded footage. No automatic playback.</small>
           </div>
         </section>}
@@ -79,7 +81,7 @@ export function DiscoveryDirectory({ initialLaunches, source }: { initialLaunche
         </section>
         <section className="discovery-agenda" aria-labelledby="agenda-title"><div className="discovery-results-heading"><div><span className="eyebrow">MAKE IT A REGULAR THING</span><h2 id="agenda-title">On the calendar</h2></div><button onClick={() => update("view", "upcoming")} className="discovery-text-button">Browse shows ↗</button></div>{shows.length ? <div className="discovery-show-list">{shows.map(room => <Link href={`/room/${room.token.address}`} key={room.token.address}><ShowTime startsAt={room.creator!.show!.startsAt} /><strong>{room.creator!.show!.title}</strong><span>{room.title} ↗</span></Link>)}</div> : <div className="discovery-agenda-empty"><span aria-hidden="true">◷</span><div><h3>No upcoming shows announced yet.</h3><p>Creators can schedule their next stream from their room. Times appear here in your local time zone.</p></div></div>}</section>
         <RoomFaq compact />
-        <div className="discovery-creator-banner"><div><span className="eyebrow">DON’T JUST GO LIVE. BUILD A HOME.</span><h2>Your people. Your room. Your next show.</h2><p>Create a coin & room, personalize your profile, and schedule a reason to return.</p></div><Link className="primary-button" href="/#launch">Create a room ↗</Link></div>
+        <div className="discovery-creator-banner"><div><span className="eyebrow">DON’T JUST GO LIVE. BUILD A HOME.</span><h2>Your people. Your room. Your next show.</h2><p>Learn how to host a show and get help with your first testnet room.</p></div><Link className="primary-button" href="/creators">For creators ↗</Link></div>
         <SiteFooter />
       </div>
     </div>

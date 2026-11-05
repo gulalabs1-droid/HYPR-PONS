@@ -21,6 +21,13 @@ export function discoveryRooms(launches: Launch[], creators: GrowthRoom[], now =
   });
 }
 
+// This is an actual HYPR testnet launch, not a fixture or a claim of activity.
+// Only offer the tour when that exact room is present in the current index.
+export function introductoryDemoRoom(rooms: DiscoveryRoom[]) {
+  const demoAddress = "0xea3b5d2cf6eacd3dd6241736082b7698e519a675";
+  return rooms.find(room => room.token.origin === "hypr" && room.token.dataStatus !== "demo" && room.token.address.toLowerCase() === demoAddress);
+}
+
 const THROWAWAY = /^(test|demo|asdf|foo|bar|tmp|xxx+|kkk+|aaa+|hypr testnet demo)$/i;
 
 /** Pilot/catalog hygiene: obvious scratch names stay out of Explore unless searched. Never guesses quality. */

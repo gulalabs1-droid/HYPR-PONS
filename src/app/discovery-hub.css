@@ -152,6 +152,7 @@
   .discovery-heading .eyebrow { font-size: 8px; }
   .discovery-preview-tag { position: absolute; top: 0; left: 0; font-size: 8px; padding: 5px 8px; margin: 0; }
   .discovery-spotlight { grid-template-columns: 1fr; border-radius: 16px; }
+  .discovery-spotlight:is(.is-demo, .is-empty) .spotlight-art { display: none; }
   .spotlight-art { min-height: 190px; max-height: 220px; }
   .spotlight-copy { padding: 24px; }
   .spotlight-copy h2 { font-size: 29px; }

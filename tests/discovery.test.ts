@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { broadcastLabel, discoveryRooms, isThrowawayRoom, selectDiscoveryRooms } from "../src/lib/discovery";
+import { broadcastLabel, discoveryRooms, introductoryDemoRoom, isThrowawayRoom, selectDiscoveryRooms } from "../src/lib/discovery";
 import type { Launch } from "../src/lib/types";
 import type { GrowthRoom } from "../src/lib/growth";
 import { DiscoveryRoomCard } from "../src/components/discovery-room-card";
@@ -18,6 +18,14 @@ function profile(launch: Launch, overrides: Partial<GrowthRoom> = {}): GrowthRoo
 test("discovery excludes demo records and deduplicates case-insensitively", () => {
   const real = token(1); const rooms = discoveryRooms([real, { ...real }, token(2, { dataStatus: "demo" })], []);
   assert.equal(rooms.length, 1); assert.equal(rooms[0].token.address, real.address);
+});
+test("the introductory room is shown only when the indexed HYPR testnet demo is present", () => {
+  const address = "0xeA3b5d2Cf6EAcD3dd6241736082b7698E519a675" as const;
+  const actual = token(1, { address, name: "HYPR Testnet Demo", symbol: "HYPRTEST" });
+  assert.equal(introductoryDemoRoom(discoveryRooms([actual], []))?.token.address, address);
+  assert.equal(introductoryDemoRoom(discoveryRooms([token(2, { name: actual.name, symbol: actual.symbol })], [])), undefined);
+  assert.equal(introductoryDemoRoom(discoveryRooms([{ ...actual, origin: "pons" }], [])), undefined);
+  assert.equal(introductoryDemoRoom(discoveryRooms([{ ...actual, dataStatus: "demo" }], [])), undefined);
 });
 test("creator and show search uses real profiles, independent of coin names", () => {
   const real = token(1); const rooms = discoveryRooms([real], [profile(real)], Date.parse("2029-01-01"));

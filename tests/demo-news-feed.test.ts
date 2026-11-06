@@ -4,9 +4,22 @@ import { createElement } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { NativeLiveRoom } from "../src/components/native-live-room";
 import { isTestnetDemoRoom } from "../src/lib/demo-news";
+import { fallbackNewsVideo, findNBCNewsBroadcast, NBC_NEWS_CHANNEL, NBC_NEWS_VERIFIED_VIDEO, NBC_NEWS_VERIFIED_UNTIL } from "../src/lib/nbc-news";
 import type { Launch } from "../src/lib/types";
 
 const demo = { address: "0xeA3b5d2Cf6EAcD3dd6241736082b7698E519a675", deployer: `0x${"2".repeat(40)}`, origin: "hypr", dataStatus: "partial" } as Launch;
+
+test("the news lookup accepts only a live NBC News NOW broadcast", () => {
+  const item = { id: { videoId: "0uwAtfBIVx0" }, snippet: { channelId: NBC_NEWS_CHANNEL, title: "LIVE: NBC News NOW - Nov. 5", liveBroadcastContent: "live" } };
+  assert.equal(findNBCNewsBroadcast({ items: [item] }), "0uwAtfBIVx0");
+  assert.equal(findNBCNewsBroadcast({ items: [{ ...item, snippet: { ...item.snippet, title: "Stay Tuned NOW" } }] }), null);
+  assert.equal(findNBCNewsBroadcast({ items: [{ ...item, snippet: { ...item.snippet, channelId: "another-channel" } }] }), null);
+  assert.equal(findNBCNewsBroadcast({ items: [{ ...item, snippet: { ...item.snippet, liveBroadcastContent: "none" } }] }), null);
+  assert.equal(findNBCNewsBroadcast({ items: [{ ...item, id: { videoId: "bad" } }] }), null);
+  assert.equal(findNBCNewsBroadcast({ items: null }), null);
+  assert.equal(fallbackNewsVideo(NBC_NEWS_VERIFIED_UNTIL - 1), NBC_NEWS_VERIFIED_VIDEO);
+  assert.equal(fallbackNewsVideo(NBC_NEWS_VERIFIED_UNTIL), null);
+});
 
 test("the external news feature is limited to the actual HYPR testnet demo", () => {
   assert.equal(isTestnetDemoRoom(demo), true);
@@ -35,11 +48,11 @@ test("the external feed yields to the creator and disappears when live status is
     observe() { this.callback([{ isIntersecting: true, intersectionRatio: 1 }]); }
     disconnect() {}
   }
-  Object.defineProperty(globalThis, "window", { configurable: true, value: { IntersectionObserver: Observer, matchMedia() { return { matches: false }; }, setInterval(callback: () => void) { tick = callback; return 1; }, clearInterval() {}, addEventListener() {}, removeEventListener() {} } });
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { IntersectionObserver: Observer, matchMedia() { return { matches: false }; }, setInterval(callback: () => void, delay: number) { if (delay === 5000) tick = callback; return 1; }, clearInterval() {}, addEventListener() {}, removeEventListener() {} } });
   Object.defineProperty(globalThis, "IntersectionObserver", { configurable: true, value: Observer });
   Object.defineProperty(globalThis, "document", { configurable: true, value: { visibilityState: "visible", addEventListener() {}, removeEventListener() {} } });
   Object.defineProperty(globalThis, "navigator", { configurable: true, value: { mediaDevices: { async getUserMedia() { deviceRequests++; throw Error("Media must not be requested"); } } } });
-  Object.defineProperty(globalThis, "fetch", { configurable: true, value: async () => statuses[calls++] });
+  Object.defineProperty(globalThis, "fetch", { configurable: true, value: async (url: string) => url === "/api/news" ? Response.json({ videoId: NBC_NEWS_VERIFIED_VIDEO }) : statuses[calls++] });
   try {
     await act(async () => { renderer = create(createElement(NativeLiveRoom, { token: demo }), { createNodeMock: () => ({}) }); });
     const text = () => JSON.stringify(renderer!.toJSON());

@@ -44,13 +44,24 @@ test("a temporary lookup failure does not interrupt an already playing news vide
   Object.defineProperty(globalThis, "window", { configurable: true, value: { IntersectionObserver: Observer, matchMedia() { return { matches: false }; }, setInterval(callback: () => void) { refresh = callback; return 1; }, clearInterval() {} } });
   Object.defineProperty(globalThis, "IntersectionObserver", { configurable: true, value: Observer });
   Object.defineProperty(globalThis, "document", { configurable: true, value: { visibilityState: "visible", addEventListener() {}, removeEventListener() {} } });
-  Object.defineProperty(globalThis, "fetch", { configurable: true, value: async () => { if (calls++) throw new Error("Network offline"); return Response.json({ videoId: NBC_NEWS_VERIFIED_VIDEO }); } });
+  Object.defineProperty(globalThis, "fetch", { configurable: true, value: async () => {
+    switch (calls++) {
+      case 0: return Response.json({ videoId: NBC_NEWS_VERIFIED_VIDEO });
+      case 1: throw new Error("Network offline");
+      case 2: return Response.json({ videoId: null }, { status: 503 });
+      default: return Response.json({ videoId: null });
+    }
+  } });
   try {
     await act(async () => { renderer = create(createElement(DemoNewsFeed), { createNodeMock: () => ({}) }); });
     assert.match(JSON.stringify(renderer!.toJSON()), /embed\/0uwAtfBIVx0/);
     assert.equal(renderer!.root.findByType("a").props.href, `https://www.youtube.com/watch?v=${NBC_NEWS_VERIFIED_VIDEO}`);
     await act(async () => refresh!());
     assert.match(JSON.stringify(renderer!.toJSON()), /embed\/0uwAtfBIVx0/);
+    await act(async () => refresh!());
+    assert.match(JSON.stringify(renderer!.toJSON()), /embed\/0uwAtfBIVx0/);
+    await act(async () => refresh!());
+    assert.doesNotMatch(JSON.stringify(renderer!.toJSON()), /embed\/0uwAtfBIVx0/);
   } finally {
     await act(async () => renderer?.unmount());
     for (const [key, descriptor] of saved) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else Reflect.deleteProperty(globalThis, key); }

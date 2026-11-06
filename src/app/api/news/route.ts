@@ -15,7 +15,12 @@ const lookupNBCNews = unstable_cache(async () => {
 export async function GET() {
   let videoId: string | null = null;
   if (process.env.YOUTUBE_DATA_API_KEY) {
-    try { videoId = await lookupNBCNews(); } catch { /* keep the current verified fallback when possible */ }
+    try { videoId = await lookupNBCNews(); } catch {
+      // Let an already-playing client keep its player on a temporary provider failure.
+      // A successful empty result remains distinct: that means no matching live stream.
+      videoId = fallbackNewsVideo();
+      if (!videoId) return Response.json({ videoId: null }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    }
   }
   videoId ||= fallbackNewsVideo();
   return Response.json({ videoId }, { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60" } });

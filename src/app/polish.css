@@ -251,8 +251,8 @@ p { text-wrap: pretty; }
   .native-live-watch-first .native-live-mark { padding: 28px 20px; }
   .room-header-compact { flex-wrap: wrap; }
   .room-header-compact .room-token-identity { flex: 1 1 100%; }
-  .room-header-compact .share-controls { flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 8px; }
-  .room-header-compact .share-controls::-webkit-scrollbar { display: none; }
+  .room-header-compact > .share-controls { flex: 1 1 100%; flex-wrap: wrap; overflow: visible; gap: 8px; }
+  .room-header-compact > .share-controls > .share-controls { display: contents; }
   .room-header-compact .share-controls .secondary-button, .room-header-compact .share-controls button { flex: 0 0 auto; min-height: 40px; padding: 8px 14px; font-size: 13px; }
   .room-section-nav { left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); width: auto; padding: 6px; border: 1px solid var(--glass-line-strong); border-radius: 22px; background: rgba(16, 18, 22, .82); backdrop-filter: saturate(160%) blur(22px); -webkit-backdrop-filter: saturate(160%) blur(22px); box-shadow: 0 20px 50px -10px rgba(0, 0, 0, .9); }
   .room-section-nav button { gap: 2px; min-height: 52px; border-radius: 16px; font-size: 12px; }

@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { createElement } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { NativeLiveRoom } from "../src/components/native-live-room";
+import { DemoNewsFeed } from "../src/components/demo-news-feed";
 import { isTestnetDemoRoom } from "../src/lib/demo-news";
 import { fallbackNewsVideo, findNBCNewsBroadcast, NBC_NEWS_CHANNEL, NBC_NEWS_VERIFIED_VIDEO, NBC_NEWS_VERIFIED_UNTIL } from "../src/lib/nbc-news";
 import type { Launch } from "../src/lib/types";
@@ -29,6 +30,31 @@ test("the external news feature is limited to the actual HYPR testnet demo", () 
   const previous = process.env.NEXT_PUBLIC_HYPR_NETWORK;
   try { process.env.NEXT_PUBLIC_HYPR_NETWORK = "mainnet"; assert.equal(isTestnetDemoRoom(demo), false); }
   finally { if (previous === undefined) delete process.env.NEXT_PUBLIC_HYPR_NETWORK; else process.env.NEXT_PUBLIC_HYPR_NETWORK = previous; }
+});
+
+test("a temporary lookup failure does not interrupt an already playing news video", async () => {
+  const keys = ["window", "document", "fetch", "IntersectionObserver"] as const;
+  const saved = keys.map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const);
+  let refresh: (() => void) | undefined; let calls = 0; let renderer: ReactTestRenderer | undefined;
+  class Observer {
+    constructor(private callback: (entries: Array<{ isIntersecting: boolean; intersectionRatio: number }>) => void) {}
+    observe() { this.callback([{ isIntersecting: true, intersectionRatio: 1 }]); }
+    disconnect() {}
+  }
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { IntersectionObserver: Observer, matchMedia() { return { matches: false }; }, setInterval(callback: () => void) { refresh = callback; return 1; }, clearInterval() {} } });
+  Object.defineProperty(globalThis, "IntersectionObserver", { configurable: true, value: Observer });
+  Object.defineProperty(globalThis, "document", { configurable: true, value: { visibilityState: "visible", addEventListener() {}, removeEventListener() {} } });
+  Object.defineProperty(globalThis, "fetch", { configurable: true, value: async () => { if (calls++) throw new Error("Network offline"); return Response.json({ videoId: NBC_NEWS_VERIFIED_VIDEO }); } });
+  try {
+    await act(async () => { renderer = create(createElement(DemoNewsFeed), { createNodeMock: () => ({}) }); });
+    assert.match(JSON.stringify(renderer!.toJSON()), /embed\/0uwAtfBIVx0/);
+    assert.equal(renderer!.root.findByType("a").props.href, `https://www.youtube.com/watch?v=${NBC_NEWS_VERIFIED_VIDEO}`);
+    await act(async () => refresh!());
+    assert.match(JSON.stringify(renderer!.toJSON()), /embed\/0uwAtfBIVx0/);
+  } finally {
+    await act(async () => renderer?.unmount());
+    for (const [key, descriptor] of saved) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else Reflect.deleteProperty(globalThis, key); }
+  }
 });
 
 test("the external feed yields to the creator and disappears when live status is unavailable", async () => {

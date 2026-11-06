@@ -26,7 +26,7 @@ export function DemoNewsFeed() {
         if (!active) return;
         if (currentVideo.current && next !== currentVideo.current) setAutoplay(false);
         currentVideo.current = next; setVideoId(next); setNewsChecked(true);
-      } catch { if (active) { currentVideo.current = null; setVideoId(null); setNewsChecked(true); } }
+      } catch { if (active) setNewsChecked(true); /* Keep the current player during a temporary lookup failure. */ }
     }
     void check();
     const timer = window.setInterval(() => { if (document.visibilityState === "visible") void check(); }, 300000);
@@ -63,11 +63,12 @@ export function DemoNewsFeed() {
   }, []);
 
   const embed = `https://www.youtube-nocookie.com/embed/${videoId}?playsinline=1&autoplay=${autoplay ? "1" : "0"}&mute=1`;
+  const watchUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : NBC_NEWS_CHANNEL_URL;
   return <div className="demo-news">
     <div className="demo-news-heading"><span className="eyebrow">EXTERNAL NEWS · YOUTUBE</span><strong>NBC News</strong><p>The HYPR creator is offline. Watch an independent news stream while you’re here.</p></div>
     <div className="demo-news-player" ref={frameArea}>
       {!newsChecked ? <p>Finding NBC News…</p> : !videoId ? <p>NBC News is temporarily unavailable here. <button className="claim-link" onClick={() => { setNewsChecked(false); setRetry(value => value + 1); }}>Try again</button></p> : visible ? <iframe src={embed} title="NBC News — independent YouTube player" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /> : <p>News pauses when the player is out of view.</p>}
     </div>
-    <div className="demo-news-note"><p>YouTube may show ads, collect playback data, or limit availability. This feed is provided by NBC News; HYPR is independent.</p><a href={NBC_NEWS_CHANNEL_URL} target="_blank" rel="noopener noreferrer">Can’t play? Open NBC News on YouTube ↗</a></div>
+    <div className="demo-news-note"><p>YouTube may ask you to sign in, show ads, collect playback data, or limit availability. This feed is provided by NBC News; HYPR is independent.</p><a href={watchUrl} target="_blank" rel="noopener noreferrer">Can’t play? Open NBC News on YouTube ↗</a></div>
   </div>;
 }

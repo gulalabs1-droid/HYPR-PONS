@@ -1,5 +1,5 @@
 export const NBC_NEWS_CHANNEL = "UCeY0bbntWzzVIaj2z3QigXg";
-export const NBC_NEWS_CHANNEL_URL = "https://www.youtube.com/@NBCNews/live";
+export const NBC_NEWS_CHANNEL_URL = "https://www.nbcnews.com/now";
 
 // Manually verified on November 5, 2026. This is deliberately short-lived:
 // without a live lookup, an old broadcast must not be presented indefinitely.

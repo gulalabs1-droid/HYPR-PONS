@@ -69,6 +69,6 @@ export function DemoNewsFeed() {
     <div className="demo-news-player" ref={frameArea}>
       {!newsChecked ? <p>Finding NBC News…</p> : !videoId ? <p>NBC News is temporarily unavailable here. <button className="claim-link" onClick={() => { setNewsChecked(false); setRetry(value => value + 1); }}>Try again</button></p> : visible ? <iframe src={embed} title="NBC News — independent YouTube player" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /> : <p>News pauses when the player is out of view.</p>}
     </div>
-    <div className="demo-news-note"><p>YouTube may ask you to sign in, show ads, collect playback data, or limit availability. This feed is provided by NBC News; HYPR is independent.</p><a href={watchUrl} target="_blank" rel="noopener noreferrer">Can’t play? Open NBC News on YouTube ↗</a></div>
+    <div className="demo-news-note"><p>YouTube may ask you to sign in, show ads, collect playback data, or limit availability. This feed is provided by NBC News; HYPR is independent.</p><a href={watchUrl} target="_blank" rel="noopener noreferrer">{videoId ? "Can’t play? Open this broadcast on YouTube ↗" : "Watch on NBC News ↗"}</a></div>
   </div>;
 }

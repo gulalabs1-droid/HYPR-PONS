@@ -1,6 +1,6 @@
 # HYPR live data and native broadcasting
 
-Updated October 13, 2026.
+Updated November 6, 2026.
 
 ## Sources and freshness
 
@@ -13,6 +13,12 @@ Updated October 13, 2026.
 - Curve phase `Live` is displayed as **Active curve**, distinct from broadcast status.
 - Recent trade counts/volume cover the confirmed 2,500-block scan, not lifetime activity or 24-hour volume. USD prices, historical charts and unmeasured HYPE remain unavailable.
 - Real onchain token names remain unchanged, including earlier test launches. Live-first discovery ranks actual broadcasts/viewer counts, then measured curve progress; it does not fabricate popularity or silently relabel tokens.
+
+## External news in the test room
+
+The HYPR testnet demo can show an independently provided NBC News YouTube player while its creator is offline. This is not a native HYPR broadcast, and it does not affect creator live status or viewer counts. The server-only `YOUTUBE_DATA_API_KEY` queries YouTube for currently live, embeddable NBC News NOW broadcasts and caches the result for 30 minutes. Keep this key restricted to YouTube Data API and out of client bundles. The temporary manually verified fallback expires; absent a valid result, the room links to NBC rather than presenting an old video as live.
+
+The player preserves YouTube's controls and may show ads or require a viewer to sign in. Its availability, geographic restrictions, and bot checks are controlled by YouTube and NBC. A direct source link remains available if embedding fails. No external stream is restreamed or recorded by HYPR.
 
 ## Creator/viewer workflow
 

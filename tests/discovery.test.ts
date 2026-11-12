@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { broadcastLabel, discoveryRooms, introductoryDemoRoom, isThrowawayRoom, selectDiscoveryRooms } from "../src/lib/discovery";
+import { broadcastLabel, discoveryRooms, introductoryDemoRoom, isThrowawayRoom, selectDiscoveryRooms, watchLiveRooms } from "../src/lib/discovery";
 import type { Launch } from "../src/lib/types";
 import type { GrowthRoom } from "../src/lib/growth";
 import { DiscoveryRoomCard } from "../src/components/discovery-room-card";
@@ -43,6 +43,13 @@ test("live filtering requires confirmed media, not streamLive or a trading curve
   const rooms = discoveryRooms([token(1, { broadcastStatus: "unavailable", streamLive: true, curvePhase: "Live" }), token(2, { broadcastStatus: "checking" }), token(3, { broadcastStatus: "live" })], []);
   assert.deepEqual(selectDiscoveryRooms(rooms, "", "live", [], "live").map(room => room.token.rank), [3]);
   assert.equal(broadcastLabel(rooms[0].token), "Live status unavailable");
+});
+test("the watch page only promotes confirmed live creator rooms", () => {
+  const checking = token(1, { broadcastStatus: "checking", streamLive: true });
+  const live = token(2, { broadcastStatus: "live" });
+  const scratch = token(3, { name: "kkk", broadcastStatus: "live" });
+  const offline = token(4, { broadcastStatus: "offline", streamLive: true });
+  assert.deepEqual(watchLiveRooms(discoveryRooms([checking, live, scratch, offline], [])).map(room => room.token.address), [live.address]);
 });
 test("saved filter is case-insensitive, never invents follows, and combines with search", () => {
   const rooms = discoveryRooms([token(1), token(2)], []);

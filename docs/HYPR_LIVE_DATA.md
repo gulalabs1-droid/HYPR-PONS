@@ -16,9 +16,9 @@ Updated November 6, 2026.
 
 ## External news in the test room
 
-The HYPR testnet demo can show an independently provided NBC News YouTube player while its creator is offline. This is not a native HYPR broadcast, and it does not affect creator live status or viewer counts. The server-only `YOUTUBE_DATA_API_KEY` queries YouTube for currently live, embeddable NBC News NOW broadcasts and caches the result for 30 minutes. Keep this key restricted to YouTube Data API and out of client bundles. The temporary manually verified fallback expires; absent a valid result, the room links to NBC rather than presenting an old video as live.
+The HYPR testnet demo can show an independently provided NBC News YouTube player while its creator is offline. The separate `/watch` page offers this feed and ABC News Live, plus confirmed creator broadcasts and published schedules when available. These external players are not native HYPR broadcasts and do not affect creator live status or viewer counts. The server-only `YOUTUBE_DATA_API_KEY` queries YouTube for currently live, embeddable broadcasts from the allowlisted NBC and ABC channels. NBC results are cached for 30 minutes and ABC results for one hour; this reduces requests but does not guarantee a fixed daily quota across distributed instances. Keep the key restricted to YouTube Data API and out of client bundles. The temporary manually verified NBC fallback expires; absent a valid result, the player links to the broadcaster rather than presenting an old video as live.
 
-The player preserves YouTube's controls and may show ads or require a viewer to sign in. Its availability, geographic restrictions, and bot checks are controlled by YouTube and NBC. A direct source link remains available if embedding fails. No external stream is restreamed or recorded by HYPR.
+The player preserves YouTube's controls and may show ads or require a viewer to sign in. Its availability, geographic restrictions, and bot checks are controlled by YouTube and the broadcasters. A direct source link remains available if embedding fails. No external stream is restreamed or recorded by HYPR. The Watch page links to the NBC demo room's chat; it does not claim that chat follows the ABC broadcast.
 
 ## Creator/viewer workflow
 

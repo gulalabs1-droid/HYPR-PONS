@@ -10,7 +10,7 @@ import { LiveAlerts } from "./live-alerts";
 import { resetCommunitySession } from "@/lib/community-client";
 import { COMMUNITY_UPDATED_EVENT } from "@/lib/growth";
 
-export function Header({ active }: { active?: "discover" | "protocol" | "following" }) {
+export function Header({ active }: { active?: "watch" | "discover" | "protocol" | "following" }) {
   const wallet = useWalletStatus();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -72,6 +72,7 @@ export function Header({ active }: { active?: "discover" | "protocol" | "followi
     <div className="header-inner">
       <Link href="/" className="brand" aria-label="HYPR home"><span className="brand-mark">H</span><span>HYPR</span></Link>
       <nav className="main-nav" aria-label="Main navigation">
+        <Link className={active === "watch" ? "active" : ""} aria-current={active === "watch" ? "page" : undefined} href="/watch">Watch</Link>
         <Link className={active === "discover" ? "active" : ""} aria-current={active === "discover" ? "page" : undefined} href="/discover">Discover</Link>
         <Link className={active === "following" ? "active" : ""} aria-current={active === "following" ? "page" : undefined} href="/following">Following</Link>
         <Link href="/#launch">Create</Link>

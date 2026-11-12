@@ -9,6 +9,7 @@ export function SiteFooter() {
         <span>HYPR is independent and is not affiliated with or endorsed by Robinhood Markets, Inc.</span>
       </div>
       <nav className="site-footer-links" aria-label="Footer">
+        <Link href="/watch">Watch</Link>
         <Link href="/#launch">Create</Link>
         <Link href="/discover">Discover</Link>
         <Link href="/creators">For creators</Link>

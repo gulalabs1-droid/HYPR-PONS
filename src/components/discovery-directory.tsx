@@ -66,7 +66,7 @@ export function DiscoveryDirectory({ initialLaunches, source }: { initialLaunche
           <div className="discovery-categories-title"><h2 id="watch-categories-title">Find something to watch</h2><span>Choose a place to start</span></div>
           <div className="discovery-categories-grid">
             <button type="button" onClick={() => update("view", "live")}><span aria-hidden="true">◉</span><strong>Live creators</strong><small>{unavailable ? "Check available rooms" : counts.live ? `${counts.live} confirmed live` : "See who’s live"}</small></button>
-            {introDemo && <Link href={`/room/${introDemo.token.address}`}><span aria-hidden="true">▤</span><strong>News</strong><small>External NBC feed · demo room</small></Link>}
+            <Link href="/watch"><span aria-hidden="true">▤</span><strong>News</strong><small>NBC & ABC · via YouTube</small></Link>
             <button type="button" onClick={() => update("view", "upcoming")}><span aria-hidden="true">◷</span><strong>Upcoming shows</strong><small>{counts.upcoming ? `${counts.upcoming} scheduled` : "See what’s next"}</small></button>
           </div>
         </section>}

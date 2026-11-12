@@ -43,6 +43,11 @@ export function isThrowawayRoom(room: Pick<DiscoveryRoom, "token" | "creator" | 
   return false;
 }
 
+/** Only confirmed broadcasts with presentable room names belong in the Watch hub. */
+export function watchLiveRooms(rooms: DiscoveryRoom[]) {
+  return rooms.filter(room => room.token.broadcastStatus === "live" && !isThrowawayRoom(room)).slice(0, 3);
+}
+
 export function selectDiscoveryRooms(rooms: DiscoveryRoom[], query: string, filter: DiscoveryFilter, saved: string[], sort: DiscoverySort, includeTestRooms = false) {
   const needle = query.trim().toLocaleLowerCase();
   const savedSet = new Set(saved.map(address => address.toLowerCase()));

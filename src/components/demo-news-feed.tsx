@@ -2,9 +2,16 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { NBC_NEWS_CHANNEL_URL } from "@/lib/nbc-news";
+import { ABC_NEWS_CHANNEL_URL } from "@/lib/abc-news";
 
 /** Keep the broadcaster's own player and controls intact, and never count this as a HYPR broadcast. */
-export function DemoNewsFeed() {
+export function DemoNewsFeed({ source = "nbc", standalone = false }: { source?: "nbc" | "abc"; standalone?: boolean }) {
+  return <NewsFeed key={source} source={source} standalone={standalone} />;
+}
+
+function NewsFeed({ source, standalone }: { source: "nbc" | "abc"; standalone: boolean }) {
+  const broadcaster = source === "abc" ? "ABC News" : "NBC News";
+  const sourceUrl = source === "abc" ? ABC_NEWS_CHANNEL_URL : NBC_NEWS_CHANNEL_URL;
   const frameArea = useRef<HTMLDivElement>(null);
   const hasBeenShown = useRef(false);
   const [visible, setVisible] = useState(false);
@@ -18,7 +25,7 @@ export function DemoNewsFeed() {
     let active = true;
     async function check() {
       try {
-        const response = await fetch("/api/news", { cache: "no-store", signal: AbortSignal.timeout(10000) });
+        const response = await fetch(source === "abc" ? "/api/news?source=abc" : "/api/news", { cache: "no-store", signal: AbortSignal.timeout(10000) });
         if (!response.ok) throw new Error("News lookup unavailable");
         const data: unknown = await response.json();
         const id = data && typeof data === "object" && "videoId" in data ? data.videoId : null;
@@ -31,7 +38,7 @@ export function DemoNewsFeed() {
     void check();
     const timer = window.setInterval(() => { if (document.visibilityState === "visible") void check(); }, 300000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [retry]);
+  }, [retry, source]);
 
   useEffect(() => {
     const element = frameArea.current;
@@ -63,12 +70,12 @@ export function DemoNewsFeed() {
   }, []);
 
   const embed = `https://www.youtube-nocookie.com/embed/${videoId}?playsinline=1&autoplay=${autoplay ? "1" : "0"}&mute=1`;
-  const watchUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : NBC_NEWS_CHANNEL_URL;
+  const watchUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : sourceUrl;
   return <div className="demo-news">
-    <div className="demo-news-heading"><span className="eyebrow">EXTERNAL NEWS · YOUTUBE</span><strong>NBC News</strong><p>The HYPR creator is offline. Watch an independent news stream while you’re here.</p></div>
+    <div className="demo-news-heading"><span className="eyebrow">EXTERNAL NEWS · YOUTUBE</span><strong>{broadcaster}</strong><p>{standalone ? "Independent news, streamed by the broadcaster on YouTube." : "The HYPR creator is offline. Watch an independent news stream while you’re here."}</p></div>
     <div className="demo-news-player" ref={frameArea}>
-      {!newsChecked ? <p>Finding NBC News…</p> : !videoId ? <p>NBC News is temporarily unavailable here. <button className="claim-link" onClick={() => { setNewsChecked(false); setRetry(value => value + 1); }}>Try again</button></p> : visible ? <iframe src={embed} title="NBC News — independent YouTube player" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /> : <p>News pauses when the player is out of view.</p>}
+      {!newsChecked ? <p>Finding {broadcaster}…</p> : !videoId ? <p>{broadcaster} is temporarily unavailable here. <button className="claim-link" onClick={() => { setNewsChecked(false); setRetry(value => value + 1); }}>Try again</button></p> : visible ? <iframe src={embed} title={`${broadcaster} — independent YouTube player`} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /> : <p>News pauses when the player is out of view.</p>}
     </div>
-    <div className="demo-news-note"><p>YouTube may ask you to sign in, show ads, collect playback data, or limit availability. This feed is provided by NBC News; HYPR is independent.</p><a href={watchUrl} target="_blank" rel="noopener noreferrer">{videoId ? "Can’t play? Open this broadcast on YouTube ↗" : "Watch on NBC News ↗"}</a></div>
+    <div className="demo-news-note"><p>YouTube may ask you to sign in, show ads, collect playback data, or limit availability. This feed is provided by {broadcaster}; HYPR is independent.</p><a href={watchUrl} target="_blank" rel="noopener noreferrer">{videoId ? "Can’t play? Open this broadcast on YouTube ↗" : `Open ${broadcaster} ↗`}</a></div>
   </div>;
 }

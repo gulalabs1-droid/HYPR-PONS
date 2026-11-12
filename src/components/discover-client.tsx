@@ -27,7 +27,7 @@ export function DiscoverClient({ initialLaunches, source, children }: { initialL
         <div className="eyebrow"><span className="pulse" /> LIVE CREATORS. LASTING COMMUNITIES.</div>
         <h1>More than a stream.<br /><em>A place to belong.</em></h1>
         <p>Find your creator. Join the conversation. Come back for the next show. Watching is free—coins are optional.</p>
-        <div className="hero-actions"><Link href="/discover" className="primary-button">Enter Discover <span aria-hidden="true">↗</span></Link><a href="#launch" className="secondary-button">Create a coin & room +</a><button type="button" className="palette-trigger" onClick={() => setPaletteOpen(true)}>Jump to a room ↗</button></div>
+        <div className="hero-actions"><Link href="/watch" className="primary-button">Watch now <span aria-hidden="true">↗</span></Link><Link href="/discover" className="secondary-button">Discover rooms ↗</Link><a href="#launch" className="secondary-button">Create a coin & room +</a><button type="button" className="palette-trigger" onClick={() => setPaletteOpen(true)}>Jump to a room ↗</button></div>
         <ol className="hero-steps" aria-label="Explore HYPR"><li><strong>01</strong> Find your people</li><li><strong>02</strong> Watch & chat</li><li><strong>03</strong> Save & return</li></ol>
       </div>{rooms.length > 0 && <Constellation launches={rooms.map(room => room.token)} totalRooms={discoveryRooms(live.launches, []).length} />}</section>
       <p className="discovery-safety">Robinhood Chain testnet preview · Test assets have no real value. No wallet needed to watch.</p>

@@ -1,5 +1,6 @@
 import { AccessToken, RoomServiceClient, TrackSource } from "livekit-server-sdk";
 import { revokeStaleGuests, type GuestService } from "./live-guests-server";
+import { createTtlCache } from "./ttl-cache";
 
 const ADDRESS = /^0x[a-fA-F0-9]{40}$/;
 
@@ -100,3 +101,20 @@ export async function getLiveRoomStatuses(roomNames: string[]) {
   }
   return result;
 }
+
+// Public viewer polling only. Token and guest-authorization routes call the
+// uncached functions above so a creator going offline is enforced immediately.
+const PUBLIC_STATUS_TTL_MS = 3000;
+const publicRoomStatus = createTtlCache<Awaited<ReturnType<typeof getLiveRoomStatus>>>(PUBLIC_STATUS_TTL_MS);
+const publicRoomStatuses = createTtlCache<Awaited<ReturnType<typeof getLiveRoomStatuses>>>(PUBLIC_STATUS_TTL_MS, 16);
+
+export function getPublicLiveRoomStatus(roomName: string) {
+  return publicRoomStatus.get(roomName, () => getLiveRoomStatus(roomName));
+}
+
+export function getPublicLiveRoomStatuses(roomNames: string[]) {
+  return publicRoomStatuses.get([...roomNames].sort().join(","), () => getLiveRoomStatuses(roomNames));
+}
+
+/** Lets shared CDN caches collapse identical viewer polls without hiding a new broadcast for long. */
+export const PUBLIC_STATUS_CACHE_CONTROL = "public, s-maxage=3, stale-while-revalidate=5";

@@ -9,11 +9,14 @@ export function DemoNewsFeed({ source = "nbc", standalone = false }: { source?: 
   return <NewsFeed key={source} source={source} standalone={standalone} />;
 }
 
+const PLAY_RATIO = 0.3;
+
 function NewsFeed({ source, standalone }: { source: "nbc" | "abc"; standalone: boolean }) {
   const broadcaster = source === "abc" ? "ABC News" : "NBC News";
   const sourceUrl = source === "abc" ? ABC_NEWS_CHANNEL_URL : NBC_NEWS_CHANNEL_URL;
   const frameArea = useRef<HTMLDivElement>(null);
   const hasBeenShown = useRef(false);
+  const shownNow = useRef(false);
   const [visible, setVisible] = useState(false);
   const [autoplay, setAutoplay] = useState(false);
   const [videoId, setVideoId] = useState<string | null>(null);
@@ -44,11 +47,10 @@ function NewsFeed({ source, standalone }: { source: "nbc" | "abc"; standalone: b
     const element = frameArea.current;
     if (!element) return;
     let inView = false;
-    let wasVisible = false;
     const update = () => {
       const next = inView && document.visibilityState === "visible";
-      if (next === wasVisible) return;
-      wasVisible = next;
+      if (next === shownNow.current) return;
+      shownNow.current = next;
       if (next && !hasBeenShown.current) {
         hasBeenShown.current = true;
         setAutoplay(!window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -63,18 +65,22 @@ function NewsFeed({ source, standalone }: { source: "nbc" | "abc"; standalone: b
       document.addEventListener("visibilitychange", update);
       return () => document.removeEventListener("visibilitychange", update);
     }
-    const observer = new IntersectionObserver(([entry]) => { inView = entry.isIntersecting && entry.intersectionRatio >= 0.55; update(); }, { threshold: [0, 0.55] });
+    // A 16:9 player on a short laptop or phone is often only partly above the fold;
+    // requiring most of it to be visible left first-time visitors with an empty box.
+    const observer = new IntersectionObserver(([entry]) => { inView = entry.isIntersecting && entry.intersectionRatio >= PLAY_RATIO; update(); }, { threshold: [0, PLAY_RATIO] });
     observer.observe(element);
     document.addEventListener("visibilitychange", update);
     return () => { observer.disconnect(); document.removeEventListener("visibilitychange", update); };
   }, []);
 
+  // Explicit play is a user gesture, so it may autoplay even before scrolling.
+  function playNow() { hasBeenShown.current = true; shownNow.current = true; setAutoplay(true); setVisible(true); }
   const embed = `https://www.youtube-nocookie.com/embed/${videoId}?playsinline=1&autoplay=${autoplay ? "1" : "0"}&mute=1`;
   const watchUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : sourceUrl;
   return <div className="demo-news">
     <div className="demo-news-heading"><span className="eyebrow">EXTERNAL NEWS · YOUTUBE</span><strong>{broadcaster}</strong><p>{standalone ? "Independent news, streamed by the broadcaster on YouTube." : "The HYPR creator is offline. Watch an independent news stream while you’re here."}</p></div>
     <div className="demo-news-player" ref={frameArea}>
-      {!newsChecked ? <p>Finding {broadcaster}…</p> : !videoId ? <p>{broadcaster} is temporarily unavailable here. <button className="claim-link" onClick={() => { setNewsChecked(false); setRetry(value => value + 1); }}>Try again</button></p> : visible ? <iframe src={embed} title={`${broadcaster} — independent YouTube player`} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /> : <p>News pauses when the player is out of view.</p>}
+      {!newsChecked ? <p>Finding {broadcaster}…</p> : !videoId ? <p>{broadcaster} is temporarily unavailable here. <button className="claim-link" onClick={() => { setNewsChecked(false); setRetry(value => value + 1); }}>Try again</button></p> : visible ? <iframe src={embed} title={`${broadcaster} — independent YouTube player`} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /> : <p className="demo-news-paused"><button type="button" className="demo-news-play" onClick={playNow}><span aria-hidden="true">▶</span> {hasBeenShown.current ? `Resume ${broadcaster}` : `Play ${broadcaster}`}</button><small>{hasBeenShown.current ? "Paused while the player was out of view." : "Plays muted. Unmute in the player."}</small></p>}
     </div>
     <div className="demo-news-note"><p>YouTube may ask you to sign in, show ads, collect playback data, or limit availability. This feed is provided by {broadcaster}; HYPR is independent.</p><a href={watchUrl} target="_blank" rel="noopener noreferrer">{videoId ? "Can’t play? Open this broadcast on YouTube ↗" : `Open ${broadcaster} ↗`}</a></div>
   </div>;

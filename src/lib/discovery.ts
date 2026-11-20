@@ -28,10 +28,15 @@ export function introductoryDemoRoom(rooms: DiscoveryRoom[]) {
   return rooms.find(room => isTestnetDemoRoom(room.token));
 }
 
+// Hate-symbol shorthand HYPR will not promote or help publish. Onchain creation
+// is permissionless, so this is a product guard, not a protocol rule.
+const BLOCKED_NAME = /(^|[^a-z])(k{3,}|nazis?|heil|hitler|1488|14\/?88|isis)([^a-z]|$)/i;
+export function isBlockedRoomName(value: string) { return BLOCKED_NAME.test(value.trim()); }
 const THROWAWAY = /^(test|demo|asdf|foo|bar|tmp|xxx+|kkk+|aaa+|hypr testnet demo)$/i;
 
 /** Pilot/catalog hygiene: obvious scratch names stay out of Explore unless searched. Never guesses quality. */
 export function isThrowawayRoom(room: Pick<DiscoveryRoom, "token" | "creator" | "title">) {
+  if ([room.title, room.token.name, room.token.symbol || "", room.creator?.displayName || ""].some(isBlockedRoomName)) return true;
   const named = room.creator?.displayName?.trim();
   if (named && named.length >= 4 && !THROWAWAY.test(named)) return false;
   const title = room.title.trim();

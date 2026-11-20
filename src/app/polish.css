@@ -252,6 +252,8 @@ p { text-wrap: pretty; }
   .room-header-compact { flex-wrap: wrap; }
   .room-header-compact .room-token-identity { flex: 1 1 100%; }
   .room-header-compact > .share-controls { flex: 1 1 100%; flex-wrap: wrap; overflow: visible; gap: 8px; }
+  .room-header-compact > .share-controls > .save-room { display: contents; }
+  .room-header-compact .share-controls span[role="status"] { flex: 1 1 100%; order: 9; font-size: 12px; }
   .room-header-compact > .share-controls > .share-controls { display: contents; }
   .room-header-compact .share-controls .secondary-button, .room-header-compact .share-controls button { flex: 0 0 auto; min-height: 40px; padding: 8px 14px; font-size: 13px; }
   .room-section-nav { left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); width: auto; padding: 6px; border: 1px solid var(--glass-line-strong); border-radius: 22px; background: rgba(16, 18, 22, .82); backdrop-filter: saturate(160%) blur(22px); -webkit-backdrop-filter: saturate(160%) blur(22px); box-shadow: 0 20px 50px -10px rgba(0, 0, 0, .9); }

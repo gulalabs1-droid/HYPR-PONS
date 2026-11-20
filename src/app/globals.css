@@ -208,6 +208,8 @@ kbd { font: 11px var(--mono); color: var(--muted); border: 1px solid var(--line-
 .launch-form-help { grid-column: 1 / -1; color: var(--muted); font-size: 13px; line-height: 1.6; }
 .launch-form-help a, .launch-status a { color: var(--lime); font-weight: 600; }
 .launch-status { grid-column: 1 / -1; color: var(--amber); font: 13px/1.55 var(--sans); overflow-wrap: anywhere; }
+.launch-name-check { grid-column: 1 / -1; padding: 10px 12px; border: 1px solid rgba(255, 191, 71, .35); border-radius: 12px; background: rgba(255, 191, 71, .08); color: var(--amber); font-size: 13px; line-height: 1.5; }
+.launch-name-check.is-blocked { border-color: rgba(255, 99, 99, .45); background: rgba(255, 99, 99, .1); color: #ff9b9b; }
 
 .launch-result { min-width: 0; padding: 26px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
 .launch-result.is-ready { border-color: rgba(199, 243, 107, .45); background: radial-gradient(circle at 95% 0, rgba(199, 243, 107, .12), transparent 60%), var(--bg); }

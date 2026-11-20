@@ -4,6 +4,8 @@ import { RoomClient } from "@/components/room-client";
 import { findRoomLaunch } from "@/lib/page-data";
 import { ADDRESS, canonicalRoomUrl } from "@/lib/growth";
 import { readGrowth } from "@/lib/growth-server";
+import { isThrowawayRoom } from "@/lib/discovery";
+import { isTestnetDemoRoom } from "@/lib/demo-news";
 
 type Props = { params: Promise<{ tokenAddress: string }> };
 
@@ -15,7 +17,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const room = await readGrowth(null, tokenAddress).then(rooms => rooms[0]).catch(() => null);
   const name = room?.displayName || token.name, url = canonicalRoomUrl(tokenAddress), image = `${url}/share-image`;
   const live = token.broadcastStatus === "live";
+  // Test-named and blocked rooms stay reachable by link, but HYPR does not ask search engines to index them.
+  const unlisted = !isTestnetDemoRoom(token) && isThrowawayRoom({ token, creator: room || undefined, title: name });
   return {
+    ...(unlisted ? { robots: { index: false, follow: true } } : {}),
     title: live ? `${name} is live` : `${name} · ${token.dataStatus === "demo" ? "Demo room" : "Community room"}`,
     description: live ? `Watch ${name} live now. No wallet needed. This is a live session, not a saved replay.` : `${room?.bio || `Watch ${name}, join the conversation and return for the next show.`} Watching needs no wallet. Trading is optional; testnet assets have no real value.`,
     alternates: { canonical: url },

@@ -8,6 +8,7 @@ import { HYPR_NETWORKS } from "@/lib/integrations/hypr/constants";
 import { getHyprClientConfig } from "@/lib/hypr-client-config";
 import { isReviewedHyprV0Config } from "@/lib/hypr-launch-config";
 import { LaunchPreflightError, launchErrorMessage, prepareNativeLaunch } from "@/lib/launch-preflight";
+import { checkLaunchName } from "@/lib/launch-naming";
 import { checkLaunchProgress, launchStorageKey, parseSavedLaunch, type LaunchProgress, type SubmittedLaunch } from "@/lib/launch-recovery";
 
 const FACTORY_CONFIG_ABI = parseAbi([
@@ -172,6 +173,8 @@ export function LaunchpadPanel() {
     return () => { cancelled = true; };
   }, []);
 
+  const nameCheck = checkLaunchName(name, symbol);
+
   async function createLaunch(event: React.FormEvent) {
     event.preventDefault();
     if (submission || pending) return;
@@ -184,6 +187,7 @@ export function LaunchpadPanel() {
       setStatus("Enter a name and symbol with at least 2 characters.");
       return;
     }
+    if (nameCheck?.blocked) { setStatus(nameCheck.message); return; }
     const ethereum = getEthereum();
     if (!ethereum) {
       setNeedsWallet(true);
@@ -272,8 +276,9 @@ export function LaunchpadPanel() {
       }} /> : <form className="launchpad-form" onSubmit={createLaunch}>
         <label><span className="field-label">Name <small aria-hidden="true">{name.length}/32</small></span><input value={name} onChange={(event) => setName(event.target.value)} maxLength={32} placeholder="Your community" autoComplete="off" disabled={!hasValidFactory || pending} /></label>
         <label><span className="field-label">Symbol <small aria-hidden="true">{symbol.length}/10</small></span><input value={symbol} onChange={(event) => setSymbol(event.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())} maxLength={10} placeholder="HYPR" autoComplete="off" autoCapitalize="characters" spellCheck={false} disabled={!hasValidFactory || pending} /></label>
-        <span className="launch-form-help">Your symbol is the short ticker, like HYPR. Creation costs a small testnet gas fee — <a href="https://faucet.testnet.chain.robinhood.com" target="_blank" rel="noreferrer">get free test ETH ↗</a></span>
-        <button className="primary-button" type="submit" disabled={!hasValidFactory || !config || pending}>{pending ? stage === "checking" ? "Checking your launch…" : "Approve in your wallet…" : configStatus === "loading" ? "Getting ready…" : "Create coin & room →"}</button>
+        {nameCheck && <span className={`launch-name-check${nameCheck.blocked ? " is-blocked" : ""}`} role="status">{nameCheck.message}</span>}
+        <span className="launch-form-help">Your symbol is the short ticker, like HYPR. Name and symbol are permanent once created. Creation costs a small testnet gas fee — <a href="https://faucet.testnet.chain.robinhood.com" target="_blank" rel="noreferrer">get free test ETH ↗</a></span>
+        <button className="primary-button" type="submit" disabled={!hasValidFactory || !config || pending || nameCheck?.blocked}>{pending ? stage === "checking" ? "Checking your launch…" : "Approve in your wallet…" : configStatus === "loading" ? "Getting ready…" : "Create coin & room →"}</button>
         {status && <span className="launch-status" role="status">
           {status}
           {needsFunding && <a href="https://faucet.testnet.chain.robinhood.com" target="_blank" rel="noreferrer"> Get free Robinhood test ETH ↗</a>}

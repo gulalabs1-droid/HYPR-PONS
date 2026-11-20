@@ -2,6 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { getCombinedLaunchData } from "@/lib/launch-data";
 import { readNativeProtocolSnapshot, type NativeProtocolSnapshot } from "@/lib/integrations/hypr/indexer";
+import { createTtlCache } from "@/lib/ttl-cache";
 
 // Page renders only. Authorization routes (room claims, live tokens) must keep
 // reading chain state directly instead of through this short-lived cache.
@@ -9,13 +10,18 @@ const PAGE_REVALIDATE_SECONDS = 10;
 
 export const getPageLaunchData = cache(unstable_cache(getCombinedLaunchData, ["hypr-combined-launch-data"], { revalidate: PAGE_REVALIDATE_SECONDS }));
 
+// Short enough that a just-confirmed room opens on the next click.
+const freshLaunchData = createTtlCache<Awaited<ReturnType<typeof getCombinedLaunchData>>>(1500, 1);
+
 export const findRoomLaunch = cache(async (tokenAddress: string) => {
   const matches = (launches: Awaited<ReturnType<typeof getCombinedLaunchData>>) => launches.launches.find((item) => item.address.toLowerCase() === tokenAddress.toLowerCase());
   const cached = await getPageLaunchData();
   const hit = matches(cached);
   if (hit) return { token: hit, source: cached.source };
-  // A launch confirmed seconds ago may not be in the cached list yet.
-  const fresh = await getCombinedLaunchData();
+  // A launch confirmed seconds ago may not be in the cached list yet. Unknown
+  // addresses (typos, crawlers, scans) share one fresh chain read instead of
+  // each triggering its own full log scan.
+  const fresh = await freshLaunchData.get("all", getCombinedLaunchData);
   const token = matches(fresh);
   return token ? { token, source: fresh.source } : null;
 });

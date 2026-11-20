@@ -84,7 +84,7 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
           <span className="eyebrow">{isNative ? "HYPR COMMUNITY ROOM" : "PONS COMMUNITY ROOM"}</span>
           <h1>{roomName} <span>{creatorProfile?.displayName ? "Community room" : `$${token.symbol}`}</span></h1>
         </div></div>
-        <div className="share-controls"><SaveRoom roomId={token.address}/><ShareRoom roomId={token.address} name={roomName} /></div>
+        <div className="share-controls"><SaveRoom roomId={token.address} compact /><ShareRoom roomId={token.address} name={roomName} /></div>
       </section>
       {(liveNow || creatorProfile?.show) && <p className={`room-now is-${phase}`}><span className="room-now-badge">{liveNow ? <><span className="pulse" />LIVE NOW</> : phase === "upcoming" ? "NEXT SHOW" : phase === "awaiting-creator" ? "WAITING ON CREATOR" : "SCHEDULED"}</span>{creatorProfile?.show && <><strong>{creatorProfile.show.title}</strong>{phase !== "live" && <ShowTime iso={creatorProfile.show.startsAt} />}</>}</p>}
       <p className="room-safety-note">{isNative ? "Testnet preview · Free test assets, not real money. Watch without a wallet." : token.dataStatus === "demo" ? "Demo room · Sample launch data, not a verified live market." : "Indexed Pons room · Trading availability depends on the launch’s network."}</p>

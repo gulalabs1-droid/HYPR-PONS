@@ -6,6 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Launch } from "@/lib/types";
 import { roomBadge, roomHue, roomKind, roomTickerValue } from "@/lib/room-display";
 import { TokenArt, tokenGlyph } from "./token-art";
+import { isThrowawayRoom } from "@/lib/discovery";
+import { isTestnetDemoRoom } from "@/lib/demo-news";
 
 type HueStyle = React.CSSProperties & { "--hue"?: number; "--angle"?: string };
 
@@ -88,7 +90,8 @@ export function CommandPalette({ open, onClose, launches }: { open: boolean; onC
   const results = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const rooms = launches
-      .filter((item) => `${item.name} ${item.symbol} ${item.address}`.toLowerCase().includes(needle))
+      // Scratch-named rooms stay reachable by search but are not suggested unprompted.
+      .filter((item) => needle ? `${item.name} ${item.symbol} ${item.address}`.toLowerCase().includes(needle) : isTestnetDemoRoom(item) || !isThrowawayRoom({ token: item, title: item.name }))
       .slice(0, 8)
       .map((token) => ({ key: token.address, href: `/room/${token.address}`, token, title: token.name, hint: roomBadge(token) }));
     const actions = [

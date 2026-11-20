@@ -156,19 +156,6 @@ function SetupChecklist({ room, roomId, live, onOpen }: { room: GrowthRoom; room
   </div>;
 }
 
-const VIEWER_TIPS_KEY = "hypr-viewer-tips-v1";
-function ViewerTips() {
-  const [open, setOpen] = useState(false);
-  useEffect(() => { try { setOpen(window.localStorage.getItem(VIEWER_TIPS_KEY) !== "done"); } catch { setOpen(false); } }, []);
-  if (!open) return null;
-  function close() { setOpen(false); try { window.localStorage.setItem(VIEWER_TIPS_KEY, "done"); } catch { /* private mode */ } }
-  return <aside className="viewer-tips" aria-label="New to HYPR">
-    <div className="viewer-tips-head"><span className="eyebrow">NEW HERE?</span><button type="button" className="live-alerts-close" aria-label="Dismiss tips" onClick={close}>×</button></div>
-    <p>Watch free—no wallet or sign-up needed. Save this room to find it again on this device.</p>
-    <Link href="/faq">How HYPR works ↗</Link>
-  </aside>;
-}
-
 const hubTabs: { key: HubTab; label: string }[] = [{ key: "stats", label: "Stats" }, { key: "show", label: "Next show" }, { key: "obs", label: "OBS" }, { key: "profile", label: "Profile" }, { key: "moment", label: "Share card" }, { key: "reports", label: "Reports" }];
 
 function CreatorHub({ room, roomId, live, onSave }: { room: GrowthRoom; roomId: string; live: boolean; onSave: (action: string, payload: Record<string, unknown>) => Promise<void> }) {
@@ -225,7 +212,6 @@ export function CreatorGrowth({ roomId, creator, live, growth }: { roomId: strin
   return <section className="creator-growth" aria-label="Creator and next show">
     {growth.error && <p className="live-notice" role="status">{growth.error} <button className="claim-link" onClick={growth.refresh}>Retry</button></p>}
     {!room && !growth.error && <p className="accounting-copy">Checking creator and next show…</p>}
-    {room && !ownsWallet && <ViewerTips />}
     {room && <>
       <div className="creator-card">
         <div className="creator-profile"><CreatorAvatar seed={room.address} avatar={room.avatar} name={room.displayName || room.name} /><div><span className="eyebrow">CREATOR COMMUNITY</span><h2>{room.displayName || room.name}</h2>{room.bio && <p>{room.bio}</p>}</div></div>

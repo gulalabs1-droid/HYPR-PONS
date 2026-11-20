@@ -65,7 +65,6 @@ test("live-first and index-order sorting remain distinct and deterministic", () 
 test("room cards are navigation and artwork, not fake footage, engagement, or token promotion", () => {
   const room = discoveryRooms([token(1)], [])[0];
   const html = renderToStaticMarkup(createElement(DiscoveryRoomCard, { room }));
-  assert.match(html, /Room artwork · not a video preview/);
   assert.match(html, new RegExp(`/room/${room.token.address}`));
   assert.match(html, /\+ Follow/);
   assert.doesNotMatch(html, /\$TEST|Testnet/, "cards lead with the room, not the coin");

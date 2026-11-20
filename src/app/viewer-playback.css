@@ -5,5 +5,5 @@
 .live-volume { display:flex; flex:1 1 180px; align-items:center; gap:9px; color:#c4d0d5; font-size:12px; }
 .live-volume input { width:100%; min-width:80px; accent-color:#c7f36b; cursor:pointer; }
 .live-volume span { min-width:32px; text-align:right; font-variant-numeric:tabular-nums; }
-.live-volume-phone { display:none; width:100%; color:#aebac8; font-size:11px; line-height:1.4; }
+.live-volume-phone { display:none; width:100%; color:#aebac8; font-size:12px; line-height:1.4; }
 @media(max-width:760px) { .live-playback-controls { padding:12px; } .live-volume { flex-basis:100%; } .live-volume-phone { display:block; } }

@@ -1,13 +1,13 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
-import { useMediaLibrary } from "@/lib/use-media-library";
+import type { useMediaLibrary } from "@/lib/use-media-library";
 import { authorizeMedia, mediaAction } from "@/lib/media-client";
 import { MEDIA_UPDATED_EVENT, mediaDuration, type MediaAsset } from "@/lib/media";
 import { Modal } from "./modal";
 
-export function RoomMediaLibrary({ roomId }: { roomId: string }) {
-  const library = useMediaLibrary(roomId);
+/** Viewers only see this section once there is something to watch; the creator always sees it. */
+export function RoomMediaLibrary({ roomId, library, showWhenEmpty }: { roomId: string; library: ReturnType<typeof useMediaLibrary>; showWhenEmpty: boolean }) {
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [publish, setPublish] = useState<MediaAsset | null>(null);
   async function update(action: "publish" | "hide", asset: MediaAsset) {
     if (busy) return; setBusy(true); setError("");
@@ -15,6 +15,7 @@ export function RoomMediaLibrary({ roomId }: { roomId: string }) {
     catch (failure) { setError(failure instanceof Error ? failure.message : "The recording was not updated."); }
     finally { setBusy(false); }
   }
+  if (!showWhenEmpty && !library.state?.assets.length) return null;
   return <section className="media-library" aria-label="Room replays and clips">
     <div className="panel-heading"><div><span className="eyebrow">WATCH AGAIN</span><h2>Replays & clips</h2></div>{Boolean(library.state?.assets.length) && <span>{library.state!.assets.length} {library.state!.assets.length === 1 ? "recording" : "recordings"}</span>}</div>
     <p className="accounting-copy">Published recordings are free to watch.</p>

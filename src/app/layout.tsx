@@ -13,8 +13,6 @@ import { MediaUploadProvider } from "@/components/media-upload-provider";
 import "./media.css";
 import "./market.css";
 import "./live-stage.css";
-import "./viewer-playback.css";
-import "./mobile-mini-player.css";
 import "./watch.css";
 
 const sans = Manrope({ subsets: ["latin"], variable: "--font-sans", display: "swap" });

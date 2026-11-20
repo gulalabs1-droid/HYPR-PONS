@@ -33,9 +33,8 @@ test("the actual room component distinguishes pause, stop, unavailable status an
     await act(async () => tick!()); assert.match(text(), /Broadcast status unavailable/); assert.doesNotMatch(text(), /Broadcast stopped. Room still open/);
     await act(async () => tick!()); assert.match(text(), /Creator in the studio/); assert.doesNotMatch(text(), /Broadcast paused/);
     await act(async () => tick!()); assert.match(text(), /The creator is live/);
-    await act(async () => renderer!.root.findAllByType("button").find((button) => button.props["aria-label"] === "Open room chat")!.props.onClick());
-    assert.equal(chatOpens, 1); assert.equal(mediaRequests, 0);
-    assert.match(text(), /Replays appear when published/);
+    // The player itself stays focused on the broadcast; chat lives in the room's tabs.
+    assert.equal(chatOpens, 0); assert.equal(mediaRequests, 0);
     assert.equal(calls, statuses.length);
   } finally {
     await act(async () => renderer?.unmount());

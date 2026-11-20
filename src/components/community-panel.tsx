@@ -36,10 +36,15 @@ function timeAgo(iso: string, now: number) {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-type Community = { messages: Message[]; followers: number; following: boolean; wallet: string | null; guest?: { name: string } | null; checkedAt: string; hasMore?: boolean; pinned?: Message | null; settings?: ChatSettings; here?: number; poll?: Poll | null };
+type Community = { messages: Message[]; followers: number; following: boolean; wallet: string | null; guest?: { name: string } | null; checkedAt: string; hasMore?: boolean; pinned?: Message | null; settings?: ChatSettings; here?: number; poll?: Poll | null; names?: Record<string, string>; member?: { name: string } | null; reactions?: Record<string, Partial<Record<Reaction, { count: number; mine: boolean }>>> };
+type Reaction = "heart" | "fire" | "laugh" | "clap";
+const REACTION_EMOJI: Record<Reaction, string> = { heart: "❤️", fire: "🔥", laugh: "😂", clap: "👏" };
+const FIRST_VISIT_KEY = "hypr-chat-hello-v1";
 
-function speakerName(message: Pick<Message, "wallet" | "guest">, creator: string, creatorName?: string) {
+function speakerName(message: Pick<Message, "wallet" | "guest">, creator: string, creatorName?: string, names?: Record<string, string>) {
   if (!message.wallet) return message.guest || "Guest";
+  const member = names?.[message.wallet.toLowerCase()];
+  if (member) return member;
   if (message.wallet.toLowerCase() !== creator.toLowerCase()) return shortAddress(message.wallet);
   return creatorName?.trim() || shortAddress(message.wallet);
 }
@@ -60,6 +65,21 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
   const [asking, setAsking] = useState(false);
   const [questionsOnly, setQuestionsOnly] = useState(false);
   const viewerId = useRef("");
+  const [picker, setPicker] = useState<string | null>(null);
+  const [hello, setHello] = useState(false);
+  useEffect(() => { try { setHello(window.localStorage.getItem(FIRST_VISIT_KEY) !== "done"); } catch { setHello(false); } }, []);
+  function dismissHello() { setHello(false); try { window.localStorage.setItem(FIRST_VISIT_KEY, "done"); } catch { /* private mode */ } }
+  async function toggleReaction(messageId: string, emoji: Reaction) {
+    setPicker(null);
+    const current = state?.reactions?.[messageId]?.[emoji];
+    const on = !current?.mine;
+    // Optimistic: reactions should feel instant.
+    setState(existing => existing ? { ...existing, reactions: { ...existing.reactions, [messageId]: { ...existing.reactions?.[messageId], [emoji]: { count: Math.max(0, (current?.count || 0) + (on ? 1 : -1)), mine: on } } } } : existing);
+    try {
+      const response = await fetch("/api/community", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomId, action: "react", messageId, emoji, on, viewer: viewerId.current || tabViewerId() }) });
+      if (!response.ok) throw new Error(((await response.json()) as { error?: string }).error || "Reaction not saved.");
+    } catch (failure) { setError(failure instanceof Error ? failure.message : "Reaction not saved."); void refresh(); }
+  }
   const log = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
   const historyLimit = useRef(50);
@@ -236,7 +256,7 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
     <div className="panel-heading"><div><span className="eyebrow">COMMUNITY</span><h2>Room chat</h2></div>{here !== null && here >= 2 && <span className="chat-here" aria-label={`${here} people here now`}><span className="status-dot" aria-hidden="true" />{here} here now</span>}</div>
     {state?.settings && state.settings.slowMode > 0 && <p className="chat-slow-mode">Slow mode · one message every {state.settings.slowMode}s</p>}
     {!state?.wallet && asGuest && guestName && !editingName ? <p className="accounting-copy">Chatting as <strong>{guestName}</strong> <button className="claim-link" disabled={busy} onClick={() => { setNickname(guestName); setEditingName(true); }}>Change</button></p> : null}
-    {state?.wallet ? <p className="accounting-copy">Signed in as {shortAddress(state.wallet)} <button className="claim-link" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await resetCommunitySession(); window.dispatchEvent(new Event(COMMUNITY_UPDATED_EVENT)); await refresh(); } catch { setError("Sign-out could not finish. Try again before switching accounts."); } finally { setBusy(false); } }}>Sign out</button></p> : !asGuest && state ? <p className="accounting-copy">The creator limited chat to signed-in members.</p> : null}
+    {state?.wallet ? <p className="accounting-copy">Signed in as {state.member?.name || shortAddress(state.wallet)} <button className="claim-link" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await resetCommunitySession(); window.dispatchEvent(new Event(COMMUNITY_UPDATED_EVENT)); await refresh(); } catch { setError("Sign-out could not finish. Try again before switching accounts."); } finally { setBusy(false); } }}>Sign out</button></p> : !asGuest && state ? <p className="accounting-copy">The creator limited chat to signed-in members.</p> : null}
     {state && (state.poll || state.wallet === creator.toLowerCase()) && <RoomPoll roomId={roomId} poll={state.poll} creatorView={state.wallet === creator.toLowerCase()} viewer={viewerId.current} onChanged={() => refresh()} />}
     {state?.wallet === creator.toLowerCase() && state.messages.some(message => isQuestion(message.body)) && <button type="button" className={`chat-questions-filter${questionsOnly ? " is-on" : ""}`} aria-pressed={questionsOnly} onClick={() => setQuestionsOnly(value => !value)}>❓ Questions ({state.messages.filter(message => isQuestion(message.body)).length}){questionsOnly ? " · show all" : ""}</button>}
     <div className="chat-messages" ref={log} onScroll={(event) => { const element = event.currentTarget; pinned.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80; }} role="log" aria-label="Shared room messages" aria-live="polite" aria-relevant="additions">
@@ -251,21 +271,29 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
         const canHide = Boolean(state.wallet && (ownMessage || creatorView));
         const hasOptions = canHide || creatorView || reportsEnabled;
         const isOpen = openMessageId === message.id;
-        const name = speakerName(message, creator, creatorName);
+        const name = speakerName(message, creator, creatorName, state.names);
         const actionsId = `chat-actions-${message.id}`;
-        return <div className={`message${creatorMessage ? " is-creator" : ""}${ownMessage ? " is-mine" : ""}`} key={message.id}>
+        const handle = (creatorName || "").replace(/\s+/g, "").toLowerCase();
+        const mentionsCreator = !creatorMessage && (/@creator\b/i.test(message.body) || (handle.length > 1 && message.body.toLowerCase().replace(/\s+/g, "").includes(`@${handle}`)));
+        const reactions = state.reactions?.[message.id] || {};
+        return <div className={`message${creatorMessage ? " is-creator" : ""}${ownMessage ? " is-mine" : ""}${mentionsCreator && creatorView ? " mentions-you" : ""}`} key={message.id}>
           <span className="avatar" aria-hidden="true"><TokenArt seed={message.wallet || `guest:${message.guest}`} /></span>
           <div className="message-bubble" ref={isOpen ? openMessage : undefined}>
             <div className="message-heading"><strong title={name}>{name}</strong>{creatorMessage && <span className="message-role">Creator</span>}{!message.wallet && <span className="message-role is-guest">Guest</span>}{isQuestion(message.body) && <span className="message-role is-question">Question</span>}<time dateTime={message.created_at} title={new Date(message.created_at).toLocaleString()}>{timeAgo(message.created_at, now)}</time>{hasOptions && <button type="button" className="message-more" aria-label={`Message options for ${name}`} aria-expanded={isOpen} aria-controls={isOpen ? actionsId : undefined} onClick={() => setOpenMessageId(current => current === message.id ? null : message.id)}><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button>}</div>
             <p>{isQuestion(message.body) ? message.body.slice(QUESTION_PREFIX.length) : message.body}</p>
+            <div className="message-reactions">{(Object.keys(REACTION_EMOJI) as Reaction[]).filter(emoji => (reactions[emoji]?.count || 0) > 0).map(emoji => <button type="button" key={emoji} aria-pressed={Boolean(reactions[emoji]?.mine)} aria-label={`${REACTION_EMOJI[emoji]} ${reactions[emoji]!.count}`} onClick={() => void toggleReaction(message.id, emoji)}>{REACTION_EMOJI[emoji]} {reactions[emoji]!.count}</button>)}
+              <button type="button" className="message-react" aria-label="Add a reaction" aria-expanded={picker === message.id} onClick={() => setPicker(current => current === message.id ? null : message.id)}>☺+</button>
+              {picker === message.id && <span className="message-react-picker" role="group" aria-label="Choose a reaction">{(Object.keys(REACTION_EMOJI) as Reaction[]).map(emoji => <button type="button" key={emoji} aria-label={`React ${REACTION_EMOJI[emoji]}`} onClick={() => void toggleReaction(message.id, emoji)}>{REACTION_EMOJI[emoji]}</button>)}</span>}
+            </div>
             {isOpen && <div className="message-actions" id={actionsId}>{canHide && <button type="button" disabled={busy} onClick={() => { setOpenMessageId(null); void update("hide", { messageId: message.id }); }}>{creatorView && isQuestion(message.body) ? "Mark answered" : "Hide message"}</button>}{creatorView && <button type="button" disabled={busy} onClick={() => { setOpenMessageId(null); void update("pin", { messageId: message.id }); }}>{isQuestion(message.body) ? "Spotlight" : "Pin"}</button>}{reportsEnabled && <button type="button" onClick={() => { setOpenMessageId(null); setReport(message.id); }}>Report</button>}</div>}
           </div>
         </div>;
       })}
       {pendingBody && (state?.wallet || asGuest) && <div className="message is-mine is-pending"><span className="avatar" aria-hidden="true"><TokenArt seed={state?.wallet || `guest:${guestName || nickname}`} /></span><div className="message-bubble"><div className="message-heading"><strong>{state?.wallet ? speakerName({ wallet: state.wallet }, creator, creatorName) : guestName || nickname}</strong><time>Sending…</time></div><p>{pendingBody}</p></div></div>}
     </div>
+    {hello && state && state.wallet !== creator.toLowerCase() && <div className="chat-hello"><span aria-hidden="true">👋</span><p><strong>First time here?</strong> Say hi—no wallet or sign-up needed.</p><button type="button" className="live-alerts-close" aria-label="Dismiss" onClick={dismissHello}>×</button></div>}
     {needsNickname && <label className="chat-nickname"><span>Your nickname</span><input value={nickname} onChange={event => setNickname(event.target.value)} maxLength={24} placeholder="e.g. Sam" autoComplete="nickname" disabled={busy} /></label>}
-    <form className="chat-form" onSubmit={(event) => { event.preventDefault(); const body = text.trim(); void update("message", { body: asking && !isQuestion(body) ? `${QUESTION_PREFIX}${body}`.slice(0, 280) : body }); setAsking(false); }}><button type="button" className={`chat-ask${asking ? " is-on" : ""}`} aria-pressed={asking} aria-label="Send as a question for the creator" title="Ask the creator a question" disabled={busy || !state} onClick={() => setAsking(value => !value)}>❓</button><input aria-label="Shared room message" value={text} onChange={(event) => setText(event.target.value)} maxLength={280} disabled={busy || !state || (!state.wallet && !guestsAllowed)} placeholder={state && !state.wallet && !guestsAllowed ? "Sign in to chat in this room" : asking ? "Ask the creator a question" : "Say hello to the room"} /><button aria-label="Send shared message" disabled={busy || !state || !text.trim() || (needsNickname && nickname.trim().length < 2) || (!state.wallet && !guestsAllowed)}>↑</button></form>
+    <form className="chat-form" onSubmit={(event) => { event.preventDefault(); const body = text.trim(); dismissHello(); void update("message", { body: asking && !isQuestion(body) ? `${QUESTION_PREFIX}${body}`.slice(0, 280) : body }); setAsking(false); }}><button type="button" className="chat-ask" aria-label={`Mention ${creatorName || "the creator"}`} title={`Mention ${creatorName || "the creator"}`} disabled={busy || !state || state.wallet === creator.toLowerCase()} onClick={() => setText(current => current.includes("@") ? current : `@${(creatorName || "creator").replace(/\s+/g, "")} ${current}`)}>@</button><button type="button" className={`chat-ask${asking ? " is-on" : ""}`} aria-pressed={asking} aria-label="Send as a question for the creator" title="Ask the creator a question" disabled={busy || !state} onClick={() => setAsking(value => !value)}>❓</button><input aria-label="Shared room message" value={text} onChange={(event) => setText(event.target.value)} maxLength={280} disabled={busy || !state || (!state.wallet && !guestsAllowed)} placeholder={state && !state.wallet && !guestsAllowed ? "Sign in to chat in this room" : asking ? "Ask the creator a question" : "Say hello to the room"} /><button aria-label="Send shared message" disabled={busy || !state || !text.trim() || (needsNickname && nickname.trim().length < 2) || (!state.wallet && !guestsAllowed)}>↑</button></form>
     {!state?.wallet && state && <button className="claim-link" disabled={busy} onClick={() => void authorize()}>{busy ? "Check your wallet…" : asGuest ? "Or sign in with a wallet" : "Sign in to chat"}</button>}
     {state?.wallet && state.wallet === creator.toLowerCase() && state.settings && <div className="chat-settings" aria-label="Chat settings">
       <label><input type="checkbox" checked={state.settings.guestsAllowed} disabled={busy} onChange={event => void saveSettings({ ...state.settings!, guestsAllowed: event.target.checked })} /> Allow guest chat</label>

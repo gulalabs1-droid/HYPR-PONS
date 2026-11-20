@@ -11,7 +11,7 @@
 .media-card { min-width:0; border:1px solid var(--line-strong); border-radius:16px; padding:18px; background:linear-gradient(145deg,#212331,#13151c); }
 .media-card h3 { overflow-wrap:anywhere; margin:14px 0; }
 .media-card p,.media-card time { font-size:13px; color:var(--text-soft); }
-.media-kind { font-size:11px; color:var(--lime); letter-spacing:.08em; }
+.media-kind { font-size:12px; color:var(--lime); letter-spacing:.08em; }
 .media-empty { text-align:center; padding:28px 16px; border:1px dashed var(--line-strong); border-radius:16px; margin:20px 0; }
 .media-empty>span { display:block; font-size:38px; color:var(--lime); }
 .media-empty p,.media-empty small { color:var(--text-soft); line-height:1.7; }

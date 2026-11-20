@@ -4,7 +4,8 @@ import { getHyprNetwork, HYPR_NETWORKS } from "./integrations/hypr/constants";
 
 export const COMMUNITY_SESSION_COOKIE = "hypr-community-session";
 export const COMMUNITY_CHALLENGE_COOKIE = "hypr-community-challenge";
-type Authorization = { wallet: string; chainId: number; origin: string; nonce: string; expiresAt: number; kind: "challenge" | "session"; version?: 2 };
+// `account: "passkey"` marks a wallet-free member session; `wallet` then holds a member address, not a real wallet.
+type Authorization = { wallet: string; chainId: number; origin: string; nonce: string; expiresAt: number; kind: "challenge" | "session"; version?: 2; account?: "passkey"; name?: string };
 
 function authKey() {
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();

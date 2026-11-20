@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Launch } from "@/lib/types";
+import type { MediaAsset } from "@/lib/media";
 import { getStreamEmbedUrl } from "@/lib/stream";
 import { NativeLiveRoom } from "./native-live-room";
 
-export function LiveLaunchSurface({ token, onOpenChat, showTitle }: { token: Launch; onOpenChat?: () => void; showTitle?: string }) {
+export function LiveLaunchSurface({ token, onOpenChat, showTitle, nextShow, latestReplay, otherLive }: { token: Launch; onOpenChat?: () => void; nextShow?: { id: string; title: string; startsAt: string }; latestReplay?: MediaAsset; otherLive?: { address: string; name: string }[]; showTitle?: string }) {
   const [parentHost, setParentHost] = useState("hypr.app");
   useEffect(() => {
     if (window.location.hostname) setParentHost(window.location.hostname);
@@ -13,7 +14,7 @@ export function LiveLaunchSurface({ token, onOpenChat, showTitle }: { token: Lau
   const embedUrl = useMemo(() => getStreamEmbedUrl(token.streamUrl, parentHost), [token.streamUrl, parentHost]);
   const live = Boolean(token.streamLive && embedUrl);
 
-  if (token.origin === "hypr") return <NativeLiveRoom key={token.address} token={token} onOpenChat={onOpenChat} showTitle={showTitle} />;
+  if (token.origin === "hypr") return <NativeLiveRoom key={token.address} token={token} onOpenChat={onOpenChat} nextShow={nextShow} latestReplay={latestReplay} otherLive={otherLive} showTitle={showTitle} />;
   if (!token.streamUrl) return <section className="live-surface"><div className="live-copy"><span className="eyebrow">INDEXED PONS ROOM</span><h2>Onchain launch activity</h2><p>Native broadcasts are available in HYPR-created rooms. No external broadcast is being claimed for this room.</p></div></section>;
 
   return <section className="live-surface">

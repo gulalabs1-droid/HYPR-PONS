@@ -95,7 +95,7 @@ export function CommandPalette({ open, onClose, launches }: { open: boolean; onC
       .slice(0, 8)
       .map((token) => ({ key: token.address, href: `/room/${token.address}`, token, title: token.name, hint: roomBadge(token) }));
     const actions = [
-      { key: "create", href: "/#launch", token: undefined, title: "Create a launch", hint: "Action" },
+      { key: "create", href: "/creators#open-room", token: undefined, title: "Open a room", hint: "Action" },
       { key: "protocol", href: "/protocol", token: undefined, title: "Protocol stats", hint: "Page" },
     ].filter((item) => !needle || item.title.toLowerCase().includes(needle));
     return [...rooms, ...actions];

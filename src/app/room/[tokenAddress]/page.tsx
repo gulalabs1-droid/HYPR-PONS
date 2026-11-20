@@ -1,3 +1,6 @@
+// Live-player styles load only on room pages, not on every page.
+import "../../viewer-playback.css";
+import "../../mobile-mini-player.css";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { RoomClient } from "@/components/room-client";
@@ -5,6 +8,7 @@ import { findRoomLaunch } from "@/lib/page-data";
 import { ADDRESS, canonicalRoomUrl } from "@/lib/growth";
 import { readGrowth } from "@/lib/growth-server";
 import { isThrowawayRoom } from "@/lib/discovery";
+import { getPublicLiveRoomStatus, roomNameForLaunch } from "@/lib/livekit";
 import { isTestnetDemoRoom } from "@/lib/demo-news";
 
 type Props = { params: Promise<{ tokenAddress: string }> };
@@ -16,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!token) return { title: "Room not found" };
   const room = await readGrowth(null, tokenAddress).then(rooms => rooms[0]).catch(() => null);
   const name = room?.displayName || token.name, url = canonicalRoomUrl(tokenAddress), image = `${url}/share-image`;
-  const live = token.broadcastStatus === "live";
+  const live = token.origin === "hypr" && await getPublicLiveRoomStatus(roomNameForLaunch(token.address)).then(status => status.live, () => false);
   // Test-named and blocked rooms stay reachable by link, but HYPR does not ask search engines to index them.
   const unlisted = !isTestnetDemoRoom(token) && isThrowawayRoom({ token, creator: room || undefined, title: name });
   return {

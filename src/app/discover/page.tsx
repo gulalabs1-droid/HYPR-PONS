@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { DiscoveryDirectory } from "@/components/discovery-directory";
 import { getPageLaunchData } from "@/lib/page-data";
 
-export const dynamic = "force-dynamic";
+// Served from cache and refreshed every 10 seconds; live status updates in the browser.
+export const revalidate = 10;
 export const metadata: Metadata = {
   title: "Discover creators & live rooms",
   description: "Find live creators, upcoming shows, and a community to return to. Watching is free. No wallet or coin purchase needed.",

@@ -40,17 +40,24 @@ export async function GET(request: NextRequest) {
     const guest = session ? null : decodeGuest(request.cookies.get(GUEST_COOKIE)?.value, requestOrigin(request));
     // The live poll rides along with chat so viewers don't poll a second endpoint.
     const voter = voterKey(roomId, { wallet: session?.wallet, guestId: guest?.id, viewer: request.nextUrl.searchParams.get("viewer") });
-    const poll = before ? undefined : await client.rpc<unknown>("hypr_read_poll", { p_chain_id: args.p_chain_id, p_token_address: roomId, p_voter_key: voter }).catch(() => undefined);
-    return NextResponse.json({ ...state, wallet: session?.wallet || null, guest: guest ? { name: guest.name } : null, ...(poll !== undefined ? { poll } : {}), checkedAt: new Date().toISOString() }, { headers });
+    const messageIds = Array.isArray((state as { messages?: unknown }).messages) ? ((state as { messages: Array<{ id?: unknown }> }).messages).map(message => message.id).filter((id): id is string => typeof id === "string" && UUID.test(id)) : [];
+    const authors = [...new Set(((state as { messages?: Array<{ wallet?: unknown }> }).messages || []).map(message => message.wallet).filter((wallet): wallet is string => typeof wallet === "string"))];
+    const [poll, reactions, names] = await Promise.all([
+      before ? undefined : client.rpc<unknown>("hypr_read_poll", { p_chain_id: args.p_chain_id, p_token_address: roomId, p_voter_key: voter }).catch(() => undefined),
+      messageIds.length ? client.rpc<unknown>("hypr_read_reactions", { p_message_ids: messageIds, p_reactor_key: voter }).catch(() => undefined) : undefined,
+      authors.length ? client.rpc<unknown>("hypr_member_names", { p_addresses: authors }).catch(() => undefined) : undefined,
+    ]);
+    return NextResponse.json({ ...state, wallet: session?.wallet || null, guest: guest ? { name: guest.name } : null, ...(poll !== undefined ? { poll } : {}), ...(reactions !== undefined ? { reactions } : {}), ...(names !== undefined ? { names } : {}), member: session?.account === "passkey" ? { name: session.name || "Member" } : null, checkedAt: new Date().toISOString() }, { headers });
   } catch { return NextResponse.json({ error: before ? "Older messages are unavailable." : "Shared community data is temporarily unavailable. No local preview is being shown." }, { status: 503, headers }); }
 }
 
 export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) return NextResponse.json({ error: "Use HYPR to update this room." }, { status: 403, headers });
-  let body: { roomId?: string; action?: string; body?: string; following?: boolean; messageId?: string; shareId?: string; analyticsConsent?: boolean; guestName?: string; guestsAllowed?: boolean; slowMode?: number };
+  let body: { roomId?: string; action?: string; body?: string; following?: boolean; messageId?: string; shareId?: string; analyticsConsent?: boolean; guestName?: string; guestsAllowed?: boolean; slowMode?: number; emoji?: string; on?: boolean; viewer?: string };
   try { body = await request.json(); if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("invalid body"); } catch { return NextResponse.json({ error: "Invalid request." }, { status: 400, headers }); }
   const session = decodeAuthorization(request.cookies.get(COMMUNITY_SESSION_COOKIE)?.value, requestOrigin(request), "session");
   if (body.action === "guest-message") return guestMessage(request, body);
+  if (body.action === "react") return react(request, body, session?.wallet || null);
   if (!session) return NextResponse.json({ error: "Sign in with your wallet to join the community." }, { status: 401, headers });
   if (body.action === "settings") {
     if (!validAddress(body.roomId) || typeof body.guestsAllowed !== "boolean" || ![0, 5, 15, 30, 60].includes(Number(body.slowMode))) return NextResponse.json({ error: "Invalid chat settings." }, { status: 400, headers });
@@ -101,4 +108,16 @@ async function guestMessage(request: NextRequest, body: { roomId?: string; body?
   } catch (error) {
     return NextResponse.json({ error: writeFailure(error) }, { status: dbReason(error).includes("rate limit") ? 429 : dbReason(error).includes("guest chat off") ? 403 : 503, headers });
   }
+}
+
+const REACTIONS = ["heart", "fire", "laugh", "clap"];
+/** Anyone in the room can react—wallet, guest or anonymous tab—once per emoji per message. */
+async function react(request: NextRequest, body: { roomId?: string; messageId?: string; emoji?: string; on?: boolean; viewer?: string }, wallet: string | null) {
+  if (!validAddress(body.roomId) || !UUID.test(body.messageId || "") || !REACTIONS.includes(body.emoji || "") || typeof body.on !== "boolean") return NextResponse.json({ error: "Invalid reaction." }, { status: 400, headers });
+  const key = voterKey(body.roomId, { wallet, guestId: decodeGuest(request.cookies.get(GUEST_COOKIE)?.value, requestOrigin(request))?.id, viewer: body.viewer || null });
+  if (!key) return NextResponse.json({ error: "Invalid reaction." }, { status: 400, headers });
+  const client = getSupabaseAdminClient();
+  if (!client) return NextResponse.json({ error: "Reactions are unavailable." }, { status: 503, headers });
+  try { await client.rpc("hypr_react", { p_chain_id: HYPR_NETWORKS[getHyprNetwork()].id, p_token_address: body.roomId, p_message_id: body.messageId, p_reactor_key: key, p_emoji: body.emoji, p_on: body.on }); return NextResponse.json({ saved: true }, { headers }); }
+  catch (error) { return NextResponse.json({ error: dbReason(error).includes("rate limit") ? "Easy there—try again in a minute." : "Reaction not saved." }, { status: dbReason(error).includes("rate limit") ? 429 : 503, headers }); }
 }

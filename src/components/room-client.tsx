@@ -26,6 +26,9 @@ import { LOBBY_OPENS_MS, ShowCountdown, useNow } from "./show-countdown";
 import { TokenArt, tokenGlyph } from "./token-art";
 import { RoomFaq } from "./room-faq";
 import { RoomMediaLibrary } from "./room-media-library";
+import { useMediaLibrary } from "@/lib/use-media-library";
+import { isThrowawayRoom } from "@/lib/discovery";
+import { useWalletStatus } from "@/lib/use-wallet-status";
 import { NativeMarketChart } from "./native-market-chart";
 
 // Viewers come for the person: chat and replays first, the optional coin last.
@@ -57,6 +60,12 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
   const liveNow = token.broadcastStatus === "live";
   const phase = showPhase(creatorProfile?.show || null, liveNow);
   const roomName = creatorProfile?.displayName || token.name;
+  const library = useMediaLibrary(token.address, isNative);
+  const wallet = useWalletStatus();
+  const ownsRoom = Boolean(wallet.account && wallet.account.toLowerCase() === token.deployer.toLowerCase());
+  const latestReplay = library.state?.assets.find(asset => asset.published);
+  const hasReplays = Boolean(library.state?.assets.length);
+  const otherLive = liveData.launches.filter(item => item.address.toLowerCase() !== token.address.toLowerCase() && item.broadcastStatus === "live" && !isThrowawayRoom({ token: item, title: item.name })).map(item => ({ address: item.address, name: item.name }));
   const showStart = creatorProfile?.show?.status === "scheduled" ? Date.parse(creatorProfile.show.startsAt) : NaN;
   const clock = useNow(creatorProfile?.show?.startsAt);
   // Pre-show lobby: 15 minutes before, until an hour after the planned start, while not live.
@@ -85,13 +94,13 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
   }
 
   return <main className="room-page">
-    <Header />
+    <Header compact />
     <div className="room-shell room-aura" style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
       <Link href="/discover" className="back-link">← Discover rooms</Link>
       <section className="room-header room-header-compact">
         <div className="room-token-identity"><span className="room-logo" aria-hidden="true"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} /></span><div>
           <span className="eyebrow">COMMUNITY ROOM</span>
-          <h1>{roomName} <span>{creatorProfile?.displayName || token.coinless ? "Community room" : `$${token.symbol}`}</span></h1>
+          <h1>{roomName}</h1>
         </div></div>
         <div className="share-controls"><FollowButton roomId={token.address} growth={growth} />{isNative && <RemindMe roomId={token.address} calendarHref={creatorProfile?.show ? `/api/community/calendar?roomId=${token.address}&showId=${creatorProfile.show.id}` : undefined} />}<ShareRoom roomId={token.address} name={roomName} /></div>
       </section>
@@ -100,16 +109,16 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
         {creatorProfile?.show && <><strong>{creatorProfile.show.title}</strong>{phase === "upcoming" && <ShowCountdown startsAt={creatorProfile.show.startsAt} />}{phase !== "live" && <ShowTime iso={creatorProfile.show.startsAt} />}</>}
         {lobbyOpen && <button type="button" className="room-now-action" onClick={() => chooseSection("chat")}>Chat is open—say hi →</button>}
       </div>}
-      <p className="room-safety-note">{isNative ? "Testnet preview · Free test assets, not real money. Watch without a wallet." : token.dataStatus === "demo" ? "Demo room · Sample launch data, not a verified live market." : "Indexed Pons room · Trading availability depends on the launch’s network."}</p>
+      {!isNative && <p className="room-safety-note">{token.dataStatus === "demo" ? "Demo room · Sample launch data, not a verified live market." : "Indexed Pons room · Trading availability depends on the launch’s network."}</p>}
       {liveData.error && <p className="live-notice" role="status">{liveData.error} Last successful data is kept visible; it may be out of date.</p>}
-      <div className={`room-experience${hasCoin?" has-market":""}`} ref={sectionsRef}>
-        <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} showTitle={creatorProfile?.show?.title} /></div>
+      <div className={`room-experience${hasCoin?" has-market":""}`} ref={sectionsRef} data-chatting={section === "chat"}>
+        <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} showTitle={creatorProfile?.show?.title} nextShow={creatorProfile?.show?.status === "scheduled" ? creatorProfile.show : undefined} latestReplay={latestReplay} otherLive={otherLive} /></div>
         <nav className="room-section-nav" aria-label="Room sections" data-native={isNative}>
           <button type="button" aria-label="Watch broadcast" aria-controls="room-watch" onClick={() => sectionsRef.current?.querySelector("#room-watch")?.scrollIntoView({ behavior: "instant", block: "start" })}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m10 8 6 4-6 4Z" /></svg><span>Watch</span></button>
-          {(Object.keys(sectionLabels) as RoomSection[]).filter(key => (isNative || key !== "videos") && (key !== "coin" || !token.coinless)).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={key === "coin" ? (isNative ? "room-chart room-trade" : "room-trade") : `room-${key}`} onClick={() => chooseSection(key)}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{sectionIcons[key]}</svg><span>{sectionLabels[key]}</span></button>)}
+          {(Object.keys(sectionLabels) as RoomSection[]).filter(key => (isNative || key !== "videos") && (key !== "videos" || hasReplays || ownsRoom) && (key !== "coin" || !token.coinless)).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={key === "coin" ? (isNative ? "room-chart room-trade" : "room-trade") : `room-${key}`} onClick={() => chooseSection(key)}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{sectionIcons[key]}</svg><span>{sectionLabels[key]}</span></button>)}
         </nav>
         {hasCoin&&<section className="room-chart-section" id="room-chart" data-mobile-active={section==="coin"}><NativeMarketChart tokenAddress={token.address} symbol={token.symbol}/></section>}
-        {isNative && <section className="room-media-section" id="room-videos" data-mobile-active={section === "videos"}><RoomMediaLibrary roomId={token.address} /></section>}
+        {isNative && <section className="room-media-section" id="room-videos" data-mobile-active={section === "videos"}><RoomMediaLibrary roomId={token.address} library={library} showWhenEmpty={ownsRoom} /></section>}
         <section className="room-chat-section" id="room-chat" data-mobile-active={section === "chat"} aria-label="Room chat"><CommunityPanel roomId={token.address} creator={token.deployer} creatorName={creatorProfile?.displayName || token.name} reportsEnabled={growth.state?.enabled === true} chatActive={section === "chat"} /></section>
         {!token.coinless && <section className="room-trade-section" id="room-trade" data-mobile-active={section === "coin"} aria-label={`Trade ${token.symbol}`}>
           {isNative ? <NativeTradePanel curveAddress={token.pool} tokenAddress={token.address} tokenSymbol={token.symbol} /> : <div className="activity-panel"><h2>About this token’s trading</h2><p className="accounting-copy">HYPR’s in-room buy and sell controls currently support native HYPR testnet launches only. This indexed Pons token is not offered for trading here.</p><a className="claim-link" href={`${explorer}/address/${token.address}`} target="_blank" rel="noreferrer">View its contract ↗</a></div>}

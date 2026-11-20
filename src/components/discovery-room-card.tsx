@@ -16,7 +16,6 @@ export function DiscoveryRoomCard({ room }: { room: DiscoveryRoom }) {
     <Link className="discovery-poster" href={`/room/${token.address}`} aria-label={`${live ? "Watch" : "Visit"} ${title}`}>
       <TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} />
       <span className={`discovery-status${live ? " is-live" : ""}`}>{live && <span className="status-dot" />}{broadcastLabel(token)}</span>
-      <span className="poster-art-label">Room artwork · not a video preview</span>
       <span className="poster-enter" aria-hidden="true">{live ? "▶" : "↗"}</span>
       {live && token.viewerCount !== undefined && <span className="poster-viewers">{token.viewerCount.toLocaleString()} connected {token.viewerCount === 1 ? "viewer" : "viewers"}</span>}
     </Link>

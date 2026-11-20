@@ -6,16 +6,18 @@ import { getEthereum, ROBINHOOD_TESTNET_CHAIN_ID, shortAddress, switchToRobinhoo
 import { discoverWallets, OPEN_WALLET_EVENT, rememberSelectedWallet, setWalletSessionDisconnected, walletErrorMessage } from "@/lib/wallet-discovery";
 import { useWalletStatus } from "@/lib/use-wallet-status";
 import { WalletPicker } from "./wallet-picker";
-import { LiveAlerts } from "./live-alerts";
 import { resetCommunitySession, signInCommunity } from "@/lib/community-client";
-import { COMMUNITY_UPDATED_EVENT } from "@/lib/growth";
+import { COMMUNITY_SIGNED_OUT_EVENT, COMMUNITY_UPDATED_EVENT } from "@/lib/growth";
 
-export function Header({ active }: { active?: "watch" | "discover" | "protocol" | "following" }) {
+/** `compact` keeps phones to one header row so video starts near the top; the menu opens the links. */
+export function Header({ active, compact = false }: { active?: "watch" | "discover" | "protocol" | "following"; compact?: boolean }) {
   const wallet = useWalletStatus();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  const [member, setMember] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const wrongChain = Boolean(wallet.account && wallet.chainId !== ROBINHOOD_TESTNET_CHAIN_ID);
 
@@ -24,6 +26,15 @@ export function Header({ active }: { active?: "watch" | "discover" | "protocol" 
     const open = () => { setMenuOpen(false); setPickerOpen(true); };
     window.addEventListener(OPEN_WALLET_EVENT, open);
     return () => window.removeEventListener(OPEN_WALLET_EVENT, open);
+  }, []);
+
+  useEffect(() => {
+    // Passkey members have no wallet; read their name from the HYPR session.
+    let active = true;
+    const load = () => fetch("/api/community/session", { cache: "no-store" }).then(response => response.json()).then((data: { kind?: string; name?: string | null }) => { if (active) setMember(data.kind === "passkey" ? data.name || "Member" : null); }).catch(() => undefined);
+    void load();
+    window.addEventListener(COMMUNITY_UPDATED_EVENT, load); window.addEventListener(COMMUNITY_SIGNED_OUT_EVENT, load);
+    return () => { active = false; window.removeEventListener(COMMUNITY_UPDATED_EVENT, load); window.removeEventListener(COMMUNITY_SIGNED_OUT_EVENT, load); };
   }, []);
 
   useEffect(() => {
@@ -71,10 +82,11 @@ export function Header({ active }: { active?: "watch" | "discover" | "protocol" 
     catch { setMessage("Your wallet is disconnected, but HYPR sign-out did not finish. Reconnect or retry before using another wallet."); }
   }
 
-  return <header className="site-header">
+  return <header className={`site-header${compact ? " is-compact" : ""}${navOpen ? " nav-open" : ""}`}>
     <div className="header-inner">
       <Link href="/" className="brand" aria-label="HYPR home"><span className="brand-mark">H</span><span>HYPR</span></Link>
-      <nav className="main-nav" aria-label="Main navigation">
+      {compact && <button type="button" className="nav-toggle" aria-expanded={navOpen} aria-controls="main-nav" aria-label={navOpen ? "Close menu" : "Open menu"} onClick={() => setNavOpen(open => !open)}><span aria-hidden="true">{navOpen ? "✕" : "☰"}</span></button>}
+      <nav className="main-nav" id="main-nav" aria-label="Main navigation" onClick={() => setNavOpen(false)}>
         <Link className={active === "watch" ? "active" : ""} aria-current={active === "watch" ? "page" : undefined} href="/watch">Watch</Link>
         <Link className={active === "discover" ? "active" : ""} aria-current={active === "discover" ? "page" : undefined} href="/discover">Discover</Link>
         <Link className={active === "following" ? "active" : ""} aria-current={active === "following" ? "page" : undefined} href="/following">Following</Link>
@@ -82,10 +94,15 @@ export function Header({ active }: { active?: "watch" | "discover" | "protocol" 
         <Link href="/faq">How it works</Link>
       </nav>
       <div className="header-actions" ref={menuRef}>
-        <button className={`wallet-button${wrongChain ? " is-warning" : wallet.account ? " is-connected" : ""}`} onClick={() => wallet.account ? setMenuOpen(!menuOpen) : setPickerOpen(true)} disabled={busy} aria-expanded={wallet.account ? menuOpen : undefined} aria-controls={wallet.account ? "wallet-account-panel" : undefined} aria-label={busy ? "Waiting for wallet" : wallet.account ? `Wallet ${shortAddress(wallet.account)}${wrongChain ? ", switch to testnet needed" : ""}` : undefined}>
+        <button className={`wallet-button${wrongChain ? " is-warning" : wallet.account ? " is-connected" : ""}`} onClick={() => wallet.account || member ? setMenuOpen(!menuOpen) : setPickerOpen(true)} disabled={busy} aria-expanded={wallet.account || member ? menuOpen : undefined} aria-controls={wallet.account || member ? "wallet-account-panel" : undefined} aria-label={busy ? "Waiting for wallet" : wallet.account ? `Wallet ${shortAddress(wallet.account)}${wrongChain ? ", switch to testnet needed" : ""}` : undefined}>
           <span className={wallet.account && !wrongChain ? "status-dot" : "status-dot inactive"} aria-hidden="true" />
-          {busy ? "Check your wallet…" : wallet.account ? `${shortAddress(wallet.account)} ▾` : "Sign in"}
+          {busy ? "Check your wallet…" : wallet.account ? `${shortAddress(wallet.account)} ▾` : member ? `👤 ${member} ▾` : "Sign in"}
         </button>
+        {menuOpen && !wallet.account && member && <div className="wallet-account-panel" id="wallet-account-panel">
+          <strong>Signed in as {member}</strong><p className="accounting-copy">Passkey account · follows sync across your devices.</p>
+          <button className="secondary-button" onClick={() => { setMenuOpen(false); setPickerOpen(true); }}>Use a wallet instead</button>
+          <button className="claim-link" onClick={async () => { setMenuOpen(false); try { await resetCommunitySession(); setMember(null); window.dispatchEvent(new Event(COMMUNITY_UPDATED_EVENT)); } catch { setMessage("Sign-out didn’t finish. Try again."); } }}>Sign out</button>
+        </div>}
         {menuOpen && wallet.account && <div className="wallet-account-panel" id="wallet-account-panel">
           <strong>Your wallet</strong><p className="wallet-full-address">{wallet.account}</p>
           <p className={wrongChain ? "wallet-network-warning" : "accounting-copy"}>{wrongChain ? "Switch to Robinhood testnet to create or trade." : "Robinhood Chain testnet · free test assets"}</p>
@@ -96,10 +113,9 @@ export function Header({ active }: { active?: "watch" | "discover" | "protocol" 
         </div>}
       </div>
     </div>
-    <LiveAlerts />
     {busy && <div className="wallet-banner" role="status"><span>Check your wallet for a connection or network request. If you don’t see it, open the wallet extension or app.</span></div>}
     {wrongChain && !message && !busy && <div className="wallet-banner"><span>Wallet connected · switch to Robinhood testnet before creating or trading.</span><button className="wallet-switch" onClick={() => void switchNetwork()} disabled={busy}>Switch to testnet</button></div>}
     {message && <div className="wallet-banner" role="status"><span>{message}</span><button onClick={() => setMessage("")} aria-label="Dismiss wallet message">×</button></div>}
-    {pickerOpen && <WalletPicker onSelect={() => void connect()} onClose={() => setPickerOpen(false)} />}
+    {pickerOpen && <WalletPicker onSelect={() => void connect()} onClose={() => setPickerOpen(false)} onMember={name => { setMember(name); setMessage(`Welcome, ${name}! You’re signed in with your passkey.`); }} />}
   </header>;
 }

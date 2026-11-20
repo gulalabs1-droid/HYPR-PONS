@@ -10,7 +10,9 @@ test("opening the studio leaves devices off; only explicit private preview reque
   const saved = keys.map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const);
   let requests = 0; let stopped = 0;
   let renderer: ReactTestRenderer | undefined;
-  Object.defineProperty(globalThis, "window", { configurable: true, value: { setInterval() { return 1; }, clearInterval() {}, addEventListener() {}, removeEventListener() {} } });
+  // Only the creator's own wallet sees the studio entry point.
+  const creatorWallet = { request: async ({ method }: { method: string }) => method === "eth_accounts" ? [`0x${"2".repeat(40)}`] : "0xb626", on() {}, removeListener() {} };
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { ethereum: creatorWallet, localStorage: { getItem: () => null, setItem() {}, removeItem() {} }, setInterval() { return 1; }, clearInterval() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; } } });
   Object.defineProperty(globalThis, "document", { configurable: true, value: { visibilityState: "visible", addEventListener() {}, removeEventListener() {} } });
   Object.defineProperty(globalThis, "navigator", { configurable: true, value: { mediaDevices: { async getUserMedia(constraints: unknown) {
     requests++; assert.deepEqual(constraints, { video: true, audio: false });

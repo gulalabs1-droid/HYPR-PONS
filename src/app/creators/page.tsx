@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
 import { CreateRoomPanel } from "@/components/create-room-panel";
+import { LaunchpadPanel } from "@/components/launchpad-panel";
 import "./creators.css";
 
 export const metadata: Metadata = {
@@ -33,6 +34,7 @@ export default function CreatorsPage() {
       </section>
 
       <CreateRoomPanel />
+      <LaunchpadPanel />
 
       <section className="creator-intro-benefits" aria-labelledby="creator-benefits-title"><div className="creator-intro-section-heading"><span className="eyebrow">A LITTLE MORE THAN A STREAM</span><h2 id="creator-benefits-title">Make it a place worth coming back to.</h2></div>
         <div className="creator-intro-grid">

@@ -18,6 +18,8 @@
     "@fix-webm-duration/fix": "1.0.1",
     "@livekit/components-react": "^2.9.24",
     "@livekit/components-styles": "^1.2.0",
+    "@simplewebauthn/browser": "13.3.0",
+    "@simplewebauthn/server": "13.3.3",
     "lightweight-charts": "5.2.1",
     "livekit-client": "^2.22.3",
     "livekit-server-sdk": "^2.18.0",

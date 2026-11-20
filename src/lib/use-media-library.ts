@@ -4,11 +4,11 @@ import { MEDIA_UPDATED_EVENT, type MediaLibrary } from "./media";
 import { COMMUNITY_UPDATED_EVENT } from "./growth";
 import { awaitCommunityReset, resetCommunitySession } from "./community-client";
 import { subscribeMediaWalletChange } from "./media-client";
-export function useMediaLibrary(roomId: string) {
+export function useMediaLibrary(roomId: string, enabled = true) {
   const [state, setState] = useState<MediaLibrary | null>(null), [error, setError] = useState("");
   const active = useRef(true), pending = useRef(false), generation = useRef(0);
   const refresh = useCallback(async () => {
-    if (pending.current || document.visibilityState === "hidden") return;
+    if (!enabled || pending.current || document.visibilityState === "hidden") return;
     pending.current = true; const current = generation.current;
     try {
       await awaitCommunityReset();
@@ -19,7 +19,7 @@ export function useMediaLibrary(roomId: string) {
     } catch (failure) {
       if (active.current && current === generation.current) { setState(null); setError(failure instanceof Error ? failure.message : "Video library unavailable."); }
     } finally { pending.current = false; }
-  }, [roomId]);
+  }, [roomId, enabled]);
   useEffect(() => {
     const counter = generation;
     active.current = true; setState(null); void refresh();

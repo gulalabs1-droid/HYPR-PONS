@@ -9,11 +9,14 @@ import type { Session } from "./native-live-connected";
 import { useWalletStatus } from "@/lib/use-wallet-status";
 import { OPEN_WALLET_EVENT } from "@/lib/wallet-discovery";
 import { broadcastCopy, broadcastExitNotice, publicBroadcastPhase, type BroadcastExit, type BroadcastStatus } from "@/lib/broadcast-lifecycle";
-import { RoomContinuity } from "./room-continuity";
 import { TokenArt, tokenGlyph } from "./token-art";
 import { roomHue } from "@/lib/room-display";
 import { CommunitySignInError, signInCommunity } from "@/lib/community-client";
 import { showDemoNews } from "@/lib/demo-news";
+import type { MediaAsset } from "@/lib/media";
+import { InlineReplay } from "./inline-replay";
+import { ShowCountdown } from "./show-countdown";
+import { RemindMe } from "./remind-me";
 import { DemoNewsFeed } from "./demo-news-feed";
 
 // LiveKit is large; load it only once a viewer joins or a creator starts broadcasting.
@@ -26,7 +29,7 @@ function signedHostMessage(roomId: string, address: string, timestamp: number) {
   return ["HYPR native live host authorization", `Room: hypr-${roomId.toLowerCase()}`, `Wallet: ${address.toLowerCase()}`, `Timestamp: ${timestamp}`].join("\n");
 }
 
-export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch; onOpenChat?: () => void; showTitle?: string }) {
+export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestReplay, otherLive = [] }: { token: Launch; onOpenChat?: () => void; nextShow?: { id: string; title: string; startsAt: string }; latestReplay?: MediaAsset; otherLive?: { address: string; name: string }[]; showTitle?: string }) {
   const [status, setStatus] = useState<BroadcastStatus | null>(null);
   const [statusError, setStatusError] = useState(false);
   const [seenLive, setSeenLive] = useState(false);
@@ -150,14 +153,14 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
     stopPreview(); setShareVideo(false); setShareAudio(false); setSaveReplay(false); void refreshStatus();
   }, [refreshStatus, stopPreview]);
 
-  if (session) return <section aria-label="Broadcast player"><ConnectedRoom key={session.token} session={session} onLeave={leaveRoom} onError={setNotice} onSessionChange={setSession} /><RoomContinuity onOpenChat={onOpenChat} />{notice && <div className="live-notice" role="alert">{notice}</div>}</section>;
+  if (session) return <section aria-label="Broadcast player"><ConnectedRoom key={session.token} session={session} onLeave={leaveRoom} onError={setNotice} onSessionChange={setSession} />{notice && <div className="live-notice" role="alert">{notice}</div>}</section>;
 
   const creatorConnected = wallet.account?.toLowerCase() === token.deployer.toLowerCase();
   const phase = publicBroadcastPhase(status, statusError, seenLive, lastExit);
   const copy = broadcastCopy(phase);
   const phaseLabel = phase === "live" && status?.viewerCount !== undefined ? `LIVE · ${status.viewerCount} viewer${status.viewerCount === 1 ? "" : "s"}` : copy.label;
   return <section className="native-live-surface native-live-watch-first" aria-label="Broadcast player">
-    {showDemoNews(token, phase) ? <DemoNewsFeed /> : <div className={`live-viewport native-live-placeholder stage-poster is-${phase}`} style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
+    {latestReplay && !status?.live && phase !== "checking" && !studioOpen ? <InlineReplay roomId={token.address} asset={latestReplay} /> : showDemoNews(token, phase) ? <DemoNewsFeed /> : <div className={`live-viewport native-live-placeholder stage-poster is-${phase}`} style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
       <div className="stage-backdrop" aria-hidden="true"><TokenArt seed={token.address} /></div>
       <div className="native-live-mark"><span className="stage-avatar" aria-hidden="true"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} /></span>
       <span className="broadcast-phase-label">{phase === "live" && <span className="pulse" />}{phaseLabel}</span>
@@ -167,10 +170,12 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
       {status?.live && <button className="primary-button live-action" onClick={joinViewer} disabled={busy}>{busy ? "Joining…" : "Watch live →"}</button>}
       {status?.live && <small className="live-ask-hint">Want to be on the show? Watch, then tap ✋ Ask to join. The creator approves each guest.</small>}
       {phase === "unavailable" && <button className="secondary-button" onClick={() => void refreshStatus()}>Retry broadcast status</button>}
+      {!status?.live && nextShow && Date.parse(nextShow.startsAt) > Date.now() - 60 * 60_000 && <div className="stage-next-show"><span>NEXT SHOW</span><strong>{nextShow.title}</strong><ShowCountdown startsAt={nextShow.startsAt} /><RemindMe roomId={token.address} calendarHref={`/api/community/calendar?roomId=${token.address}&showId=${nextShow.id}`} /></div>}
+      {!status?.live && !nextShow && phase !== "unavailable" && onOpenChat && <button type="button" className="secondary-button" onClick={onOpenChat}>Say hi in chat</button>}
     </div></div>}
     <div className="native-live-copy native-live-viewer-footer">
       <span className="live-state broadcast-status-announcement" role="status">{phaseLabel}</span>
-      {!studioOpen && (creatorConnected ? <button className="secondary-button" onClick={() => setStudioOpen(true)} disabled={!status?.configured}>Open creator studio</button> : <details className="creator-entry"><summary>Are you the creator?</summary><p>Broadcasting requires the wallet that created this room: {token.deployer.slice(0, 6)}…{token.deployer.slice(-4)}.</p><button className="secondary-button" onClick={() => setStudioOpen(true)} disabled={!status?.configured}>Open creator studio</button></details>)}
+      {!studioOpen && creatorConnected && <button className="secondary-button" onClick={() => setStudioOpen(true)} disabled={!status?.configured}>Open creator studio</button>}
       {studioOpen && <div className="live-studio-card"><strong>Creator studio · not live yet</strong>
         <ol className="studio-steps"><li>Choose your devices.</li><li>Preview privately on this device.</li><li>Sign in if needed, then start broadcasting.</li></ol>
         <span>Preview requests access but does not publish or record. “Start broadcast” shares your selected devices live through LiveKit. Your HYPR sign-in also works for chat and creator tools; it is a free signature, not a transaction.</span>
@@ -185,7 +190,22 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
         <button className="claim-link" disabled={busy} onClick={() => { stopPreview(); setStudioOpen(false); setNotice(""); }}>Close studio</button>
       </div>}
       {notice && <div className="live-notice" role="status">{notice}</div>}
+      {lastExit && !status?.live && <UpNext roomId={token.address} nextShow={nextShow} latestReplay={latestReplay} otherLive={otherLive} onOpenChat={onOpenChat} />}
     </div>
-    <RoomContinuity onOpenChat={onOpenChat} />
+    
+  </section>;
+}
+
+/** After a show ends: the next show, the replay, or another room that's live right now. */
+function UpNext({ roomId, nextShow, latestReplay, otherLive, onOpenChat }: { roomId: string; nextShow?: { id: string; title: string; startsAt: string }; latestReplay?: MediaAsset; otherLive: { address: string; name: string }[]; onOpenChat?: () => void }) {
+  const upcoming = nextShow && Date.parse(nextShow.startsAt) > Date.now() ? nextShow : undefined;
+  return <section className="up-next" aria-label="Up next">
+    <span className="eyebrow">UP NEXT</span>
+    <ul>
+      {upcoming && <li><strong>Next show · {upcoming.title}</strong><ShowCountdown startsAt={upcoming.startsAt} /><RemindMe roomId={roomId} calendarHref={`/api/community/calendar?roomId=${roomId}&showId=${upcoming.id}`} /></li>}
+      {latestReplay && <li><strong>Watch the replay · {latestReplay.title}</strong><a className="secondary-button" href={`/room/${roomId}/recording/${latestReplay.id}`}>Watch ↗</a></li>}
+      {otherLive.slice(0, 3).map(room => <li key={room.address}><strong><span className="pulse" aria-hidden="true" /> {room.name} is live</strong><a className="secondary-button" href={`/room/${room.address}`}>Watch ↗</a></li>)}
+      {!upcoming && !latestReplay && !otherLive.length && <li><strong>Keep the conversation going</strong>{onOpenChat ? <button type="button" className="secondary-button" onClick={onOpenChat}>Open chat</button> : null}<a className="claim-link" href="/discover">Find another room ↗</a></li>}
+    </ul>
   </section>;
 }

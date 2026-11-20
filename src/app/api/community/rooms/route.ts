@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) return NextResponse.json({ error: "Use HYPR to open a room." }, { status: 403, headers });
   const session = decodeAuthorization(request.cookies.get(COMMUNITY_SESSION_COOKIE)?.value, requestOrigin(request), "session");
   if (!session) return NextResponse.json({ error: "Sign in with your wallet (free, no transaction) to open a room." }, { status: 401, headers });
+  if (session.account === "passkey") return NextResponse.json({ error: "Opening a room needs a wallet so you can broadcast. Passkey accounts can watch, chat and follow." }, { status: 403, headers });
   let body: { name?: unknown };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid request." }, { status: 400, headers }); }
   const name = typeof body?.name === "string" ? body.name.trim().replace(/\s+/g, " ") : "";

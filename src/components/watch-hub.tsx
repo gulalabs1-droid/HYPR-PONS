@@ -36,8 +36,10 @@ export function WatchHub({ source, initialLaunches, initialSource }: { source: "
     <div className="watch-shell">
       <section className="watch-intro">
         <div><span className="eyebrow">THE WATCH ROOM</span><h1>Find something <em>worth watching.</em></h1><p>Independent news and real creator rooms, all in one place. Watching is free and needs no wallet.</p></div>
-        <div className="watch-intro-actions"><span className="watch-preview">TESTNET PREVIEW</span><button type="button" className="secondary-button" onClick={() => void share()}>Share watch page ↗</button><span role="status" aria-live="polite">{shareNotice}</span></div>
+        <div className="watch-intro-actions"><button type="button" className="secondary-button" onClick={() => void share()}>Share watch page ↗</button><span role="status" aria-live="polite">{shareNotice}</span></div>
       </section>
+      {/* Real creators outrank borrowed news whenever anyone is live. */}
+      {creatorsLive.length > 0 && <section className="watch-live-rooms" aria-labelledby="watch-live-rooms-title"><div className="watch-section-heading"><div><span className="eyebrow">HAPPENING ON HYPR</span><h2 id="watch-live-rooms-title">Creator rooms live now</h2></div><Link href="/discover?view=live">See all ↗</Link></div><div className="discovery-card-grid">{creatorsLive.map(room => <DiscoveryRoomCard key={room.token.address} room={room} />)}</div></section>}
       <div className="watch-layout">
         <section className="watch-stage" aria-labelledby="watch-news-title">
           <div className="watch-section-heading"><div><span className="eyebrow">NEWS · VIA YOUTUBE</span><h2 id="watch-news-title">Choose a news stream.</h2></div><span>Independent broadcasters</span></div>
@@ -54,7 +56,6 @@ export function WatchHub({ source, initialLaunches, initialSource }: { source: "
           <section className="watch-sidebar-creator"><span className="eyebrow">HAVE A SHOW?</span><h2>Make it yours.</h2><p>Start a creator room and give your audience a place to return.</p><Link href="/creators">For creators ↗</Link></section>
         </aside>
       </div>
-      {creatorsLive.length > 0 && <section className="watch-live-rooms" aria-labelledby="watch-live-rooms-title"><div className="watch-section-heading"><div><span className="eyebrow">HAPPENING ON HYPR</span><h2 id="watch-live-rooms-title">Creator rooms live now</h2></div><Link href="/discover?view=live">See all ↗</Link></div><div className="discovery-card-grid">{creatorsLive.map(room => <DiscoveryRoomCard key={room.token.address} room={room} />)}</div></section>}
       <SiteFooter />
     </div>
   </main>;

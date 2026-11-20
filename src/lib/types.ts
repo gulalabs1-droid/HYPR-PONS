@@ -24,6 +24,8 @@ export type Launch = {
   liveCheckedAt?: string;
   chainCheckedAt?: string;
   origin?: "pons" | "hypr";
+  /** A HYPR room opened without a coin: no contract, curve, chart or trading. */
+  coinless?: boolean;
   dataStatus?: "demo" | "partial" | "verified";
   curveProgressBps?: number;
   curvePhase?: "Live" | "Graduating" | "Graduated";

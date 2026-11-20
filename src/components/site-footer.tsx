@@ -10,14 +10,13 @@ export function SiteFooter() {
       </div>
       <nav className="site-footer-links" aria-label="Footer">
         <Link href="/watch">Watch</Link>
-        <Link href="/#launch">Create</Link>
+        <Link href="/creators">Create</Link>
         <Link href="/discover">Discover</Link>
         <Link href="/creators">For creators</Link>
         <Link href="/faq">FAQ</Link>
         <Link href="/about">About HYPR</Link>
         <Link href="/protocol">Protocol</Link>
         <a href="https://faucet.testnet.chain.robinhood.com" target="_blank" rel="noreferrer">Test ETH faucet ↗</a>
-        <a href="https://docs.ponsfamily.com" target="_blank" rel="noreferrer">Pons docs ↗</a>
       </nav>
     </footer>
   );

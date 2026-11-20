@@ -250,9 +250,9 @@ export function LaunchpadPanel() {
   return (
     <section id="launch" className="launchpad-panel">
       <div className="launchpad-copy">
-        <span className="eyebrow">CREATE ON HYPR · TESTNET</span>
-        <h2>Your coin. Your community.</h2>
-        <p>Name your coin, approve it in your wallet, then open your room. Trading and native creator streaming stay inside HYPR.</p>
+        <span className="eyebrow">OPTIONAL · TESTNET COIN</span>
+        <h2>Want a coin with your room?</h2>
+        <p>Rooms don’t need one. If your community wants a coin to trade, name it and approve it in your wallet; it gets its own room with a chart and trading.</p>
         <p className="launch-testnet-note">You’re testing with free test ETH—not launching a real-money coin. Going live is a separate step.</p>
         {!hasValidFactory && (
           <div className="data-notice" role="status">

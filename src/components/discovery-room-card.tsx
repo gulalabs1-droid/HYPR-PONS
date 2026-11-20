@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { DiscoveryRoom } from "@/lib/discovery";
 import { broadcastLabel } from "@/lib/discovery";
 import { CreatorAvatar, TokenArt, tokenGlyph } from "./token-art";
-import { SaveRoom } from "./save-room";
+import { FollowButton } from "./follow-button";
 
 export function ShowTime({ startsAt }: { startsAt: string }) {
   return <time dateTime={startsAt} suppressHydrationWarning>{new Date(startsAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" })}</time>;
@@ -21,10 +21,10 @@ export function DiscoveryRoomCard({ room }: { room: DiscoveryRoom }) {
       {live && token.viewerCount !== undefined && <span className="poster-viewers">{token.viewerCount.toLocaleString()} connected {token.viewerCount === 1 ? "viewer" : "viewers"}</span>}
     </Link>
     <div className="discovery-card-body">
-      <div className="discovery-card-identity"><CreatorAvatar seed={token.address} avatar={creator?.avatar || "H"} name={title} /><div><h3><Link href={`/room/${token.address}`}>{title}</Link></h3><span>{token.origin === "hypr" ? "HYPR · Testnet" : "Pons · Indexed room"} <span className="discovery-symbol">${token.symbol}</span></span></div></div>
+      <div className="discovery-card-identity"><CreatorAvatar seed={token.address} avatar={creator?.avatar || "H"} name={title} /><div><h3><Link href={`/room/${token.address}`}>{title}</Link></h3><span>Community room</span></div></div>
       <p>{description}</p>
       {upcoming && creator?.show && <div className="discovery-next"><span>UP NEXT · {creator.show.title}</span><ShowTime startsAt={creator.show.startsAt} /></div>}
-      <div className="discovery-card-bottom"><Link href={`/room/${token.address}`} className="discovery-room-link">{live ? "Watch stream" : "Open room"} <span aria-hidden="true">↗</span></Link><SaveRoom roomId={token.address} /></div>
+      <div className="discovery-card-bottom"><Link href={`/room/${token.address}`} className="discovery-room-link">{live ? "Watch stream" : "Open room"} <span aria-hidden="true">↗</span></Link><FollowButton roomId={token.address} /></div>
     </div>
   </article>;
 }

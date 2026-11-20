@@ -55,12 +55,12 @@ export function DiscoveryDirectory({ initialLaunches, source }: { initialLaunche
     <div className="discovery-shell">
       <aside className="discovery-sidebar" aria-label="Browse discovery">
         <Link href="/discover" className="discovery-wordmark">THE DISCOVERY ROOM<span>Find your people.</span></Link>
-        <div className="discovery-nav" role="group" aria-label="Filter rooms">{discoveryFilters.map(item => <button key={item} aria-pressed={filter === item} onClick={() => update("view", item)}><span aria-hidden="true">{icons[item]}</span><span>{item === "all" ? "Explore" : labels[item]}</span><small>{counts[item]}</small></button>)}</div>
+        <div className="discovery-nav" role="group" aria-label="Filter rooms">{discoveryFilters.map(item => <button key={item} aria-pressed={filter === item} onClick={() => update("view", item)}><span aria-hidden="true">{icons[item]}</span><span>{item === "all" ? "Explore" : labels[item]}</span>{counts[item] > 0 && <small>{counts[item]}</small>}</button>)}</div>
         <div className="discovery-sidebar-note"><span className="eyebrow">WATCH FIRST. COINS OPTIONAL.</span><p>No wallet. No buy-in.<br />Just open a room.</p><Link href="/faq">How HYPR works ↗</Link></div>
         <Link href="/following" className="discovery-library">Your Following library ↗</Link>
       </aside>
       <div className="discovery-main">
-        <header className="discovery-heading"><div><span className="eyebrow">CREATORS, NOT JUST TICKERS</span><h1>Find your next<br /><em>“I was there.”</em></h1><p>Live conversations. Familiar faces. A room to come back to.</p></div><span className="discovery-preview-tag">TESTNET PREVIEW</span></header>
+        <header className="discovery-heading"><div><span className="eyebrow">CREATORS, NOT JUST TICKERS</span><h1>Find your next<br /><em>“I was there.”</em></h1><p>Live conversations. Familiar faces. A room to come back to.</p></div></header>
         <div className="discovery-search-row"><label className="discovery-search"><span aria-hidden="true">⌕</span><span className="sr-only">Search creators, rooms, coins, or show titles</span><input aria-label="Search creators, rooms, coins, or show titles" type="search" value={query} maxLength={200} placeholder="Find a creator, room, or show…" onChange={event => update("q", event.target.value)} />{query && <button aria-label="Clear search" onClick={() => update("q", "")}>×</button>}</label><label className="discovery-sort"><span className="sr-only">Sort rooms</span><select value={sort} onChange={event => update("sort", event.target.value)}><option value="live">Live first</option><option value="new">Index order</option><option value="name">Name A–Z</option></select></label></div>
         {filter === "all" && !query && <section className="discovery-categories" aria-labelledby="watch-categories-title">
           <div className="discovery-categories-title"><h2 id="watch-categories-title">Find something to watch</h2><span>Choose a place to start</span></div>
@@ -78,7 +78,7 @@ export function DiscoveryDirectory({ initialLaunches, source }: { initialLaunche
             <small>Room artwork, not live footage.</small>
           </div>
         </section>}
-        <div className="discovery-data-line"><span>◉ {counts.live} confirmed live · {rooms.length} indexed {rooms.length === 1 ? "room" : "rooms"}{filter === "all" && !query && throwaway && !includeTestRooms ? ` · ${throwaway} test ${throwaway === 1 ? "room" : "rooms"} hidden from Explore` : ""}</span><Link href="/faq#wallet">First visit? Start here ↗</Link></div>
+        <div className="discovery-data-line"><span>{counts.live > 0 ? `◉ ${counts.live} live now` : "Watching is free. No wallet needed."}</span><Link href="/faq#wallet">First visit? Start here ↗</Link></div>
         <section className="discovery-browse" aria-labelledby="discovery-results-title">
           <div className="discovery-results-heading"><h2 id="discovery-results-title">{labels[filter]}</h2><span role="status" aria-live="polite">{results.length} {results.length === 1 ? "room" : "rooms"}{query ? ` matching “${query}”` : ""}</span></div>
           {filter === "all" && !query && throwaway > 0 && <p className="accounting-copy">{includeTestRooms ? "Showing indexed test rooms. These are real testnet launches, not sample activity." : "Test-named rooms are hidden from Explore, not deleted. Search for one or reveal them below."} <button className="claim-link" type="button" aria-pressed={includeTestRooms} onClick={() => update("tests", includeTestRooms ? "" : "1")}>{includeTestRooms ? "Hide test rooms" : "Show test rooms"}</button></p>}

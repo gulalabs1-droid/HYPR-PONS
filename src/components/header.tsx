@@ -7,7 +7,7 @@ import { discoverWallets, OPEN_WALLET_EVENT, rememberSelectedWallet, setWalletSe
 import { useWalletStatus } from "@/lib/use-wallet-status";
 import { WalletPicker } from "./wallet-picker";
 import { LiveAlerts } from "./live-alerts";
-import { resetCommunitySession } from "@/lib/community-client";
+import { resetCommunitySession, signInCommunity } from "@/lib/community-client";
 import { COMMUNITY_UPDATED_EVENT } from "@/lib/growth";
 
 export function Header({ active }: { active?: "watch" | "discover" | "protocol" | "following" }) {
@@ -47,6 +47,9 @@ export function Header({ active }: { active?: "watch" | "discover" | "protocol" 
         setMessage("Your wallet is connected, but not on HYPR’s testnet. Open your wallet to finish switching; no trade was sent.");
       }
       await wallet.refresh();
+      // One sign-in: the same free signature unlocks chat, follows sync and creator tools.
+      try { await signInCommunity(); window.dispatchEvent(new Event(COMMUNITY_UPDATED_EVENT)); }
+      catch { setMessage("Wallet connected. Sign the free HYPR message when you chat or follow to sync across devices."); }
     } catch (error) { setMessage(walletErrorMessage(error)); }
     finally { setBusy(false); }
   }
@@ -75,13 +78,13 @@ export function Header({ active }: { active?: "watch" | "discover" | "protocol" 
         <Link className={active === "watch" ? "active" : ""} aria-current={active === "watch" ? "page" : undefined} href="/watch">Watch</Link>
         <Link className={active === "discover" ? "active" : ""} aria-current={active === "discover" ? "page" : undefined} href="/discover">Discover</Link>
         <Link className={active === "following" ? "active" : ""} aria-current={active === "following" ? "page" : undefined} href="/following">Following</Link>
-        <Link href="/#launch">Create</Link>
-        <Link className={active === "protocol" ? "active" : ""} aria-current={active === "protocol" ? "page" : undefined} href="/protocol">How it works</Link>
+        <Link href="/creators">Create</Link>
+        <Link href="/faq">How it works</Link>
       </nav>
       <div className="header-actions" ref={menuRef}>
         <button className={`wallet-button${wrongChain ? " is-warning" : wallet.account ? " is-connected" : ""}`} onClick={() => wallet.account ? setMenuOpen(!menuOpen) : setPickerOpen(true)} disabled={busy} aria-expanded={wallet.account ? menuOpen : undefined} aria-controls={wallet.account ? "wallet-account-panel" : undefined} aria-label={busy ? "Waiting for wallet" : wallet.account ? `Wallet ${shortAddress(wallet.account)}${wrongChain ? ", switch to testnet needed" : ""}` : undefined}>
           <span className={wallet.account && !wrongChain ? "status-dot" : "status-dot inactive"} aria-hidden="true" />
-          {busy ? "Check your wallet…" : wallet.account ? `${shortAddress(wallet.account)} ▾` : "Connect wallet"}
+          {busy ? "Check your wallet…" : wallet.account ? `${shortAddress(wallet.account)} ▾` : "Sign in"}
         </button>
         {menuOpen && wallet.account && <div className="wallet-account-panel" id="wallet-account-panel">
           <strong>Your wallet</strong><p className="wallet-full-address">{wallet.account}</p>

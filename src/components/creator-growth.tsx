@@ -9,6 +9,9 @@ import { useWalletStatus } from "@/lib/use-wallet-status";
 import { walletErrorMessage } from "@/lib/wallet-discovery";
 import { ShareRoom } from "./share-room";
 import { CreatorAvatar } from "./token-art";
+import { FollowButton } from "./follow-button";
+import { TipCreator } from "./tip-creator";
+import { ObsSetup } from "./obs-setup";
 
 export function ShowTime({ iso }: { iso: string }) {
   const [label, setLabel] = useState(`${iso.replace("T", " ").slice(0, 16)} UTC`);
@@ -96,7 +99,33 @@ function CreatorReports({ room, onSave }: { room: GrowthRoom; onSave: (action: s
   return <div className="growth-form"><div className="hub-form-head"><h3>Community reports</h3><p>Reports are private to this room’s creator. This is not an emergency service or a platform takedown system.</p></div><div className="growth-actions"><button className="secondary-button" onClick={() => void load()}>{reports ? "Refresh reports" : "Check reports"}</button></div>{reports?.length === 0 && <p>No unresolved reports.</p>}{reports?.map(report => <div className="growth-report" key={report.id}><strong>{report.reason}</strong><p>{report.details}</p>{report.message && <blockquote>{report.message}</blockquote>}<button className="secondary-button" onClick={async () => { await onSave("resolve-report", { id: report.id, hideMessage: Boolean(report.messageId) }); await load(); }}>{report.messageId ? "Hide message & resolve" : "Mark reviewed"}</button></div>)}{error && <p role="alert">{error}</p>}</div>;
 }
 
-type HubTab = "show" | "profile" | "moment" | "reports";
+type HubTab = "stats" | "show" | "obs" | "profile" | "moment" | "reports";
+
+type Stats = { last7Days: Record<string, number>; followers: number; newFollowers7d: number; lastBroadcast: { peakViewers: number; startedAt: string } | null; bestPeak30d: number | null; cameBack30d: number };
+function CreatorStats({ roomId }: { roomId: string }) {
+  const [stats, setStats] = useState<Stats | null>(null), [error, setError] = useState("");
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/community/stats?roomId=${roomId}`, { cache: "no-store" }).then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.error); if (active) setStats(data); })
+      .catch(failure => { if (active) setError(failure instanceof Error && failure.message ? failure.message : "Stats are unavailable."); });
+    return () => { active = false; };
+  }, [roomId]);
+  if (error) return <p className="accounting-copy">{error}</p>;
+  if (!stats) return <p className="accounting-copy">Loading your numbers…</p>;
+  const week = stats.last7Days || {};
+  const tiles: [string, number | string, string][] = [
+    ["Room visits", week.room_view || 0, "last 7 days"],
+    ["Started watching", week.play_start || 0, "last 7 days"],
+    ["Watched 30s+", week.watch_30s || 0, "last 7 days"],
+    ["Chat messages", (week.chat_message || 0) + (week.guest_message || 0), "last 7 days"],
+    ["New followers", stats.newFollowers7d + (week.follow || 0), "last 7 days"],
+    ["Peak viewers", stats.lastBroadcast ? stats.lastBroadcast.peakViewers : "—", stats.lastBroadcast ? "last broadcast" : "go live to see this"],
+    ["Came back", stats.cameBack30d, "chatted on 2+ days · 30 days"],
+    ["Alerts turned on", week.alert_on || 0, "last 7 days"],
+  ];
+  return <div className="creator-stats"><div className="creator-stats-grid">{tiles.map(([label, value, note]) => <div key={label}><strong>{typeof value === "number" ? value.toLocaleString() : value}</strong><span>{label}</span><small>{note}</small></div>)}</div>
+    <p className="creator-fineprint">Anonymous daily totals—no cookies or personal data. Counts can include repeat visits and miss people who block tracking; “Came back” only sees people who chatted.</p></div>;
+}
 const wentLiveKey = (roomId: string) => `hypr-went-live-${roomId.toLowerCase()}`;
 
 function SetupChecklist({ room, roomId, live, onOpen }: { room: GrowthRoom; roomId: string; live: boolean; onOpen: (tab: HubTab) => void }) {
@@ -140,23 +169,25 @@ function ViewerTips() {
   </aside>;
 }
 
-const hubTabs: { key: HubTab; label: string }[] = [{ key: "show", label: "Next show" }, { key: "profile", label: "Profile" }, { key: "moment", label: "Share card" }, { key: "reports", label: "Reports" }];
+const hubTabs: { key: HubTab; label: string }[] = [{ key: "stats", label: "Stats" }, { key: "show", label: "Next show" }, { key: "obs", label: "OBS" }, { key: "profile", label: "Profile" }, { key: "moment", label: "Share card" }, { key: "reports", label: "Reports" }];
 
 function CreatorHub({ room, roomId, live, onSave }: { room: GrowthRoom; roomId: string; live: boolean; onSave: (action: string, payload: Record<string, unknown>) => Promise<void> }) {
-  const [tab, setTab] = useState<HubTab>("show");
+  const [tab, setTab] = useState<HubTab>(room.show ? "stats" : "show");
   return <details className="creator-hub" open>
     <summary><span className="hub-title"><span className="hub-badge">ONLY YOU SEE THIS</span><strong>Creator dashboard</strong><small>Shows, profile, share card & reports</small></span><span className="hub-chevron" aria-hidden="true" /></summary>
     <div className="hub-body">
       <SetupChecklist room={room} roomId={roomId} live={live} onOpen={setTab} />
       <div className="hub-actions">
         <a className="hub-action" href="#room-watch"><span aria-hidden="true">◉</span><strong>Go live</strong><small>Open the broadcast studio</small></a>
-        <Link className="hub-action" href={`/insights?roomId=${roomId}`}><span aria-hidden="true">↗</span><strong>Insights</strong><small>Return visits & shares</small></Link>
+        <button type="button" className="hub-action" onClick={() => setTab("stats")}><span aria-hidden="true">↗</span><strong>Stats</strong><small>Visits, plays, follows & peak viewers</small></button>
         <div className="hub-action is-share"><span aria-hidden="true">⇪</span><strong>Share room</strong><ShareRoom roomId={roomId} name={room.displayName || room.name} /></div>
       </div>
       <div className="hub-tabs" role="tablist" aria-label="Creator dashboard sections">
         {hubTabs.map(item => <button key={item.key} type="button" role="tab" id={`hub-tab-${item.key}`} aria-selected={tab === item.key} aria-controls="hub-panel" className={tab === item.key ? "selected" : ""} onClick={() => setTab(item.key)}>{item.label}{item.key === "show" && room.show && <i aria-hidden="true" />}</button>)}
       </div>
       <div className="hub-panel" id="hub-panel" role="tabpanel" aria-labelledby={`hub-tab-${tab}`}>
+        {tab === "stats" && <CreatorStats roomId={roomId} />}
+        {tab === "obs" && <ObsSetup roomId={roomId} />}
         {tab === "show" && <ShowEditor key={`${room.show?.id || "new"}-${room.show?.revision || 0}`} room={room} onSave={onSave} />}
         {tab === "profile" && <ProfileForm room={room} onSave={onSave} />}
         {tab === "moment" && <MomentForm room={room} onSave={onSave} />}
@@ -170,7 +201,6 @@ function CreatorHub({ room, roomId, live, onSave }: { room: GrowthRoom; roomId: 
 export function CreatorGrowth({ roomId, creator, live, growth }: { roomId: string; creator: string; live: boolean; growth: ReturnType<typeof useGrowth> }) {
   const wallet = useWalletStatus();
   const [notice, setNotice] = useState("");
-  const [busy, setBusy] = useState(false);
   const room = growth.state?.rooms[0];
   const ownsWallet = wallet.account?.toLowerCase() === creator.toLowerCase();
   useEffect(() => {
@@ -191,11 +221,6 @@ export function CreatorGrowth({ roomId, creator, live, growth }: { roomId: strin
   async function save(action: string, payload: Record<string, unknown>) {
     setNotice(""); try { await saveGrowth(roomId, action, payload); setNotice(action === "report" ? "Report saved for the room creator." : "Saved. Your room link stays the same."); growth.refresh(); } catch (failure) { setNotice(walletErrorMessage(failure)); }
   }
-  async function follow() {
-    setBusy(true); setNotice("");
-    try { await signInCommunity(); const response = await fetch("/api/community", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomId, action: "follow", following: !room?.following, shareId: shareAttribution(), analyticsConsent: analyticsAllowed() }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); window.dispatchEvent(new Event(COMMUNITY_UPDATED_EVENT)); setNotice(room?.following ? "Unfollowed this room." : "Following saved. Find this room and its next show in Following."); growth.refresh(); }
-    catch (failure) { setNotice(walletErrorMessage(failure)); } finally { setBusy(false); }
-  }
   if (growth.state?.enabled === false) return null;
   return <section className="creator-growth" aria-label="Creator and next show">
     {growth.error && <p className="live-notice" role="status">{growth.error} <button className="claim-link" onClick={growth.refresh}>Retry</button></p>}
@@ -205,11 +230,11 @@ export function CreatorGrowth({ roomId, creator, live, growth }: { roomId: strin
       <div className="creator-card">
         <div className="creator-profile"><CreatorAvatar seed={room.address} avatar={room.avatar} name={room.displayName || room.name} /><div><span className="eyebrow">CREATOR COMMUNITY</span><h2>{room.displayName || room.name}</h2>{room.bio && <p>{room.bio}</p>}</div></div>
         <div className="creator-card-side">
-          <div className="creator-stat"><strong>{room.followers.toLocaleString()}</strong><span>wallet follower{room.followers === 1 ? "" : "s"}</span></div>
-          <div className="growth-actions"><button className={`${room.following ? "secondary-button following" : "primary-button"}`} aria-pressed={room.following} disabled={busy} onClick={() => void follow()}>{busy ? "Saving…" : room.following ? "✓ Following with wallet" : "Follow with wallet"}</button><Link className="secondary-button" href="/following">Following →</Link></div>
+          {room.followers >= 10 && <div className="creator-stat"><strong>{room.followers.toLocaleString()}</strong><span>followers</span></div>}
+          <div className="growth-actions"><FollowButton roomId={roomId} growth={growth} /><Link className="secondary-button" href="/following">Following →</Link></div>
+          {!ownsWallet && <TipCreator roomId={roomId} creator={creator} creatorName={room.displayName || room.name} />}
         </div>
       </div>
-      <p className="creator-fineprint">Saved rooms stay on this device. Wallet follows sync across devices.</p>
       <UpcomingShow room={room} live={live} />
       {room.moment && <div className="moment-share"><span className="eyebrow">MOMENT SHARE CARD · NOT VIDEO</span><h3>{room.moment}</h3><div className="growth-actions"><Link className="secondary-button" href={`/room/${room.address}/moment`}>Open share card →</Link><ShareRoom roomId={room.address} name={room.displayName || room.name} moment /></div></div>}
     </>}

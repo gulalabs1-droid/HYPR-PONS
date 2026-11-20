@@ -165,6 +165,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle }: { token: Launch
       <strong>{copy.title}</strong>
       <small>{copy.detail}</small>
       {status?.live && <button className="primary-button live-action" onClick={joinViewer} disabled={busy}>{busy ? "Joining…" : "Watch live →"}</button>}
+      {status?.live && <small className="live-ask-hint">Want to be on the show? Watch, then tap ✋ Ask to join. The creator approves each guest.</small>}
       {phase === "unavailable" && <button className="secondary-button" onClick={() => void refreshStatus()}>Retry broadcast status</button>}
     </div></div>}
     <div className="native-live-copy native-live-viewer-footer">

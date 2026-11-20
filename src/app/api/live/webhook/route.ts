@@ -1,6 +1,7 @@
 import { WebhookReceiver } from "livekit-server-sdk";
 import { getRoomService, isLiveKitConfigured, participantRole } from "@/lib/livekit";
 import { revokeStaleGuests, type GuestService } from "@/lib/live-guests-server";
+import { announceLiveLater } from "@/lib/live-announce";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +35,10 @@ export async function POST(request: Request) {
     event = await new WebhookReceiver(process.env.LIVEKIT_API_KEY!, process.env.LIVEKIT_API_SECRET!).receive(body, request.headers.get("authorization") || undefined);
   } catch { return new Response(null, { status: 401 }); }
   const roomName = event.room?.name || "";
+  if (event.event === "track_published" && /^hypr-0x[a-f0-9]{40}$/.test(roomName) && /^host-0x[a-f0-9]{40}$/.test(event.participant?.identity || "") && participantRole(event.participant?.metadata) === "host" && event.participant?.sid) {
+    announceLiveLater(roomName.slice("hypr-".length), event.participant.sid);
+    return new Response(null, { status: 204 });
+  }
   if (event.event !== "participant_left" || !/^hypr-0x[a-f0-9]{40}$/.test(roomName) ||
       !/^host-0x[a-f0-9]{40}$/.test(event.participant?.identity || "") || participantRole(event.participant?.metadata) !== "host") {
     return new Response(null, { status: 204 });

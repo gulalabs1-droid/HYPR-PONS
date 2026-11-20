@@ -16,14 +16,18 @@ function globals(values:Record<string,unknown>) {
 }
 test("guest sharing copies only the clean canonical room; canceling native share records nothing", async () => {
   const target=new EventTarget(); let copied=""; let requests=0;
-  const restore=globals({window:{location:{origin:"https://hypr.test",href:`https://hypr.test/room/${roomId}?untrusted=1#trade`},localStorage:{getItem:()=>null},addEventListener:target.addEventListener.bind(target),removeEventListener:target.removeEventListener.bind(target)},navigator:{clipboard:{writeText:async(value:string)=>{copied=value;}},share:async()=>{throw Object.assign(new Error("cancel"),{name:"AbortError"});}},fetch:async()=>{requests++;return Response.json({});}});
+  const restore=globals({window:{location:{origin:"https://hypr.test",href:`https://hypr.test/room/${roomId}?untrusted=1#trade`},localStorage:{getItem:()=>null},addEventListener:target.addEventListener.bind(target),removeEventListener:target.removeEventListener.bind(target)},navigator:{clipboard:{writeText:async(value:string)=>{copied=value;}},share:async()=>{throw Object.assign(new Error("cancel"),{name:"AbortError"});}},fetch:async(url:string)=>{if(url!=="/api/count")requests++;return Response.json({});}});
   let renderer:ReactTestRenderer|undefined;
   try {
     await act(async()=>{renderer=create(createElement(ShareRoom,{roomId,name:"Creator"}));});
+    assert.equal(renderer!.root.findAllByType("button").length,1,"one Share control; the share sheet includes Copy");
+    // Canceling the native sheet records nothing.
+    await act(async()=>renderer!.root.findAllByType("button")[0].props.onClick());
+    assert.equal(requests,0); assert.equal(copied,""); assert.doesNotMatch(JSON.stringify(renderer!.toJSON()),/Shared\./);
+    // Without a native sheet, the same control copies the clean canonical link.
+    Reflect.deleteProperty(globalThis.navigator as object,"share");
     await act(async()=>renderer!.root.findAllByType("button")[0].props.onClick());
     assert.equal(copied,`https://hypr-pons.vercel.app/room/${roomId}`); assert.equal(requests,0);
-    await act(async()=>renderer!.root.findAllByType("button")[1].props.onClick());
-    assert.equal(requests,0); assert.doesNotMatch(JSON.stringify(renderer!.toJSON()),/Shared\./);
   } finally { await act(async()=>renderer?.unmount()); restore(); }
 });
 

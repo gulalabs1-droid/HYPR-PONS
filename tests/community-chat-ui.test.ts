@@ -18,7 +18,8 @@ test("message options stay available to the right people without crowding chat",
     document: { visibilityState: "visible", addEventListener: documentEvents.addEventListener.bind(documentEvents), removeEventListener: documentEvents.removeEventListener.bind(documentEvents) },
     navigator: {},
     fetch: async (_url: string, init?: RequestInit) => {
-      if (init?.method === "POST") { posts.push(JSON.parse(String(init.body))); return Response.json({ ok: true }); }
+      // Presence heartbeats carry no action; only record room updates.
+      if (init?.method === "POST") { const post = JSON.parse(String(init.body)); if (post.action) posts.push(post); return Response.json({ ok: true }); }
       return Response.json({ followers: 0, following: false, wallet: signedIn, messages, pinned: messages[0], hasMore: false });
     },
   };

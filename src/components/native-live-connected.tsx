@@ -17,6 +17,7 @@ import { signInCommunity } from "@/lib/community-client";
 import { shortAddress } from "@/lib/wallet";
 import { LivePlaybackAudio, LivePlaybackControls, useViewerPlayback } from "./live-playback-controls";
 import { MobileMiniPlayer, useMobileMiniPlayer } from "./mobile-mini-player";
+import { countOnce } from "@/lib/counts";
 
 type Floating = { id: number; reaction: number; x: number; mine: boolean };
 
@@ -119,13 +120,13 @@ function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Sess
   useEffect(() => {
     if (!measurement) { measured.current = false; seconds.current = 0; threshold.current = false; }
     if (role !== "viewer" || !roomId || !measurement || !playing || phase !== "live" || viewerPaused) return;
-    if (!measured.current) { measured.current = true; void pilotEvent("stream_playback_started", roomId); }
+    if (!measured.current) { measured.current = true; void pilotEvent("stream_playback_started", roomId); countOnce("play_start", roomId); }
     let previous = Date.now();
     const timer = window.setInterval(() => {
       const now = Date.now(), elapsed = Math.min(now - previous, 1200); previous = now;
       if (document.visibilityState !== "visible" || !analyticsAllowed()) return;
       seconds.current += elapsed;
-      if (seconds.current >= 30000 && !threshold.current) { threshold.current = true; void pilotEvent("stream_watch_threshold_reached", roomId); }
+      if (seconds.current >= 30000 && !threshold.current) { threshold.current = true; void pilotEvent("stream_watch_threshold_reached", roomId); countOnce("watch_30s", roomId); }
     }, 1000);
     return () => window.clearInterval(timer);
   }, [role, roomId, measurement, playing, phase, viewerPaused]);

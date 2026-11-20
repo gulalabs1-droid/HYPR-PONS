@@ -193,3 +193,80 @@ body:has(.demo-news-player iframe) .site-header { position: static; }
   .discover-page .constellation { display: none; }
   .discover-page .discover-section { padding-top: 40px; }
 }
+
+/* Guest chat, presence and creator chat settings */
+.chat-here { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(199, 243, 107, .1); color: var(--lime); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.chat-slow-mode { margin: 0; color: var(--amber); font-size: 12px; }
+.message-role.is-guest { background: rgba(255, 255, 255, .08); color: var(--text-soft); }
+.chat-nickname { display: grid; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--text-soft); }
+.chat-nickname input { min-height: 40px; padding: 8px 12px; border: 1px solid rgba(255, 255, 255, .14); border-radius: 12px; background: rgba(255, 255, 255, .04); color: inherit; font: inherit; font-size: 14px; }
+.chat-settings { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin-top: 10px; padding: 10px 12px; border: 1px dashed rgba(255, 255, 255, .14); border-radius: 12px; font-size: 13px; color: var(--text-soft); }
+.chat-settings label { display: inline-flex; align-items: center; gap: 8px; }
+.chat-settings select { min-height: 32px; border-radius: 8px; background: #11151a; color: inherit; border: 1px solid rgba(255, 255, 255, .14); }
+.follow-control { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.follow-control span { font-size: 12px; color: var(--lime); }
+.follow-control .is-following { border-color: rgba(199, 243, 107, .4); }
+.show-countdown { padding: 3px 9px; border-radius: 999px; background: rgba(168, 147, 255, .14); color: #d7cdff; font: 700 12px/1.4 var(--font-mono, monospace); font-variant-numeric: tabular-nums; }
+.room-now.is-lobby { border-color: rgba(199, 243, 107, .45); background: rgba(199, 243, 107, .07); }
+.room-now.is-lobby .room-now-badge { background: var(--lime); color: #0b0c0e; }
+.room-now-action { margin-left: auto; min-height: 36px; padding: 6px 14px; border: 0; border-radius: 999px; background: var(--lime); color: #0b0c0e; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.remind-me { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.remind-me > span { font-size: 12px; color: var(--text-soft); max-width: 320px; }
+.remind-me > span a { color: var(--lime); }
+.remind-me .is-on { border-color: rgba(199, 243, 107, .4); color: var(--lime); }
+@media (max-width: 760px) { .room-now-action { margin-left: 0; width: 100%; } .room-header-compact > .share-controls > .remind-me, .room-header-compact > .share-controls > .follow-control { display: contents; } }
+
+/* Polls and Q&A */
+.room-poll { display: grid; gap: 10px; margin-top: 12px; padding: 14px; border: 1px solid rgba(168, 147, 255, .3); border-radius: 16px; background: rgba(168, 147, 255, .06); }
+.room-poll-head { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-soft); }
+.room-poll > strong { font-size: 15px; line-height: 1.4; }
+.room-poll ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.room-poll li button { position: relative; display: flex; justify-content: space-between; width: 100%; min-height: 42px; padding: 10px 12px; overflow: hidden; border: 1px solid rgba(255, 255, 255, .12); border-radius: 12px; background: rgba(255, 255, 255, .03); color: inherit; font: inherit; font-size: 14px; cursor: pointer; isolation: isolate; }
+.room-poll li button::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--share, 0%); background: rgba(168, 147, 255, .22); z-index: -1; transition: width .4s ease; }
+.room-poll li button[aria-pressed="true"] { border-color: rgba(199, 243, 107, .55); }
+.room-poll li button:disabled { cursor: default; }
+.room-poll-form { display: grid; gap: 8px; }
+.room-poll-form input { min-height: 40px; padding: 8px 12px; border: 1px solid rgba(255, 255, 255, .14); border-radius: 10px; background: rgba(255, 255, 255, .04); color: inherit; font: inherit; font-size: 14px; }
+.room-poll-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; }
+.room-poll-start { justify-self: start; }
+.chat-ask { flex: 0 0 auto; width: 40px; min-height: 40px; border: 1px solid rgba(255, 255, 255, .14); border-radius: 12px; background: transparent; font-size: 16px; cursor: pointer; }
+.chat-ask.is-on { border-color: var(--lime); background: rgba(199, 243, 107, .12); }
+.message-role.is-question { background: rgba(168, 147, 255, .18); color: #d7cdff; }
+.chat-questions-filter { justify-self: start; margin-top: 10px; padding: 6px 12px; border: 1px solid rgba(168, 147, 255, .35); border-radius: 999px; background: transparent; color: #d7cdff; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.chat-questions-filter.is-on { background: rgba(168, 147, 255, .18); }
+.live-ask-hint { display: block; max-width: 34ch; margin: 10px auto 0; color: var(--text-soft); }
+
+/* Creator stats */
+.creator-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.creator-stats-grid > div { display: grid; gap: 2px; padding: 14px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 14px; background: rgba(255, 255, 255, .03); }
+.creator-stats-grid strong { font-size: 26px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.creator-stats-grid span { font-size: 13px; font-weight: 700; }
+.creator-stats-grid small { font-size: 11px; color: var(--text-soft); }
+
+/* Tips */
+.tip-creator { display: grid; gap: 8px; margin-top: 10px; }
+.tip-panel { display: grid; gap: 10px; padding: 14px; border: 1px solid rgba(199, 243, 107, .3); border-radius: 16px; background: rgba(199, 243, 107, .05); }
+.tip-panel p { margin: 0; font-size: 13px; color: var(--text-soft); line-height: 1.5; }
+.tip-amounts { display: flex; flex-wrap: wrap; gap: 8px; }
+.tip-amounts button { min-height: 40px; padding: 6px 14px; border: 1px solid rgba(255, 255, 255, .16); border-radius: 999px; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
+.tip-amounts button[aria-pressed="true"] { border-color: var(--lime); background: rgba(199, 243, 107, .14); color: var(--lime); }
+.tip-actions { display: flex; justify-content: flex-end; align-items: center; gap: 14px; }
+.obs-setup label { display: grid; gap: 6px; font-size: 13px; color: var(--text-soft); }
+.obs-field { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 10px; background: rgba(0, 0, 0, .25); }
+.obs-field code { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; color: var(--text); font-size: 13px; }
+
+/* Open a room without a coin */
+.create-room-panel { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 28px; align-items: center; margin: 32px 0; padding: 32px; border: 1px solid rgba(199, 243, 107, .3); border-radius: 28px; background: radial-gradient(120% 140% at 0% 0%, rgba(199, 243, 107, .1), transparent 60%), #0f1317; }
+.create-room-panel h2 { margin: 8px 0 10px; font-size: clamp(26px, 3vw, 36px); letter-spacing: -.03em; }
+.create-room-panel p { margin: 0; color: var(--text-soft); line-height: 1.6; }
+.create-room-panel form { display: grid; gap: 12px; }
+.create-room-panel label { display: grid; gap: 8px; }
+.create-room-panel input { min-height: 52px; padding: 12px 16px; border: 1px solid rgba(255, 255, 255, .16); border-radius: 14px; background: rgba(0, 0, 0, .3); color: inherit; font: inherit; font-size: 16px; }
+@media (max-width: 760px) { .create-room-panel { grid-template-columns: 1fr; padding: 22px; gap: 18px; border-radius: 22px; } }
+
+/* Room header actions: one row of buttons, confirmations on their own line */
+.follow-control .is-following, .remind-me .is-on { border-color: rgba(199, 243, 107, .55); background: rgba(199, 243, 107, .1); color: var(--lime); opacity: 1; }
+.room-header-compact > .share-controls > .follow-control, .room-header-compact > .share-controls > .remind-me { display: contents; }
+.room-header-compact > .share-controls { justify-content: flex-end; }
+.room-header-compact .share-controls span[role="status"] { flex: 1 1 100%; order: 9; max-width: none; text-align: right; font-size: 12px; }
+@media (max-width: 760px) { .room-header-compact > .share-controls { justify-content: flex-start; } .room-header-compact .share-controls span[role="status"] { text-align: left; } }

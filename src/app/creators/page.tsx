@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
+import { CreateRoomPanel } from "@/components/create-room-panel";
 import "./creators.css";
 
 export const metadata: Metadata = {
@@ -22,7 +23,7 @@ export default function CreatorsPage() {
           <span className="eyebrow">FOR CREATORS · EARLY PREVIEW</span>
           <h1 id="creator-hero-title">Go live.<br /><em>Keep your people.</em></h1>
           <p>Host the conversation in your own room. Invite guests on camera or mic, then come back to the same community for your next show.</p>
-          <div className="creator-intro-actions"><a className="primary-button" href={contact}>Get help with your first show ↗</a><Link className="secondary-button" href="/discover">Explore rooms ↗</Link></div>
+          <div className="creator-intro-actions"><a className="primary-button" href="#open-room">Open my room →</a><a className="secondary-button" href={contact}>Get help with your first show ↗</a></div>
           <p className="creator-intro-note">Robinhood Chain testnet preview · Test assets have no real value.</p>
         </div>
         <div className="creator-intro-visual" aria-label="A room for your show and community">
@@ -30,6 +31,8 @@ export default function CreatorsPage() {
           <div className="creator-intro-visual-note"><span aria-hidden="true">↗</span><div><strong>One room link</strong><small>Share it before, during and after a show.</small></div></div>
         </div>
       </section>
+
+      <CreateRoomPanel />
 
       <section className="creator-intro-benefits" aria-labelledby="creator-benefits-title"><div className="creator-intro-section-heading"><span className="eyebrow">A LITTLE MORE THAN A STREAM</span><h2 id="creator-benefits-title">Make it a place worth coming back to.</h2></div>
         <div className="creator-intro-grid">

@@ -70,7 +70,12 @@ export function createSupabaseAdminClient(
         cache: "no-store",
         signal: AbortSignal.timeout(10000),
       });
-      if (!response.ok) throw new Error(`Supabase RPC failed (${response.status})`);
+      if (!response.ok) {
+        // Keep the database's short reason (e.g. "message rate limit") for safe user messaging.
+        let detail = "";
+        try { const body = await response.json() as { message?: unknown }; if (typeof body.message === "string") detail = body.message.slice(0, 120); } catch { /* non-JSON error */ }
+        throw Object.assign(new Error(`Supabase RPC failed (${response.status})`), { detail });
+      }
       return await response.json() as T;
     },
   };

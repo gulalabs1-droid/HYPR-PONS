@@ -1,7 +1,8 @@
 import type { Launch } from "@/lib/types";
 import { getLaunchData, type LaunchDataSource } from "@/lib/integrations/pons/data";
-import { getHyprFactoryAddress } from "@/lib/integrations/hypr/constants";
 import { readRecentNativeLaunches } from "@/lib/integrations/hypr/indexer";
+import { getHyprFactoryAddress, getHyprNetwork, HYPR_NETWORKS } from "@/lib/integrations/hypr/constants";
+import { readCoinlessRooms } from "@/lib/supabase/coinless-rooms";
 
 export type CombinedLaunchDataSource = LaunchDataSource | "mixed" | "native-rpc" | "native-empty" | "native-error";
 
@@ -70,19 +71,22 @@ async function getNativeLaunches() {
 }
 
 export async function getCombinedLaunchData(): Promise<CombinedLaunchData> {
-  const [pons, native] = await Promise.all([getLaunchData(), getNativeLaunches()]);
+  const [pons, native, coinless] = await Promise.all([getLaunchData(), getNativeLaunches(), readCoinlessRooms(HYPR_NETWORKS[getHyprNetwork()].id).catch(() => [] as Launch[])]);
   const knownAddresses = new Set(native.launches.map((item) => item.address.toLowerCase()));
+  // Coinless rooms come first: they exist to be watched, not traded.
+  const rooms = coinless.filter((item) => !knownAddresses.has(item.address.toLowerCase()));
+  for (const room of rooms) knownAddresses.add(room.address.toLowerCase());
   const ponsLaunches = pons.launches
     .filter((item) => !knownAddresses.has(item.address.toLowerCase()))
     .map((item) => ({ ...item, origin: item.origin || "pons", dataStatus: item.dataStatus || (pons.source === "fixture" || pons.source === "fixture-fallback" ? "demo" : "partial") }));
-  const launches = [...native.launches, ...ponsLaunches].map((item, index) => ({ ...item, rank: index + 1 }));
+  const launches = [...rooms, ...native.launches, ...ponsLaunches].map((item, index) => ({ ...item, rank: index + 1 }));
   return {
     launches,
     source: native.source === "native-error"
       ? "native-error"
-      : native.configured && native.launches.length > 0 && ponsLaunches.length === 0
+      : native.configured && native.launches.length + rooms.length > 0 && ponsLaunches.length === 0
         ? "native-rpc"
-        : native.configured && (native.launches.length > 0 || pons.launches.length > 0)
+        : native.configured && (native.launches.length > 0 || rooms.length > 0 || pons.launches.length > 0)
         ? "mixed"
         : native.configured
           ? "native-empty"

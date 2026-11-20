@@ -67,7 +67,8 @@ test("room cards are navigation and artwork, not fake footage, engagement, or to
   const html = renderToStaticMarkup(createElement(DiscoveryRoomCard, { room }));
   assert.match(html, /Room artwork · not a video preview/);
   assert.match(html, new RegExp(`/room/${room.token.address}`));
-  assert.match(html, /Save on this device/);
+  assert.match(html, /\+ Follow/);
+  assert.doesNotMatch(html, /\$TEST|Testnet/, "cards lead with the room, not the coin");
   assert.doesNotMatch(html, /connected viewers|Market cap|<video|<a[^>]*>[^]*<button[^>]*[^]*<\/a>/);
 });
 test("viewer count is displayed only when known and confirmed live, including a genuine zero", () => {

@@ -8,7 +8,7 @@ import { createTtlCache } from "@/lib/ttl-cache";
 // reading chain state directly instead of through this short-lived cache.
 const PAGE_REVALIDATE_SECONDS = 10;
 
-export const getPageLaunchData = cache(unstable_cache(getCombinedLaunchData, ["hypr-combined-launch-data"], { revalidate: PAGE_REVALIDATE_SECONDS }));
+export const getPageLaunchData = cache(unstable_cache(getCombinedLaunchData, ["hypr-combined-launch-data"], { revalidate: PAGE_REVALIDATE_SECONDS, tags: ["hypr-combined-launch-data"] }));
 
 // Short enough that a just-confirmed room opens on the next click.
 const freshLaunchData = createTtlCache<Awaited<ReturnType<typeof getCombinedLaunchData>>>(1500, 1);

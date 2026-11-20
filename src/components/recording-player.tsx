@@ -4,6 +4,7 @@ import { canonicalRoomUrl } from "@/lib/growth";
 import { mediaDuration } from "@/lib/media";
 import { authorizeMedia, subscribeMediaWalletChange } from "@/lib/media-client";
 import { resetCommunitySession } from "@/lib/community-client";
+import { exportVerticalClip, VERTICAL_MAX_SECONDS, verticalMime } from "@/lib/vertical-clip";
 
 type Playback = { id: string; title: string; kind: string; published: boolean; mime: string; durationSeconds: number; url: string };
 export function RecordingPlayer({ roomId, id }: { roomId: string; id: string }) {
@@ -23,12 +24,28 @@ export function RecordingPlayer({ roomId, id }: { roomId: string; id: string }) 
   useEffect(() => subscribeMediaWalletChange(() => { generation.current++; setAsset(null); position.current = 0; setLoading(false); setError("Wallet changed. Sign in again to access a private draft, or reload to watch a public recording."); void resetCommunitySession().catch(() => undefined); }), []);
   async function signIn() { try { await authorizeMedia(); await load(); } catch (failure) { setError(failure instanceof Error ? failure.message : "Sign-in failed."); } }
   const url = `${canonicalRoomUrl(roomId)}/recording/${id}`;
+  const [exporting, setExporting] = useState<number | null>(null);
+  const exportAbort = useRef<AbortController | null>(null);
+  const [exportSupported, setExportSupported] = useState(false);
+  useEffect(() => setExportSupported(Boolean(verticalMime())), []);
+  const canExport = Boolean(asset?.published && Number(asset.durationSeconds) <= VERTICAL_MAX_SECONDS && exportSupported);
+  async function makeVertical() {
+    if (!asset) return;
+    exportAbort.current = new AbortController(); setExporting(0); setError("");
+    try {
+      const blob = await exportVerticalClip({ src: asset.url, title: asset.title, link: canonicalRoomUrl(roomId), onProgress: setExporting, signal: exportAbort.current.signal });
+      const file = new File([blob], `hypr-${id.slice(0, 8)}-vertical.${blob.type.includes("mp4") ? "mp4" : "webm"}`, { type: blob.type });
+      if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: asset.title, text: `Watch live on HYPR: ${canonicalRoomUrl(roomId)}` }).catch(() => undefined); }
+      else { const href = URL.createObjectURL(file); const link = document.createElement("a"); link.href = href; link.download = file.name; link.click(); window.setTimeout(() => URL.revokeObjectURL(href), 10_000); }
+    } catch (failure) { setError(failure instanceof Error ? failure.message : "Vertical export failed."); }
+    finally { setExporting(null); exportAbort.current = null; }
+  }
   return <section className="recording-player" aria-label="Saved recording player">
     {loading && <p role="status">Loading recording…</p>}
     {asset && <><span className="eyebrow">{asset.published ? "PUBLISHED RECORDING" : "PRIVATE DRAFT · NOT PUBLIC"} · {mediaDuration(Number(asset.durationSeconds))}</span><h1>{asset.title}</h1>
       <p className="accounting-copy">{asset.kind === "clip" ? "A saved clip" : "A saved replay"} · not a live broadcast. Your camera and microphone are never requested.</p>
       <video key={asset.url} ref={video} src={asset.url} controls playsInline preload="metadata" aria-label={asset.title} onLoadedMetadata={() => { if (video.current && position.current > 0) video.current.currentTime = position.current; }} onError={() => setError("The playback link may have expired, or this browser cannot decode the video. Reload the video link or try a current Chrome, Edge or Safari browser.")} />
-      {asset.published ? <div className="media-actions"><button type="button" className="secondary-button" onClick={async () => { try { await navigator.clipboard.writeText(url); setCopied(true); } catch { setError(`Copy this public recording link: ${url}`); } }}>{copied ? "Link copied" : "Copy recording link"}</button></div> : <p className="live-notice">Only you and the room creator can preview this draft. The creator can publish it from Replays & clips in the room.</p>}
+      {asset.published ? <div className="media-actions"><button type="button" className="secondary-button" onClick={async () => { try { await navigator.clipboard.writeText(url); setCopied(true); } catch { setError(`Copy this public recording link: ${url}`); } }}>{copied ? "Link copied" : "Copy recording link"}</button>{canExport && (exporting === null ? <button type="button" className="secondary-button" onClick={() => void makeVertical()}>Make vertical video for TikTok / Reels ↓</button> : <><span role="status">Making vertical video… {Math.round(exporting * 100)}% (plays through once)</span><button type="button" className="claim-link" onClick={() => exportAbort.current?.abort()}>Cancel</button></>)}</div> : <p className="live-notice">Only you and the room creator can preview this draft. The creator can publish it from Replays & clips in the room.</p>}
     </>}
     {error && <p role="alert" className="live-notice">{error}</p>}
     <div className="media-actions"><button className="claim-link" type="button" disabled={loading} onClick={() => { position.current = video.current?.currentTime || 0; void load(); }}>Reload video link</button>{!asset && !loading && <button className="secondary-button" type="button" onClick={() => void signIn()}>Sign in to preview your draft</button>}</div>

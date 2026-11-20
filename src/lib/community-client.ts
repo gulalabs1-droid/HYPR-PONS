@@ -2,6 +2,7 @@
 import { getEthereum, personalSignHex } from "./wallet";
 import { OPEN_WALLET_EVENT, walletSessionDisconnected } from "./wallet-discovery";
 import { COMMUNITY_SIGNED_OUT_EVENT, COMMUNITY_UPDATED_EVENT } from "./growth";
+import { syncDeviceFollows } from "./follow-sync";
 
 let resetting: Promise<void> | null = null;
 let resetNeeded = false;
@@ -45,6 +46,8 @@ async function signInOnce(requireLiveHost: boolean) {
   const verification = await fetch("/api/community/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signature }), signal:AbortSignal.timeout(10000) });
   const verified = await verification.json();
   if (!verification.ok || !verified.wallet) throw new CommunitySignInError(verified.error || "Wallet sign-in could not be verified.", verification.status);
+  // Rooms followed on this device before signing in become account follows.
+  await syncDeviceFollows().catch(() => 0);
   window.dispatchEvent(new Event(COMMUNITY_UPDATED_EVENT));
   return verified.wallet as string;
 }

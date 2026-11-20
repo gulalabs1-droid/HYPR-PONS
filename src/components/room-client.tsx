@@ -18,32 +18,38 @@ import { useLiveLaunches } from "@/lib/use-live-launches";
 import { CommunityPanel } from "./community-panel";
 import { CreatorGrowth } from "./creator-growth";
 import { ShareRoom } from "./share-room";
-import { PilotConsent } from "./pilot-consent";
+import { countOnce } from "@/lib/counts";
 import { useGrowth } from "@/lib/use-growth";
-import { SaveRoom } from "./save-room";
+import { FollowButton } from "./follow-button";
+import { RemindMe } from "./remind-me";
+import { LOBBY_OPENS_MS, ShowCountdown, useNow } from "./show-countdown";
 import { TokenArt, tokenGlyph } from "./token-art";
 import { RoomFaq } from "./room-faq";
 import { RoomMediaLibrary } from "./room-media-library";
 import { NativeMarketChart } from "./native-market-chart";
 
-type RoomSection = "chart" | "chat" | "videos" | "trade" | "about";
-const sectionLabels: Record<RoomSection, string> = { chart:"Chart", chat: "Chat", videos: "Videos", trade: "Trade", about: "About" };
+// Viewers come for the person: chat and replays first, the optional coin last.
+type RoomSection = "chat" | "videos" | "about" | "coin";
+const sectionLabels: Record<RoomSection, string> = { chat: "Chat", videos: "Replays", about: "About", coin: "Coin" };
 const sectionIcons: Record<RoomSection, React.ReactNode> = {
-  chart:<><path d="M3 3v18h18"/><path d="m6 15 4-5 4 2 6-7"/></>,
   chat: <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" />,
-  videos: <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m10 8 6 4-6 4Z" /></>,
-  trade: <><path d="M7 4v16M7 4 3 8M7 4l4 4" /><path d="M17 20V4m0 16-4-4m4 4 4-4" /></>,
+  videos: <><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /><path d="m10 9 5 3-5 3Z" /></>,
   about: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
+  coin: <><circle cx="12" cy="12" r="9" /><path d="m7 14 3-3 3 2 4-5" /></>,
 };
+// Older shared links used separate chart and trade tabs.
+const sectionAliases: Record<string, RoomSection> = { chart: "coin", trade: "coin", coin: "coin", chat: "chat", videos: "videos", replays: "videos", about: "about" };
 function feePercent(value?: string) { return value && Number.isFinite(Number(value)) ? `${(Number(value) / 100).toFixed(2)}%` : "—"; }
 
 export function RoomClient({ token: initialToken, source }: { token: Launch; source?: CombinedLaunchDataSource }) {
   const liveData = useLiveLaunches([initialToken], source);
   const token = liveData.launches.find((launch) => launch.address.toLowerCase() === initialToken.address.toLowerCase()) || initialToken;
   const isNative = token.origin === "hypr";
+  // Coinless rooms have no contract: no chart, trading or contract links.
+  const hasCoin = isNative && !token.coinless;
   const growth = useGrowth(token.address);
   const creatorProfile = growth.state?.rooms[0];
-  const [section, setSection] = useState<RoomSection>(isNative && initialToken.broadcastStatus !== "live" ? "chart" : "chat");
+  const [section, setSection] = useState<RoomSection>("chat");
   const sectionsRef = useRef<HTMLDivElement>(null);
   const userSelectedSection = useRef(false);
   const explorer = isNative && process.env.NEXT_PUBLIC_HYPR_NETWORK !== "mainnet" ? "https://explorer.testnet.chain.robinhood.com" : "https://robinhoodchain.blockscout.com";
@@ -51,28 +57,31 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
   const liveNow = token.broadcastStatus === "live";
   const phase = showPhase(creatorProfile?.show || null, liveNow);
   const roomName = creatorProfile?.displayName || token.name;
+  const showStart = creatorProfile?.show?.status === "scheduled" ? Date.parse(creatorProfile.show.startsAt) : NaN;
+  const clock = useNow(creatorProfile?.show?.startsAt);
+  // Pre-show lobby: 15 minutes before, until an hour after the planned start, while not live.
+  const lobbyOpen = !liveNow && Number.isFinite(showStart) && clock >= showStart - LOBBY_OPENS_MS && clock < showStart + 60 * 60_000;
+
+  useEffect(() => { countOnce("room_view", token.address); }, [token.address]);
 
   useEffect(() => {
     function followSectionLink() {
-      const value = window.location.hash.replace(/^#room-/, "") as RoomSection;
-      if (!Object.prototype.hasOwnProperty.call(sectionLabels, value) || (!isNative && (value === "chart" || value === "videos"))) return;
+      const raw = window.location.hash.replace(/^#room-/, "");
+      const value = Object.prototype.hasOwnProperty.call(sectionAliases, raw) ? sectionAliases[raw] : null;
+      if (!value || (!isNative && value === "videos")) return;
       userSelectedSection.current = true;
       setSection(value);
-      if (window.matchMedia("(max-width: 760px)").matches) window.requestAnimationFrame(() => sectionsRef.current?.querySelector(`#room-${value}`)?.scrollIntoView({ behavior: "instant", block: "start" }));
+      if (window.matchMedia("(max-width: 760px)").matches) window.requestAnimationFrame(() => sectionsRef.current?.querySelector(`#room-${value === "coin" ? (isNative ? "chart" : "trade") : value}`)?.scrollIntoView({ behavior: "instant", block: "start" }));
     }
     followSectionLink();
     window.addEventListener("hashchange", followSectionLink);
     return () => window.removeEventListener("hashchange", followSectionLink);
   }, [isNative, token.address]);
 
-  useEffect(() => {
-    if (liveNow && !userSelectedSection.current && !window.location.hash) setSection("chat");
-  }, [liveNow]);
-
   function chooseSection(next: RoomSection) {
     userSelectedSection.current = true;
     setSection(next);
-    window.requestAnimationFrame(() => sectionsRef.current?.querySelector(`#room-${next}`)?.scrollIntoView({ behavior: "instant", block: "start" }));
+    window.requestAnimationFrame(() => sectionsRef.current?.querySelector(`#room-${next === "coin" ? (isNative ? "chart" : "trade") : next}`)?.scrollIntoView({ behavior: "instant", block: "start" }));
   }
 
   return <main className="room-page">
@@ -81,33 +90,29 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
       <Link href="/discover" className="back-link">← Discover rooms</Link>
       <section className="room-header room-header-compact">
         <div className="room-token-identity"><span className="room-logo" aria-hidden="true"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} /></span><div>
-          <span className="eyebrow">{isNative ? "HYPR COMMUNITY ROOM" : "PONS COMMUNITY ROOM"}</span>
-          <h1>{roomName} <span>{creatorProfile?.displayName ? "Community room" : `$${token.symbol}`}</span></h1>
+          <span className="eyebrow">COMMUNITY ROOM</span>
+          <h1>{roomName} <span>{creatorProfile?.displayName || token.coinless ? "Community room" : `$${token.symbol}`}</span></h1>
         </div></div>
-        <div className="share-controls"><SaveRoom roomId={token.address} compact /><ShareRoom roomId={token.address} name={roomName} /></div>
+        <div className="share-controls"><FollowButton roomId={token.address} growth={growth} />{isNative && <RemindMe roomId={token.address} calendarHref={creatorProfile?.show ? `/api/community/calendar?roomId=${token.address}&showId=${creatorProfile.show.id}` : undefined} />}<ShareRoom roomId={token.address} name={roomName} /></div>
       </section>
-      {(liveNow || creatorProfile?.show) && <p className={`room-now is-${phase}`}><span className="room-now-badge">{liveNow ? <><span className="pulse" />LIVE NOW</> : phase === "upcoming" ? "NEXT SHOW" : phase === "awaiting-creator" ? "WAITING ON CREATOR" : "SCHEDULED"}</span>{creatorProfile?.show && <><strong>{creatorProfile.show.title}</strong>{phase !== "live" && <ShowTime iso={creatorProfile.show.startsAt} />}</>}</p>}
+      {(liveNow || creatorProfile?.show) && <div className={`room-now is-${phase}${lobbyOpen ? " is-lobby" : ""}`}>
+        <span className="room-now-badge">{liveNow ? <><span className="pulse" />LIVE NOW</> : lobbyOpen ? "PRE-SHOW" : phase === "upcoming" ? "NEXT SHOW" : phase === "awaiting-creator" ? "STARTING SOON" : "SCHEDULED"}</span>
+        {creatorProfile?.show && <><strong>{creatorProfile.show.title}</strong>{phase === "upcoming" && <ShowCountdown startsAt={creatorProfile.show.startsAt} />}{phase !== "live" && <ShowTime iso={creatorProfile.show.startsAt} />}</>}
+        {lobbyOpen && <button type="button" className="room-now-action" onClick={() => chooseSection("chat")}>Chat is open—say hi →</button>}
+      </div>}
       <p className="room-safety-note">{isNative ? "Testnet preview · Free test assets, not real money. Watch without a wallet." : token.dataStatus === "demo" ? "Demo room · Sample launch data, not a verified live market." : "Indexed Pons room · Trading availability depends on the launch’s network."}</p>
       {liveData.error && <p className="live-notice" role="status">{liveData.error} Last successful data is kept visible; it may be out of date.</p>}
-      <div className={`room-experience${isNative?" has-market":""}`} ref={sectionsRef}>
+      <div className={`room-experience${hasCoin?" has-market":""}`} ref={sectionsRef}>
         <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} showTitle={creatorProfile?.show?.title} /></div>
         <nav className="room-section-nav" aria-label="Room sections" data-native={isNative}>
           <button type="button" aria-label="Watch broadcast" aria-controls="room-watch" onClick={() => sectionsRef.current?.querySelector("#room-watch")?.scrollIntoView({ behavior: "instant", block: "start" })}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m10 8 6 4-6 4Z" /></svg><span>Watch</span></button>
-          {(Object.keys(sectionLabels) as RoomSection[]).filter(key => isNative || (key !== "videos"&&key!=="chart")).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={`room-${key}`} onClick={() => chooseSection(key)}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{sectionIcons[key]}</svg><span>{sectionLabels[key]}{key === "trade" && <small> ${token.symbol}</small>}</span></button>)}
+          {(Object.keys(sectionLabels) as RoomSection[]).filter(key => (isNative || key !== "videos") && (key !== "coin" || !token.coinless)).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={key === "coin" ? (isNative ? "room-chart room-trade" : "room-trade") : `room-${key}`} onClick={() => chooseSection(key)}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{sectionIcons[key]}</svg><span>{sectionLabels[key]}</span></button>)}
         </nav>
-        {isNative&&<section className="room-chart-section" id="room-chart" data-mobile-active={section==="chart"}><NativeMarketChart tokenAddress={token.address} symbol={token.symbol}/></section>}
+        {hasCoin&&<section className="room-chart-section" id="room-chart" data-mobile-active={section==="coin"}><NativeMarketChart tokenAddress={token.address} symbol={token.symbol}/></section>}
         {isNative && <section className="room-media-section" id="room-videos" data-mobile-active={section === "videos"}><RoomMediaLibrary roomId={token.address} /></section>}
         <section className="room-chat-section" id="room-chat" data-mobile-active={section === "chat"} aria-label="Room chat"><CommunityPanel roomId={token.address} creator={token.deployer} creatorName={creatorProfile?.displayName || token.name} reportsEnabled={growth.state?.enabled === true} chatActive={section === "chat"} /></section>
-        <section className="room-trade-section" id="room-trade" data-mobile-active={section === "trade"} aria-label={`Trade ${token.symbol}`}>
+        {!token.coinless && <section className="room-trade-section" id="room-trade" data-mobile-active={section === "coin"} aria-label={`Trade ${token.symbol}`}>
           {isNative ? <NativeTradePanel curveAddress={token.pool} tokenAddress={token.address} tokenSymbol={token.symbol} /> : <div className="activity-panel"><h2>About this token’s trading</h2><p className="accounting-copy">HYPR’s in-room buy and sell controls currently support native HYPR testnet launches only. This indexed Pons token is not offered for trading here.</p><a className="claim-link" href={`${explorer}/address/${token.address}`} target="_blank" rel="noreferrer">View its contract ↗</a></div>}
-        </section>
-        <section className="room-about-section" id="room-about" data-mobile-active={section === "about"} aria-label="About this room">
-          <div className="activity-panel room-about-card"><span className="eyebrow">ABOUT ${token.symbol}</span><h2>A coin and a community room</h2>
-            <p className="accounting-copy">{token.description}</p>
-            <p className="accounting-copy">{isNative ? "This ERC-20 token belongs to this launch. It is not company ownership, a promise of income, or a requirement to watch. Only the wallet that created it can broadcast in this room." : "This launch is indexed from Pons. A room listing does not endorse the token or guarantee its value."}</p>
-            {isNative && <div className="room-after-live"><h3>What happens after a broadcast?</h3><p>The audio/video session stops, but this same room link, saved chat, follows and token remain. The creator can broadcast here again. Trading depends on the contract’s status, not whether someone is streaming.</p><p>Recording is opt-in. Creators can save up to 10 minutes as a private replay draft and allow 30-second viewer clips. Creator-published recordings appear in Replays & clips. There is no always-on cloud DVR; saved chat is separate from saved video.</p></div>}
-            <div className="room-contract-links"><a href={`${explorer}/address/${token.address}`} target="_blank" rel="noreferrer">Token {shortAddress(token.address)} ↗</a><a href={`${explorer}/address/${token.deployer}`} target="_blank" rel="noreferrer">Creator {shortAddress(token.deployer)} ↗</a>{token.launchTxHash && <a href={`${explorer}/tx/${token.launchTxHash}`} target="_blank" rel="noreferrer">Creation transaction ↗</a>}</div>
-          </div>
           {isNative && <details className="room-details"><summary>Trading details <span>Price rules, fees & live contract data</span></summary>
             <div className="room-details-body">
               <h3>How pricing works</h3><p>Before graduation, the contract sets the price automatically: buying pushes it up and selling pushes it down. The “bonding curve” is that pricing rule—not a chart or a guarantee of profit.</p>
@@ -125,11 +130,18 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
               <p className="accounting-copy">{liveData.updatedAt ? `Live contract data checked ${new Date(liveData.updatedAt).toLocaleTimeString()} · refreshes every 15 seconds while visible.` : "Checking live contract data…"}</p>
             </div>
           </details>}
+        </section>}
+        <section className="room-about-section" id="room-about" data-mobile-active={section === "about"} aria-label="About this room">
+          <div className="activity-panel room-about-card"><span className="eyebrow">ABOUT THIS ROOM</span><h2>{roomName}</h2>
+            <p className="accounting-copy">{creatorProfile?.bio || "A permanent place to watch, talk, and come back for the next show."}</p>
+            <p className="accounting-copy">{token.coinless ? "Free to watch, chat and follow. Only the creator can broadcast here." : `The room has an optional $${token.symbol} coin. You never need it to watch, chat or follow; only the creator’s wallet can broadcast here.`}</p>
+            {isNative && <div className="room-after-live"><h3>What happens after a broadcast?</h3><p>The audio/video session stops, but this same room link, saved chat, follows and token remain. The creator can broadcast here again. Trading depends on the contract’s status, not whether someone is streaming.</p><p>Recording is opt-in. Creators can save up to 10 minutes as a private replay draft and allow 30-second viewer clips. Creator-published recordings appear in Replays & clips. There is no always-on cloud DVR; saved chat is separate from saved video.</p></div>}
+            {!token.coinless && <div className="room-contract-links"><a href={`${explorer}/address/${token.address}`} target="_blank" rel="noreferrer">Token {shortAddress(token.address)} ↗</a><a href={`${explorer}/address/${token.deployer}`} target="_blank" rel="noreferrer">Creator {shortAddress(token.deployer)} ↗</a>{token.launchTxHash && <a href={`${explorer}/tx/${token.launchTxHash}`} target="_blank" rel="noreferrer">Creation transaction ↗</a>}</div>}
+          </div>
           <RoomFaq compact />
         </section>
         {isNative && <div className="room-creator" id="creator-dashboard"><CreatorGrowth roomId={token.address} creator={token.deployer} live={liveNow} growth={growth} /></div>}
       </div>
-      {isNative && growth.state?.enabled === true && <PilotConsent roomId={token.address} />}
       <SiteFooter />
     </div>
   </main>;

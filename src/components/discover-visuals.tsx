@@ -31,7 +31,7 @@ export function Constellation({ launches, totalRooms }: { launches: Launch[]; to
         >
           <span className="orbit-node-inner">
             <RoomAvatar token={token} size="md" />
-            <span className="orbit-label">${token.symbol}</span>
+            <span className="orbit-label">{token.coinless ? token.name : `$${token.symbol}`}</span>
           </span>
         </Link>
       ))}
@@ -46,8 +46,8 @@ export function Constellation({ launches, totalRooms }: { launches: Launch[]; to
       {ring(inner, "orbit-inner", 60)}
       <div className="constellation-core">
         <span className="core-ring" aria-hidden="true" />
-        <strong>{totalRooms}</strong>
-        <span>{totalRooms === 1 ? "room" : "rooms"} in orbit</span>
+        {/* Small totals advertise emptiness; show a count only once it means something. */}
+        {totalRooms >= 10 ? <><strong>{totalRooms}</strong><span>rooms in orbit</span></> : <><strong>HYPR</strong><span>find your people</span></>}
       </div>
     </div>
   );

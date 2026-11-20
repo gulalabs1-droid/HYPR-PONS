@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ANALYTICS_PREFERENCE_EVENT, analyticsAllowed, pilotEvent } from "@/lib/pilot-analytics";
 import { canonicalRoomUrl } from "@/lib/growth";
+import { countOnce } from "@/lib/counts";
 
 export function ShareRoom({ roomId, name, moment = false }: { roomId: string; name: string; moment?: boolean }) {
   const [notice, setNotice] = useState(""), [busy, setBusy] = useState(false);
@@ -29,10 +30,12 @@ export function ShareRoom({ roomId, name, moment = false }: { roomId: string; na
       if (nativeSupported) await navigator.share({ title: `${name} on HYPR${moment ? " · Share card (not video)" : ""}`, text: "Watch, chat and return for the next show. No wallet needed to watch.", url });
       else await navigator.clipboard.writeText(url);
       setNotice(nativeSupported ? "Shared." : "Link copied.");
+      countOnce("share", roomId);
       await pilotEvent("room_shared", roomId, crypto.randomUUID(), shareId);
     } catch (failure) {
       if ((failure as Error)?.name !== "AbortError") setNotice("Copy the permanent room link from your browser’s address bar.");
     } finally { setBusy(false); }
   }
-  return <div className="share-controls"><button className="secondary-button" disabled={busy} onClick={() => void share(false)}>Copy {moment ? "card" : "room"} link</button><button className="secondary-button" disabled={busy} onClick={() => void share(true)}>Share ↗</button>{notice && <span role="status">{notice}</span>}</div>;
+  // One control: the system share sheet where available (it includes Copy), otherwise copy the link.
+  return <div className="share-controls"><button className="secondary-button" disabled={busy} onClick={() => void share(true)}>{moment ? "Share card ↗" : "Share ↗"}</button>{notice && <span role="status">{notice}</span>}</div>;
 }

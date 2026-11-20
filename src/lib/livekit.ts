@@ -62,7 +62,7 @@ export function participantRole(metadata?: string) {
   try { return (JSON.parse(metadata) as { role?: string }).role || ""; } catch { return ""; }
 }
 
-type MediaParticipant = { metadata?: string; tracks?: { source: number; muted?: boolean }[] };
+type MediaParticipant = { sid?: string; metadata?: string; tracks?: { source: number; muted?: boolean }[] };
 
 export function statusFromParticipants(participants: MediaParticipant[]) {
   const host = participants.filter((participant) => participantRole(participant.metadata) === "host");
@@ -70,6 +70,8 @@ export function statusFromParticipants(participants: MediaParticipant[]) {
   const video = activeTracks.some((track) => track.source === TrackSource.CAMERA || track.source === TrackSource.SCREEN_SHARE);
   const audio = activeTracks.some((track) => track.source === TrackSource.MICROPHONE || track.source === TrackSource.SCREEN_SHARE_AUDIO);
   return { configured: true, live: video || audio, video, audio, hostConnected: host.length > 0,
+    // Server-side only: identifies one broadcast for notification de-duplication.
+    broadcastRef: video || audio ? host.find(participant => (participant.tracks || []).some(track => !track.muted))?.sid : undefined,
     viewerCount: participants.filter((participant) => participantRole(participant.metadata) === "viewer").length,
     checkedAt: new Date().toISOString() };
 }

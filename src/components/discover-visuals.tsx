@@ -38,8 +38,8 @@ export function ShowcaseRoom({ room, others }: { room: DiscoveryRoom; others: Di
         <span className="showcase-cta">{live ? "Watch" : "Visit"} <span aria-hidden="true">→</span></span>
       </span>
     </Link>
-    <ul className="showcase-features" aria-label="In every room">
-      <li><span aria-hidden="true">●</span>Live video</li><li><span aria-hidden="true">💬</span>Room chat</li><li><span aria-hidden="true">🔔</span>Show alerts</li><li><span aria-hidden="true">↺</span>Replays</li>
+    <ul className="showcase-features" aria-label="Room features">
+      <li><span aria-hidden="true">●</span>Live video</li><li><span aria-hidden="true">💬</span>Room chat</li><li><span aria-hidden="true">♡</span>Follow rooms</li><li><span aria-hidden="true">↺</span>Creator replays</li>
     </ul>
     {others.length > 0 && <div className="showcase-others"><span>Also on HYPR</span>{others.map(other => <Link key={other.token.address} href={`/room/${other.token.address}`}><RoomAvatar token={other.token} size="sm" />{other.title}{other.token.broadcastStatus === "live" && <em>Live</em>}</Link>)}</div>}
   </div>;

@@ -23,16 +23,16 @@ export function WatchHub({ source, initialLaunches, initialSource }: { source: "
   const checking = rooms.some(room => room.token.broadcastStatus === "checking");
   const showsUnavailable = Boolean(growth.error) || growth.state?.enabled === false;
 
-  return <main className="watch-page"><Header active="watch" compact />
+  return <main className="watch-page"><Header active="watch" />
     <div className="watch-shell">
       <section className="watch-intro">
-        <div><span className="eyebrow">THE WATCH ROOM</span><h1>Find something <em>worth watching.</em></h1><p>Independent news and real creator rooms, all in one place. Watching is free and needs no wallet.</p></div>
+        <div><span className="eyebrow">The watch room</span><h1>Find something <em>worth watching.</em></h1><p>Independent news and real creator rooms, all in one place. Watching is free and needs no wallet.</p></div>
       </section>
       {/* Real creators outrank borrowed news whenever anyone is live. */}
-      {creatorsLive.length > 0 && <section className="watch-live-rooms" aria-labelledby="watch-live-rooms-title"><div className="watch-section-heading"><div><span className="eyebrow">HAPPENING ON HYPR</span><h2 id="watch-live-rooms-title">Creator rooms live now</h2></div><Link href="/discover?view=live">See all ↗</Link></div><div className="discovery-card-grid">{creatorsLive.map(room => <DiscoveryRoomCard key={room.token.address} room={room} />)}</div></section>}
+      {creatorsLive.length > 0 && <section className="watch-live-rooms" aria-labelledby="watch-live-rooms-title"><div className="watch-section-heading"><div><span className="eyebrow">Happening on HYPR</span><h2 id="watch-live-rooms-title">Creator rooms live now</h2></div><Link href="/discover?view=live">See all ↗</Link></div><div className="discovery-card-grid">{creatorsLive.map(room => <DiscoveryRoomCard key={room.token.address} room={room} />)}</div></section>}
       <div className="watch-layout">
         <section className="watch-stage" aria-labelledby="watch-news-title">
-          <div className="watch-section-heading"><div><span className="eyebrow">NEWS · VIA YOUTUBE</span><h2 id="watch-news-title">Choose a news stream.</h2></div><span>Independent broadcasters</span></div>
+          <div className="watch-section-heading"><div><span className="eyebrow">News · Via YouTube</span><h2 id="watch-news-title">Choose a news stream.</h2></div><span>Independent broadcasters</span></div>
           <nav className="watch-source-tabs" aria-label="Choose a news source">
             <Link href="/watch" aria-current={source === "nbc" ? "page" : undefined} className={source === "nbc" ? "is-active" : ""}>NBC News</Link>
             <Link href="/watch?source=abc" aria-current={source === "abc" ? "page" : undefined} className={source === "abc" ? "is-active" : ""}>ABC News</Link>
@@ -41,9 +41,9 @@ export function WatchHub({ source, initialLaunches, initialSource }: { source: "
           <div className="watch-after-player"><div><strong>Want to join a conversation?</strong><p>The demo room has a shared chat that’s open to everyone—no wallet needed.</p></div>{demoRoom ? <Link className="secondary-button" href={`/room/${demoRoom.token.address}#room-chat`}>Open demo chat ↗</Link> : <Link className="secondary-button" href="/discover">Explore rooms ↗</Link>}</div>
         </section>
         <aside className="watch-sidebar" aria-label="Creator activity">
-          <section><span className="eyebrow">CREATOR ROOMS</span><h2>On HYPR</h2>{creatorsLive.length ? <><p>Creators with a confirmed live broadcast.</p><ul>{creatorsLive.map(room => <li key={room.token.address}><span className="watch-live-dot" aria-hidden="true"/><Link href={`/room/${room.token.address}`}>{room.title} <span>Watch ↗</span></Link></li>)}</ul></> : unavailable ? <p role="status">Creator live status is temporarily unavailable.</p> : checking ? <p role="status">Checking creator live status…</p> : <p>No public creator broadcasts are live right now. Rooms stay open between shows.</p>}<Link href="/discover?view=live">Browse live rooms ↗</Link></section>
-          <section><span className="eyebrow">COMING UP</span><h2>Next shows</h2>{showsUnavailable ? <p role="status">Show schedules are temporarily unavailable.</p> : !growth.state ? <p role="status">Checking upcoming shows…</p> : upcoming.length ? <ul className="watch-upcoming">{upcoming.map(room => <li key={room.token.address}><Link href={`/room/${room.token.address}`}><strong>{room.creator!.show!.title}</strong><span>{room.title} · <ShowTime startsAt={room.creator!.show!.startsAt} /></span></Link></li>)}</ul> : <p>No upcoming public shows have been announced.</p>}<Link href="/discover?view=upcoming">See upcoming shows ↗</Link></section>
-          <section className="watch-sidebar-creator"><span className="eyebrow">HAVE A SHOW?</span><h2>Make it yours.</h2><p>Start a creator room and give your audience a place to return.</p><Link href="/creators">For creators ↗</Link></section>
+          <section><span className="eyebrow">Creator rooms</span><h2>On HYPR</h2>{creatorsLive.length ? <><p>Creators with a confirmed live broadcast.</p><ul>{creatorsLive.map(room => <li key={room.token.address}><span className="watch-live-dot" aria-hidden="true"/><Link href={`/room/${room.token.address}`}>{room.title} <span>Watch ↗</span></Link></li>)}</ul></> : unavailable ? <p role="status">Creator live status is temporarily unavailable.</p> : checking ? <p role="status">Checking creator live status…</p> : <p>No public creator broadcasts are live right now. Rooms stay open between shows.</p>}<Link href="/discover?view=live">Browse live rooms ↗</Link></section>
+          <section><span className="eyebrow">Coming up</span><h2>Next shows</h2>{showsUnavailable ? <p role="status">Show schedules are temporarily unavailable.</p> : !growth.state ? <p role="status">Checking upcoming shows…</p> : upcoming.length ? <ul className="watch-upcoming">{upcoming.map(room => <li key={room.token.address}><Link href={`/room/${room.token.address}`}><strong>{room.creator!.show!.title}</strong><span>{room.title} · <ShowTime startsAt={room.creator!.show!.startsAt} /></span></Link></li>)}</ul> : <p>No upcoming public shows have been announced.</p>}<Link href="/discover?view=upcoming">See upcoming shows ↗</Link></section>
+          <section className="watch-sidebar-creator"><span className="eyebrow">Have a show?</span><h2>Make it yours.</h2><p>Start a creator room and give your audience a place to return.</p><Link href="/creators">For creators ↗</Link></section>
         </aside>
       </div>
       <SiteFooter />

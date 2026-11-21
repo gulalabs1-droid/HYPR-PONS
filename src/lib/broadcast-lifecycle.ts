@@ -34,17 +34,17 @@ export function shouldReleaseViewer(role: "host" | "viewer", connection: "connec
 
 export function broadcastCopy(phase: BroadcastPhase) {
   const copy: Record<BroadcastPhase, { title: string; detail: string; label: string }> = {
-    checking: { title: "Checking the broadcast…", detail: "The room stays open.", label: "CHECKING" },
-    unavailable: { title: "Broadcast status unavailable", detail: "We can’t confirm the stream right now. Try again shortly.", label: "STATUS UNAVAILABLE" },
-    offline: { title: "Between broadcasts", detail: "The creator is offline. Check back for the next show.", label: "CREATOR OFFLINE" },
-    preparing: { title: "Creator in the studio", detail: "Waiting for audio or video. Chat is open.", label: "NOT LIVE YET" },
-    live: { title: "The creator is live", detail: "Watch free—no wallet needed. This is live, not a replay.", label: "LIVE" },
-    paused: { title: "Broadcast paused", detail: "The creator is connected, but no audio or video is playing.", label: "PAUSED" },
-    stopped: { title: "Broadcast stopped. Room still open.", detail: "Stay in chat and return when the creator is live again. Check the room for any recordings the creator publishes.", label: "BROADCAST STOPPED · ROOM OPEN" },
-    ended: { title: "Your broadcast has ended", detail: "You stopped this media session. Your community room, saved messages, follows and token remain here.", label: "BROADCAST ENDED · ROOM OPEN" },
-    connecting: { title: "Connecting to the broadcast…", detail: "You are joining the live player, not leaving the community room.", label: "CONNECTING" },
-    reconnecting: { title: "Reconnecting your player…", detail: "Your connection was interrupted. We are trying to reconnect; this does not mean the creator ended the broadcast.", label: "RECONNECTING · ROOM OPEN" },
-    "creator-disconnected": { title: "Creator disconnected", detail: "Waiting briefly in case they reconnect. If not, we will close only the live player and keep you in this room.", label: "CREATOR DISCONNECTED · ROOM OPEN" },
+    checking: { title: "Checking the broadcast…", detail: "The room stays open.", label: "Checking" },
+    unavailable: { title: "Broadcast status unavailable", detail: "We can’t confirm the stream right now. Try again shortly.", label: "Status unavailable" },
+    offline: { title: "Between broadcasts", detail: "The creator is offline. Check back for the next show.", label: "Creator offline" },
+    preparing: { title: "Creator in the studio", detail: "Waiting for audio or video. Chat is open.", label: "Not live yet" },
+    live: { title: "The creator is live", detail: "Watch free—no wallet needed. This is live, not a replay.", label: "Live" },
+    paused: { title: "Broadcast paused", detail: "The creator is connected, but no audio or video is playing.", label: "Paused" },
+    stopped: { title: "Broadcast stopped. Room still open.", detail: "Stay in chat and return when the creator is live again. Check the room for any recordings the creator publishes.", label: "Broadcast stopped · Room open" },
+    ended: { title: "Your broadcast has ended", detail: "You stopped this media session. Your community room, saved messages, follows and token remain here.", label: "Broadcast ended · Room open" },
+    connecting: { title: "Connecting to the broadcast…", detail: "You are joining the live player, not leaving the community room.", label: "Connecting" },
+    reconnecting: { title: "Reconnecting your player…", detail: "Your connection was interrupted. We are trying to reconnect; this does not mean the creator ended the broadcast.", label: "Reconnecting · Room open" },
+    "creator-disconnected": { title: "Creator disconnected", detail: "Waiting briefly in case they reconnect. If not, we will close only the live player and keep you in this room.", label: "Creator disconnected · Room open" },
   };
   return copy[phase];
 }

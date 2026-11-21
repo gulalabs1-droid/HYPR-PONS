@@ -9,7 +9,7 @@ export default function NotFound() {
       <div className="page-shell">
         <section className="status-page">
           <span className="status-code">404</span>
-          <span className="eyebrow">PAGE NOT FOUND</span>
+          <span className="eyebrow">Page not found</span>
           <h1>Nothing here yet.</h1>
           <p>If you followed a room link, the address may be mistyped or the launch hasn’t been indexed yet. New launches can take about a minute to confirm and appear.</p>
           <div className="hero-actions">

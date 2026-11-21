@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono, Manrope } from "next/font/google";
+import { Bricolage_Grotesque, JetBrains_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 import "./trade.css";
 import "./discover.css";
@@ -14,8 +14,11 @@ import "./media.css";
 import "./market.css";
 import "./live-stage.css";
 import "./watch.css";
+// Brand layer: loaded last so the HYPR design system wins over older page layers.
+import "./brand.css";
 
 const sans = Manrope({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const display = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-display", display: "swap", weight: ["600", "700", "800"] });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
@@ -41,7 +44,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b0c0e",
+  themeColor: "#08080c",
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
@@ -49,7 +52,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+    <html lang="en" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
       <body>
         <a className="skip-link" href="#content">Skip to content</a>
         <NavigationProgress />

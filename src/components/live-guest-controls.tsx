@@ -117,7 +117,7 @@ export function LiveGuestControls({ roomId, role, live, hostSid, authenticated, 
     });
     const onStage = candidates.filter(item => item.info.guestState === "approved"), waiting = candidates.filter(item => item.info.guestState === "requested");
     return <section className="live-guests" aria-label="Manage guests">
-      <div className="live-guests-heading"><div><span className="eyebrow">YOUR STAGE</span><h3>Bring your viewers in</h3></div><span>{onStage.length}/{GUEST_LIMIT} guests</span></div>
+      <div className="live-guests-heading"><div><span className="eyebrow">Your stage</span><h3>Bring your viewers in</h3></div><span>{onStage.length}/{GUEST_LIMIT} guests</span></div>
       <p>Signed-in viewers can request a spot. You decide who joins. Guests choose when to turn on their own camera or microphone.</p>
       {!live && <p className="live-guests-muted">Guest requests open when your broadcast is live.</p>}
       {live && !waiting.length && !onStage.length && <p className="live-guests-empty">No requests yet. Viewers can ask to join from the live player.</p>}
@@ -133,7 +133,7 @@ export function LiveGuestControls({ roomId, role, live, hostSid, authenticated, 
   const onStage = guest?.guestState === "approved" && guest.hostSid === hostSid && permissions?.canPublish === true;
   const pending = guest?.guestState === "requested" && guest.hostSid === hostSid;
   return <section className="live-guests" aria-label="Join the live stage">
-    <div className="live-guests-heading"><div><span className="eyebrow">JOIN THE SHOW</span><h3>{onStage ? "You’re invited on stage" : pending ? "Your request is waiting" : "Be on the show"}</h3></div><span>{onStage ? "APPROVED" : pending ? "REQUESTED" : "GUESTS"}</span></div>
+    <div className="live-guests-heading"><div><span className="eyebrow">Join the show</span><h3>{onStage ? "You’re invited on stage" : pending ? "Your request is waiting" : "Be on the show"}</h3></div><span>{onStage ? "Approved" : pending ? "Requested" : "Guests"}</span></div>
     {onStage ? <>
       <p>Turn on the camera or microphone when you’re ready. Everyone watching can see or hear what you share.</p>
       <ControlBar controls={{ microphone: true, camera: true, screenShare: false, chat: false, leave: false }} saveUserChoices={false} />

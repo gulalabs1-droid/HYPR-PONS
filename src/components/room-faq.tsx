@@ -13,7 +13,7 @@ export const roomQuestions = [
 
 export function RoomFaq({ compact = false }: { compact?: boolean }) {
   return <section className="room-faq" aria-label="Frequently asked questions">
-    <div className="section-heading"><div><span className="eyebrow">A LITTLE LESS GUESSWORK</span><h2>{compact ? "New here? Start here." : "Good questions. Clear answers."}</h2></div>{compact && <Link href="/faq">All FAQs ↗</Link>}</div>
+    <div className="section-heading"><div><span className="eyebrow">A little less guesswork</span><h2>{compact ? "New here? Start here." : "Good questions. Clear answers."}</h2></div>{compact && <Link href="/faq">All FAQs ↗</Link>}</div>
     <div className="faq-list">{roomQuestions.filter((_, index) => !compact || index < 3).map(item => <details id={item.id} key={item.id}><summary>{item.question}<span aria-hidden="true">+</span></summary><p>{item.answer}</p></details>)}</div>
   </section>;
 }

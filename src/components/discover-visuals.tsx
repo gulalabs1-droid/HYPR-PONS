@@ -7,6 +7,8 @@ import type { Launch } from "@/lib/types";
 import { roomBadge, roomHue, roomKind, roomTickerValue } from "@/lib/room-display";
 import { TokenArt, tokenGlyph } from "./token-art";
 import { isThrowawayRoom } from "@/lib/discovery";
+import type { DiscoveryRoom } from "@/lib/discovery";
+import { ShowTime } from "./discovery-room-card";
 import { isTestnetDemoRoom } from "@/lib/demo-news";
 
 type HueStyle = React.CSSProperties & { "--hue"?: number; "--angle"?: string };
@@ -15,42 +17,32 @@ export function RoomAvatar({ token, size = "md" }: { token: Launch; size?: "sm" 
   return <span className={`room-avatar is-${size}`} style={{ "--hue": roomHue(token.address) } as HueStyle} aria-hidden="true"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} /></span>;
 }
 
-export function Constellation({ launches, totalRooms }: { launches: Launch[]; totalRooms: number }) {
-  const split = launches.length > 5;
-  const inner = split ? launches.slice(0, 3) : [];
-  const outer = split ? launches.slice(3, 9) : launches;
-  const ring = (items: Launch[], className: string, offset: number) => (
-    <div className={`orbit ${className}`}>
-      {items.map((token, index) => (
-        <Link
-          key={token.address}
-          href={`/room/${token.address}`}
-          className="orbit-node"
-          style={{ "--angle": `${offset + (360 / items.length) * index}deg`, "--hue": roomHue(token.address) } as HueStyle}
-          aria-label={`Enter ${token.name} room`}
-        >
-          <span className="orbit-node-inner">
-            <RoomAvatar token={token} size="md" />
-            <span className="orbit-label">{token.coinless ? token.name : `$${token.symbol}`}</span>
-          </span>
-        </Link>
-      ))}
-    </div>
-  );
-  return (
-    <div className="constellation">
-      <div className="constellation-glow" aria-hidden="true" />
-      <div className="orbit-track track-outer" aria-hidden="true" />
-      <div className="orbit-track track-inner" aria-hidden="true" />
-      {ring(outer, "orbit-outer", 18)}
-      {ring(inner, "orbit-inner", 60)}
-      <div className="constellation-core">
-        <span className="core-ring" aria-hidden="true" />
-        {/* Small totals advertise emptiness; show a count only once it means something. */}
-        {totalRooms >= 10 ? <><strong>{totalRooms}</strong><span>rooms in orbit</span></> : <><strong>HYPR</strong><span>find your people</span></>}
-      </div>
-    </div>
-  );
+/** Home hero: one room shown as a screen. Honest states only: live, next show, or open between shows. */
+export function ShowcaseRoom({ room, others }: { room: DiscoveryRoom; others: DiscoveryRoom[] }) {
+  const { token, creator, title } = room;
+  const live = token.broadcastStatus === "live";
+  const show = !live && room.upcoming && creator?.show ? creator.show : null;
+  const href = `/room/${token.address}`;
+  return <div className="showcase-room" style={{ "--hue": roomHue(token.address) } as HueStyle}>
+    <div className="showcase-glow" aria-hidden="true" />
+    <Link href={href} className={`showcase-screen${live ? " is-live" : ""}`} aria-label={`${live ? "Watch" : "Visit"} ${title}`}>
+      <span className="showcase-art" aria-hidden="true"><TokenArt seed={token.address} /></span>
+      <span className="showcase-scrim" aria-hidden="true" />
+      <span className="showcase-top">
+        {live ? <span className="live-pill"><span className="live-pill-dot" />Live{token.viewerCount ? ` · ${token.viewerCount.toLocaleString()} watching` : ""}</span>
+          : show ? <span className="soon-pill">Next show</span> : <span className="idle-pill">Between shows</span>}
+      </span>
+      <span className="showcase-center" aria-hidden="true"><RoomAvatar token={token} size="xl" /></span>
+      <span className="showcase-bottom">
+        <span className="showcase-title"><strong>{title}</strong><small>{show ? <>{show.title} · <ShowTime startsAt={show.startsAt} /></> : live ? "On air now. Jump into the chat." : "Open the room, read the chat, follow for the next show."}</small></span>
+        <span className="showcase-cta">{live ? "Watch" : "Visit"} <span aria-hidden="true">→</span></span>
+      </span>
+    </Link>
+    <ul className="showcase-features" aria-label="In every room">
+      <li><span aria-hidden="true">●</span>Live video</li><li><span aria-hidden="true">💬</span>Room chat</li><li><span aria-hidden="true">🔔</span>Show alerts</li><li><span aria-hidden="true">↺</span>Replays</li>
+    </ul>
+    {others.length > 0 && <div className="showcase-others"><span>Also on HYPR</span>{others.map(other => <Link key={other.token.address} href={`/room/${other.token.address}`}><RoomAvatar token={other.token} size="sm" />{other.title}{other.token.broadcastStatus === "live" && <em>Live</em>}</Link>)}</div>}
+  </div>;
 }
 
 export function Ticker({ launches }: { launches: Launch[] }) {

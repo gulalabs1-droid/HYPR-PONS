@@ -21,7 +21,7 @@ export function RoomPoll({ roomId, poll, creatorView, viewer, onChanged }: { roo
   const total = poll ? poll.counts.reduce((sum, value) => sum + value, 0) : 0;
   return <div className="room-poll">
     {poll && <>
-      <div className="room-poll-head"><span className="eyebrow">{poll.open ? "LIVE POLL" : "POLL RESULTS"}</span><span>{total} vote{total === 1 ? "" : "s"}</span></div>
+      <div className="room-poll-head"><span className="eyebrow">{poll.open ? "Live poll" : "Poll results"}</span><span>{total} vote{total === 1 ? "" : "s"}</span></div>
       <strong>{poll.question}</strong>
       <ul>{poll.options.map((option, index) => {
         const share = total ? Math.round(poll.counts[index] / total * 100) : 0;

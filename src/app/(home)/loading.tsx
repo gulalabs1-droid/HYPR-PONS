@@ -3,7 +3,7 @@ import { Header } from "@/components/header";
 export default function Loading() {
   return (
     <main aria-busy="true">
-      <Header active="discover" />
+      <Header active="home" />
       <div className="page-shell">
         <span className="sr-only" role="status">Loading rooms from Robinhood Chain…</span>
         <section className="hero">

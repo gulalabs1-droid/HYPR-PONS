@@ -15,14 +15,14 @@ export function LiveLaunchSurface({ token, onOpenChat, showTitle, nextShow, late
   const live = Boolean(token.streamLive && embedUrl);
 
   if (token.origin === "hypr") return <NativeLiveRoom key={token.address} token={token} onOpenChat={onOpenChat} nextShow={nextShow} latestReplay={latestReplay} otherLive={otherLive} showTitle={showTitle} />;
-  if (!token.streamUrl) return <section className="live-surface"><div className="live-copy"><span className="eyebrow">INDEXED PONS ROOM</span><h2>Onchain launch activity</h2><p>Native broadcasts are available in HYPR-created rooms. No external broadcast is being claimed for this room.</p></div></section>;
+  if (!token.streamUrl) return <section className="live-surface"><div className="live-copy"><span className="eyebrow">Indexed PONS room</span><h2>Onchain launch activity</h2><p>Native broadcasts are available in HYPR-created rooms. No external broadcast is being claimed for this room.</p></div></section>;
 
   return <section className="live-surface">
     <div className="live-copy">
       <span className="eyebrow"><span className={live ? "pulse" : "status-dot inactive"} /> LIVE LAUNCH EXPERIENCE</span>
       <h2>{live ? "The launch is live." : "Launch, trade, gather."}</h2>
       <p>{live ? "Watch the creator and follow the curve without leaving HYPR." : "When a creator attaches an approved stream, it appears here beside the launch activity."}</p>
-      <span className="live-state">{live ? "STREAM LIVE · ONCHAIN ACTIVITY BELOW" : token.streamUrl ? "STREAM ATTACHED · LIVE STATUS UNVERIFIED" : "CREATOR STREAM OFFLINE"}</span>
+      <span className="live-state">{live ? "Stream live · Onchain activity below" : token.streamUrl ? "Stream attached · Live status unverified" : "Creator stream offline"}</span>
       {!live && embedUrl && <a className="stream-link" href={embedUrl} target="_blank" rel="noreferrer">Open attached stream ↗</a>}
     </div>
     <div className="live-viewport">

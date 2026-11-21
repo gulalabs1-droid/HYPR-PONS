@@ -253,7 +253,7 @@ export function CommunityPanel({ roomId, creator, creatorName, reportsEnabled = 
   }
 
   return <div className="chat-panel">
-    <div className="panel-heading"><div><span className="eyebrow">COMMUNITY</span><h2>Room chat</h2></div>{here !== null && here >= 2 && <span className="chat-here" aria-label={`${here} people here now`}><span className="status-dot" aria-hidden="true" />{here} here now</span>}</div>
+    <div className="panel-heading"><div><span className="eyebrow">Community</span><h2>Room chat</h2></div>{here !== null && here >= 2 && <span className="chat-here" aria-label={`${here} people here now`}><span className="status-dot" aria-hidden="true" />{here} here now</span>}</div>
     {state?.settings && state.settings.slowMode > 0 && <p className="chat-slow-mode">Slow mode · one message every {state.settings.slowMode}s</p>}
     {!state?.wallet && asGuest && guestName && !editingName ? <p className="accounting-copy">Chatting as <strong>{guestName}</strong> <button className="claim-link" disabled={busy} onClick={() => { setNickname(guestName); setEditingName(true); }}>Change</button></p> : null}
     {state?.wallet ? <p className="accounting-copy">Signed in as {state.member?.name || shortAddress(state.wallet)} <button className="claim-link" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await resetCommunitySession(); window.dispatchEvent(new Event(COMMUNITY_UPDATED_EVENT)); await refresh(); } catch { setError("Sign-out could not finish. Try again before switching accounts."); } finally { setBusy(false); } }}>Sign out</button></p> : !asGuest && state ? <p className="accounting-copy">The creator limited chat to signed-in members.</p> : null}

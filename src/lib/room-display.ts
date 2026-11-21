@@ -34,21 +34,21 @@ export function roomMetrics(token: Launch): RoomMetric[] {
   const kind = roomKind(token);
   if (kind === "native") {
     return [
-      { label: "VIEWERS", value: token.viewerCount === undefined ? "—" : token.viewerCount.toLocaleString() },
-      { label: "TRADE RESERVE", value: formatEthCompact(token.nativeRealQuoteReserve) },
-      { label: "RECENT TRADES", value: token.nativeTradeCount === undefined ? "—" : token.nativeTradeCount.toLocaleString() },
+      { label: "Viewers", value: token.viewerCount === undefined ? "—" : token.viewerCount.toLocaleString() },
+      { label: "Trade reserve", value: formatEthCompact(token.nativeRealQuoteReserve) },
+      { label: "Recent trades", value: token.nativeTradeCount === undefined ? "—" : token.nativeTradeCount.toLocaleString() },
     ];
   }
   if (kind === "pons") {
     return [
-      { label: "POOL PRICE", value: token.poolPriceQuote === undefined ? "—" : `${token.poolPriceQuote.toPrecision(3)} WETH` },
-      { label: "SWAPS", value: token.ponsTradeCount === undefined ? "—" : token.ponsTradeCount.toLocaleString() },
+      { label: "Pool price", value: token.poolPriceQuote === undefined ? "—" : `${token.poolPriceQuote.toPrecision(3)} WETH` },
+      { label: "Swaps", value: token.ponsTradeCount === undefined ? "—" : token.ponsTradeCount.toLocaleString() },
       { label: "24H", value: "—" },
     ];
   }
   return [
-    { label: "HYPE", value: String(token.hype) },
-    { label: "MARKET CAP", value: formatUsd(token.marketCapUsd) },
+    { label: "Hype", value: String(token.hype) },
+    { label: "Market cap", value: formatUsd(token.marketCapUsd) },
     { label: "24H", value: `${token.change24h >= 0 ? "+" : ""}${token.change24h}%`, tone: token.change24h >= 0 ? "positive" : "negative" },
   ];
 }
@@ -60,7 +60,7 @@ export function roomMeter(token: Launch): { label: string; percent: number; text
     const percent = roomCurvePercent(token);
     return { label: "Progress to liquidity pool", percent, text: formatCurveProgress(token.nativeRealQuoteReserve, token.nativeGraduationThreshold, token.curveProgressBps, token.curvePhase) };
   }
-  if (kind === "sample") return { label: "HYPE", percent: Math.min(100, token.hype), text: `${token.hype}/100` };
+  if (kind === "sample") return { label: "Hype", percent: Math.min(100, token.hype), text: `${token.hype}/100` };
   return null;
 }
 

@@ -57,7 +57,7 @@ export function FollowingClient({ launches, source }: { launches: Launch[]; sour
   return <main className="following-page"><Header active="following" />
     <div className="page-shell following-shell">
       <section className="following-heading">
-        <div><span className="eyebrow">FOLLOWING</span><h1>Your rooms</h1><p>{rows.length ? "Live rooms first, then upcoming shows." : "Follow a room and it shows up here—no wallet needed."}</p></div>
+        <div><span className="eyebrow">Following</span><h1>Your rooms</h1><p>{rows.length ? "Live rooms first, then upcoming shows." : "Follow a room and it shows up here—no wallet needed."}</p></div>
         {rows.length > 0 && <button type="button" className={`secondary-button${allAlerted ? " is-on" : ""}`} aria-pressed={allAlerted} disabled={busy} onClick={() => void toggleAlerts()}>{busy ? "Updating…" : allAlerted ? "🔔 Alerts on for all" : "🔔 Alerts for all my rooms"}</button>}
       </section>
       {notice && <p className="accounting-copy" role="status">{notice}</p>}

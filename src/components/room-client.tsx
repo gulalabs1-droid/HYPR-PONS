@@ -99,19 +99,19 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
       <Link href="/discover" className="back-link">← Discover rooms</Link>
       <section className="room-header room-header-compact">
         <div className="room-token-identity"><span className="room-logo" aria-hidden="true"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} /></span><div>
-          <span className="eyebrow">COMMUNITY ROOM</span>
+          <span className="eyebrow">Community room</span>
           <h1>{roomName}</h1>
         </div></div>
         <div className="share-controls"><FollowButton roomId={token.address} growth={growth} />{isNative && <RemindMe roomId={token.address} calendarHref={creatorProfile?.show ? `/api/community/calendar?roomId=${token.address}&showId=${creatorProfile.show.id}` : undefined} />}<ShareRoom roomId={token.address} name={roomName} /></div>
       </section>
       {(liveNow || creatorProfile?.show) && <div className={`room-now is-${phase}${lobbyOpen ? " is-lobby" : ""}`}>
-        <span className="room-now-badge">{liveNow ? <><span className="pulse" />LIVE NOW</> : lobbyOpen ? "PRE-SHOW" : phase === "upcoming" ? "NEXT SHOW" : phase === "awaiting-creator" ? "STARTING SOON" : "SCHEDULED"}</span>
+        <span className="room-now-badge">{liveNow ? <><span className="pulse" />Live now</> : lobbyOpen ? "Pre-show" : phase === "upcoming" ? "Next show" : phase === "awaiting-creator" ? "Starting soon" : "Scheduled"}</span>
         {creatorProfile?.show && <><strong>{creatorProfile.show.title}</strong>{phase === "upcoming" && <ShowCountdown startsAt={creatorProfile.show.startsAt} />}{phase !== "live" && <ShowTime iso={creatorProfile.show.startsAt} />}</>}
         {lobbyOpen && <button type="button" className="room-now-action" onClick={() => chooseSection("chat")}>Chat is open—say hi →</button>}
       </div>}
       {!isNative && <p className="room-safety-note">{token.dataStatus === "demo" ? "Demo room · Sample launch data, not a verified live market." : "Indexed Pons room · Trading availability depends on the launch’s network."}</p>}
       {liveData.error && <p className="live-notice" role="status">{liveData.error} Last successful data is kept visible; it may be out of date.</p>}
-      <div className={`room-experience${hasCoin?" has-market":""}`} ref={sectionsRef} data-chatting={section === "chat"}>
+      <div className={`room-experience${hasCoin?" has-market":""}`} ref={sectionsRef} data-chatting={section === "chat" && liveNow}>
         <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} showTitle={creatorProfile?.show?.title} nextShow={creatorProfile?.show?.status === "scheduled" ? creatorProfile.show : undefined} latestReplay={latestReplay} otherLive={otherLive} /></div>
         <nav className="room-section-nav" aria-label="Room sections" data-native={isNative}>
           <button type="button" aria-label="Watch broadcast" aria-controls="room-watch" onClick={() => sectionsRef.current?.querySelector("#room-watch")?.scrollIntoView({ behavior: "instant", block: "start" })}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m10 8 6 4-6 4Z" /></svg><span>Watch</span></button>
@@ -141,7 +141,7 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
           </details>}
         </section>}
         <section className="room-about-section" id="room-about" data-mobile-active={section === "about"} aria-label="About this room">
-          <div className="activity-panel room-about-card"><span className="eyebrow">ABOUT THIS ROOM</span><h2>{roomName}</h2>
+          <div className="activity-panel room-about-card"><span className="eyebrow">About this room</span><h2>{roomName}</h2>
             <p className="accounting-copy">{creatorProfile?.bio || "A permanent place to watch, talk, and come back for the next show."}</p>
             <p className="accounting-copy">{token.coinless ? "Free to watch, chat and follow. Only the creator can broadcast here." : `The room has an optional $${token.symbol} coin. You never need it to watch, chat or follow; only the creator’s wallet can broadcast here.`}</p>
             {isNative && <div className="room-after-live"><h3>What happens after a broadcast?</h3><p>The audio/video session stops, but this same room link, saved chat, follows and token remain. The creator can broadcast here again. Trading depends on the contract’s status, not whether someone is streaming.</p><p>Recording is opt-in. Creators can save up to 10 minutes as a private replay draft and allow 30-second viewer clips. Creator-published recordings appear in Replays & clips. There is no always-on cloud DVR; saved chat is separate from saved video.</p></div>}

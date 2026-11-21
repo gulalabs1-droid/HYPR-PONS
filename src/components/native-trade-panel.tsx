@@ -236,7 +236,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
   if (!hyprClientConfig.enabled) {
     return (
       <section className="activity-panel trade-panel">
-        <div className="panel-heading"><div><span className="eyebrow">NATIVE CURVE</span><h2>Trading locked</h2></div><span className="live-chip">testnet only</span></div>
+        <div className="panel-heading"><div><span className="eyebrow">Native curve</span><h2>Trading locked</h2></div><span className="live-chip">testnet only</span></div>
         <p className="trade-copy">{hyprClientConfig.reason}</p>
       </section>
     );
@@ -244,7 +244,7 @@ export function NativeTradePanel({ curveAddress, tokenAddress, tokenSymbol, read
 
   return (
     <section className="activity-panel trade-panel">
-      <div className="panel-heading"><div><span className="eyebrow">ROOM TOKEN · TESTNET</span><h2>Buy or sell ${tokenSymbol}</h2></div><span className="live-chip">{phaseLabel}</span></div>
+      <div className="panel-heading"><div><span className="eyebrow">Room token · Testnet</span><h2>Buy or sell ${tokenSymbol}</h2></div><span className="live-chip">{phaseLabel}</span></div>
       <p className="trade-copy">Room tokens are not ownership. Test assets have no real value.</p>
       <p className="trade-fee-note">1.25% trading fee included · 0.30% creator / 0.95% HYPR. Network fees are extra.</p>
       <div className="trade-tabs"><button aria-pressed={direction === "buy"} className={direction === "buy" ? "selected" : ""} disabled={pending} onClick={() => { quoteVersion.current++; setQuote(null); setDirection("buy"); setAmount(""); setStatus(""); }}>Buy</button><button aria-pressed={direction === "sell"} className={direction === "sell" ? "selected" : ""} disabled={pending} onClick={() => { quoteVersion.current++; setQuote(null); setDirection("sell"); setAmount(""); setStatus(""); }}>Sell</button></div>

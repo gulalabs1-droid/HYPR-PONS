@@ -23,7 +23,7 @@ export function CreateRoomPanel({ compact = false }: { compact?: boolean }) {
     } catch (failure) { setError(walletErrorMessage(failure)); setBusy(false); }
   }
   return <section className={`create-room-panel${compact ? " is-compact" : ""}`} id="open-room" aria-labelledby="open-room-title">
-    <div><span className="eyebrow">START HERE · NO COIN NEEDED</span><h2 id="open-room-title">Open your room in a minute.</h2>
+    <div><span className="eyebrow">Start here · No coin needed</span><h2 id="open-room-title">Open your room in a minute.</h2>
       <p>Name it, sign in with your wallet (a free signature—no transaction or test ETH), and you’re ready to go live, schedule a show and invite people. You can add a coin later, or never.</p></div>
     <form onSubmit={create}>
       <label><span className="field-label">Room name</span><input value={name} onChange={event => setName(event.target.value)} maxLength={60} placeholder="e.g. Friday Night Hoops" autoComplete="off" disabled={busy} /></label>

@@ -7,7 +7,7 @@
   .mobile-mini-player { position:fixed; z-index:40; right:12px; bottom:calc(82px + env(safe-area-inset-bottom)); display:block; width:min(200px, 48vw); max-width:calc(100vw - 24px); overflow:hidden; border:1px solid #ffffff40; border-radius:15px; background:#10171d; color:#f5f8f6; box-shadow:0 12px 36px #000b; }
   .mobile-mini-player.is-left { right:auto; left:12px; }
   .mini-player-header { display:flex; align-items:center; justify-content:space-between; padding-left:12px; background:#172029; }
-  .mini-player-header > span { color:#e4f8ba; font-size:12px; font-weight:800; letter-spacing:.06em; }
+  .mini-player-header > span { color:#e4f8ba; font-size:12px; font-weight:800; letter-spacing: .005em; }
   .mini-player-header > div { display:flex; }
   .mini-player-header button { width:44px; height:44px; padding:0; border:0; background:transparent; color:#f6f8f8; font:inherit; font-size:21px; cursor:pointer; }
   .mini-player-picture { display:block; width:100%; aspect-ratio:16/9; padding:0; overflow:hidden; border:0; background:#080c0f; color:#edf4f3; cursor:pointer; }

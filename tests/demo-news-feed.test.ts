@@ -139,7 +139,7 @@ test("the external feed yields to the creator and disappears when live status is
   try {
     await act(async () => { renderer = create(createElement(NativeLiveRoom, { token: demo }), { createNodeMock: () => ({}) }); });
     const text = () => JSON.stringify(renderer!.toJSON());
-    assert.match(text(), /EXTERNAL NEWS/); assert.match(text(), /creator is offline/i); assert.match(text(), /youtube-nocookie/);
+    assert.match(text(), /External news/); assert.match(text(), /creator is offline/i); assert.match(text(), /youtube-nocookie/);
     assert.doesNotMatch(text(), /Watch live/);
     await act(async () => tick!()); assert.match(text(), /The creator is live/); assert.match(text(), /Watch live/); assert.doesNotMatch(text(), /youtube-nocookie/);
     await act(async () => tick!()); assert.doesNotMatch(text(), /youtube-nocookie/);

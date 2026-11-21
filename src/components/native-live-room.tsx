@@ -158,7 +158,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestR
   const creatorConnected = wallet.account?.toLowerCase() === token.deployer.toLowerCase();
   const phase = publicBroadcastPhase(status, statusError, seenLive, lastExit);
   const copy = broadcastCopy(phase);
-  const phaseLabel = phase === "live" && status?.viewerCount !== undefined ? `LIVE · ${status.viewerCount} viewer${status.viewerCount === 1 ? "" : "s"}` : copy.label;
+  const phaseLabel = phase === "live" && status?.viewerCount !== undefined ? `Live · ${status.viewerCount} viewer${status.viewerCount === 1 ? "" : "s"}` : copy.label;
   return <section className="native-live-surface native-live-watch-first" aria-label="Broadcast player">
     {latestReplay && !status?.live && phase !== "checking" && !studioOpen ? <InlineReplay roomId={token.address} asset={latestReplay} /> : showDemoNews(token, phase) ? <DemoNewsFeed /> : <div className={`live-viewport native-live-placeholder stage-poster is-${phase}`} style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
       <div className="stage-backdrop" aria-hidden="true"><TokenArt seed={token.address} /></div>
@@ -170,7 +170,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestR
       {status?.live && <button className="primary-button live-action" onClick={joinViewer} disabled={busy}>{busy ? "Joining…" : "Watch live →"}</button>}
       {status?.live && <small className="live-ask-hint">Want to be on the show? Watch, then tap ✋ Ask to join. The creator approves each guest.</small>}
       {phase === "unavailable" && <button className="secondary-button" onClick={() => void refreshStatus()}>Retry broadcast status</button>}
-      {!status?.live && nextShow && Date.parse(nextShow.startsAt) > Date.now() - 60 * 60_000 && <div className="stage-next-show"><span>NEXT SHOW</span><strong>{nextShow.title}</strong><ShowCountdown startsAt={nextShow.startsAt} /><RemindMe roomId={token.address} calendarHref={`/api/community/calendar?roomId=${token.address}&showId=${nextShow.id}`} /></div>}
+      {!status?.live && nextShow && Date.parse(nextShow.startsAt) > Date.now() - 60 * 60_000 && <div className="stage-next-show"><span>Next show</span><strong>{nextShow.title}</strong><ShowCountdown startsAt={nextShow.startsAt} /><RemindMe roomId={token.address} calendarHref={`/api/community/calendar?roomId=${token.address}&showId=${nextShow.id}`} /></div>}
       {!status?.live && !nextShow && phase !== "unavailable" && onOpenChat && <button type="button" className="secondary-button" onClick={onOpenChat}>Say hi in chat</button>}
     </div></div>}
     <div className="native-live-copy native-live-viewer-footer">
@@ -200,7 +200,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestR
 function UpNext({ roomId, nextShow, latestReplay, otherLive, onOpenChat }: { roomId: string; nextShow?: { id: string; title: string; startsAt: string }; latestReplay?: MediaAsset; otherLive: { address: string; name: string }[]; onOpenChat?: () => void }) {
   const upcoming = nextShow && Date.parse(nextShow.startsAt) > Date.now() ? nextShow : undefined;
   return <section className="up-next" aria-label="Up next">
-    <span className="eyebrow">UP NEXT</span>
+    <span className="eyebrow">Up next</span>
     <ul>
       {upcoming && <li><strong>Next show · {upcoming.title}</strong><ShowCountdown startsAt={upcoming.startsAt} /><RemindMe roomId={roomId} calendarHref={`/api/community/calendar?roomId=${roomId}&showId=${upcoming.id}`} /></li>}
       {latestReplay && <li><strong>Watch the replay · {latestReplay.title}</strong><a className="secondary-button" href={`/room/${roomId}/recording/${latestReplay.id}`}>Watch ↗</a></li>}

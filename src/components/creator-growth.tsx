@@ -23,7 +23,7 @@ export function UpcomingShow({ room, live = false }: { room: GrowthRoom; live?: 
   const show = room.show;
   if (!show) return <p className="accounting-copy">No next show announced. Follow this room and find it again in Following.</p>;
   const phase = showPhase(show, live);
-  return <div className="upcoming-show"><span className="eyebrow">{phase === "live" ? "CREATOR LIVE NOW" : phase === "upcoming" ? "NEXT SHOW" : "SCHEDULED TIME HAS PASSED"}</span><h3>{show.title}</h3><ShowTime iso={show.startsAt} />{show.description && <p>{show.description}</p>}
+  return <div className="upcoming-show"><span className="eyebrow">{phase === "live" ? "Creator live now" : phase === "upcoming" ? "Next show" : "Scheduled time has passed"}</span><h3>{show.title}</h3><ShowTime iso={show.startsAt} />{show.description && <p>{show.description}</p>}
     <p className="accounting-copy">{phase === "awaiting-creator" ? "Waiting for the creator. A scheduled time does not mean the broadcast started." : "Scheduled by the creator. Times are shown in your timezone; watching is free."}</p>
     <a className="secondary-button" href={`/api/community/calendar?roomId=${room.address}&showId=${show.id}`}>Add to calendar ↓</a>
   </div>;
@@ -161,7 +161,7 @@ const hubTabs: { key: HubTab; label: string }[] = [{ key: "stats", label: "Stats
 function CreatorHub({ room, roomId, live, onSave }: { room: GrowthRoom; roomId: string; live: boolean; onSave: (action: string, payload: Record<string, unknown>) => Promise<void> }) {
   const [tab, setTab] = useState<HubTab>(room.show ? "stats" : "show");
   return <details className="creator-hub" open>
-    <summary><span className="hub-title"><span className="hub-badge">ONLY YOU SEE THIS</span><strong>Creator dashboard</strong><small>Shows, profile, share card & reports</small></span><span className="hub-chevron" aria-hidden="true" /></summary>
+    <summary><span className="hub-title"><span className="hub-badge">Only you see this</span><strong>Creator dashboard</strong><small>Shows, profile, share card & reports</small></span><span className="hub-chevron" aria-hidden="true" /></summary>
     <div className="hub-body">
       <SetupChecklist room={room} roomId={roomId} live={live} onOpen={setTab} />
       <div className="hub-actions">
@@ -214,7 +214,7 @@ export function CreatorGrowth({ roomId, creator, live, growth }: { roomId: strin
     {!room && !growth.error && <p className="accounting-copy">Checking creator and next show…</p>}
     {room && <>
       <div className="creator-card">
-        <div className="creator-profile"><CreatorAvatar seed={room.address} avatar={room.avatar} name={room.displayName || room.name} /><div><span className="eyebrow">CREATOR COMMUNITY</span><h2>{room.displayName || room.name}</h2>{room.bio && <p>{room.bio}</p>}</div></div>
+        <div className="creator-profile"><CreatorAvatar seed={room.address} avatar={room.avatar} name={room.displayName || room.name} /><div><span className="eyebrow">Creator community</span><h2>{room.displayName || room.name}</h2>{room.bio && <p>{room.bio}</p>}</div></div>
         <div className="creator-card-side">
           {room.followers >= 10 && <div className="creator-stat"><strong>{room.followers.toLocaleString()}</strong><span>followers</span></div>}
           <div className="growth-actions"><FollowButton roomId={roomId} growth={growth} /><Link className="secondary-button" href="/following">Following →</Link></div>
@@ -222,7 +222,7 @@ export function CreatorGrowth({ roomId, creator, live, growth }: { roomId: strin
         </div>
       </div>
       <UpcomingShow room={room} live={live} />
-      {room.moment && <div className="moment-share"><span className="eyebrow">MOMENT SHARE CARD · NOT VIDEO</span><h3>{room.moment}</h3><div className="growth-actions"><Link className="secondary-button" href={`/room/${room.address}/moment`}>Open share card →</Link><ShareRoom roomId={room.address} name={room.displayName || room.name} moment /></div></div>}
+      {room.moment && <div className="moment-share"><span className="eyebrow">Moment share card · Not video</span><h3>{room.moment}</h3><div className="growth-actions"><Link className="secondary-button" href={`/room/${room.address}/moment`}>Open share card →</Link><ShareRoom roomId={room.address} name={room.displayName || room.name} moment /></div></div>}
     </>}
     {ownsWallet && room && <CreatorHub room={room} roomId={roomId} live={live} onSave={save} />}
     {notice && <p className="live-notice" role="status">{notice}</p>}

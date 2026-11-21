@@ -2,7 +2,7 @@
 .discovery-hub { --hub-muted: #b1b5c1; background: radial-gradient(ellipse at 80% 0%, #39295724, transparent 45%), #0a0b0e; min-height: 100vh; }
 .discovery-shell { max-width: 1520px; margin: auto; display: grid; grid-template-columns: 224px minmax(0, 1fr); gap: 40px; padding: 34px 38px 0; }
 .discovery-sidebar { position: sticky; top: 108px; align-self: start; }
-.discovery-wordmark { display: block; color: #f5f6fa; font-size: 12px; letter-spacing: .12em; font-weight: 800; padding: 16px 12px 30px; }
+.discovery-wordmark { display: block; color: #f5f6fa; font-size: 12px; letter-spacing: .005em; font-weight: 800; padding: 16px 12px 30px; }
 .discovery-wordmark span { display: block; margin-top: 9px; font-size: 14px; letter-spacing: -.02em; color: var(--hub-muted); font-weight: 500; }
 .discovery-nav { display: grid; gap: 7px; }
 .discovery-nav button { display: flex; align-items: center; gap: 12px; width: 100%; border: 1px solid transparent; background: transparent; color: var(--hub-muted); min-height: 48px; padding: 12px; border-radius: 12px; text-align: left; font-size: 13px; font-weight: 650; cursor: pointer; }
@@ -11,7 +11,7 @@
 .discovery-nav button[aria-pressed="true"] { background: #c7f36b12; border-color: #c7f36b28; color: #d0f88a; }
 .discovery-nav button:hover { background: #ffffff08; color: white; }
 .discovery-sidebar-note { margin-top: 34px; padding: 22px 14px; border-top: 1px solid #ffffff14; }
-.discovery-sidebar-note .eyebrow { font-size: 12px; line-height: 1.6; letter-spacing: .08em; }
+.discovery-sidebar-note .eyebrow { font-size: 12px; line-height: 1.6; letter-spacing: .005em; }
 .discovery-sidebar-note p { color: var(--hub-muted); font-size: 13px; line-height: 1.8; }
 .discovery-sidebar-note a, .discovery-library { font-size: 12px; color: #b9a6ee; }
 .discovery-library { display: block; padding: 12px; }
@@ -21,12 +21,12 @@
 .discovery-heading h1 em, .faq-page h1 em { font-style: normal; color: #d0f88a; }
 .discovery-heading p { font-size: 14px; color: var(--hub-muted); margin: 0; line-height: 1.65; }
 .discovery-heading .eyebrow { font-size: 12px; }
-.discovery-preview-tag { border: 1px solid #ffffff20; border-radius: 6px; color: #c4c5ce; font-size: 12px; letter-spacing: .08em; padding: 8px 10px; white-space: nowrap; margin-top: 7px; }
+.discovery-preview-tag { border: 1px solid #ffffff20; border-radius: 6px; color: #c4c5ce; font-size: 12px; letter-spacing: .005em; padding: 8px 10px; white-space: nowrap; margin-top: 7px; }
 .discovery-spotlight { display: grid; grid-template-columns: 1.1fr 1fr; border: 1px solid #ffffff20; border-radius: 22px; overflow: hidden; background: #13151c; min-height: 320px; }
 .spotlight-art { position: relative; min-width: 0; min-height: 300px; overflow: hidden; background: #222537; }
 .spotlight-art > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .spotlight-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, #07080cc9, transparent 55%); }
-.spotlight-art-caption { position: absolute; bottom: 24px; left: 24px; right: 18px; z-index: 1; color: #fff; font-size: 12px; letter-spacing: .13em; font-weight: 700; }
+.spotlight-art-caption { position: absolute; bottom: 24px; left: 24px; right: 18px; z-index: 1; color: #fff; font-size: 12px; letter-spacing: .005em; font-weight: 700; }
 .spotlight-copy { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 32px; background: radial-gradient(ellipse at right top, #a893ff14, transparent 75%); min-width: 0; }
 .spotlight-copy .eyebrow { font-size: 12px; color: #c2b0ff; }
 .spotlight-copy h2 { margin: 14px 0 12px; font-size: clamp(25px, 2.7vw, 38px); letter-spacing: -.045em; line-height: 1.2; white-space: pre-line; overflow-wrap: anywhere; }

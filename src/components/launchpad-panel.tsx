@@ -48,7 +48,7 @@ export function LaunchResultCard({ submission, progress, notice, onCheck, onNew 
   const failed = progress?.status === "failed";
   const created = progress && ["confirming", "indexing", "ready"].includes(progress.status);
   return <div className={`launch-result ${ready ? "is-ready" : ""}`} role="status" aria-live="polite">
-    <span className="eyebrow">{ready ? "✓ ROOM READY" : failed ? "TRANSACTION REVERTED" : created ? "✓ COIN CREATED" : "TRANSACTION SENT"}</span>
+    <span className="eyebrow">{ready ? "✓ ROOM READY" : failed ? "Transaction reverted" : created ? "✓ COIN CREATED" : "Transaction sent"}</span>
     <h3>{ready ? "Your coin has a home." : failed ? "This coin wasn’t created." : created ? "Your coin is created." : "Waiting for confirmation…"}</h3>
     <p>{ready ? `Your ${progress.name || submission.name} room is ready. Open it to trade or start your creator broadcast.` : failed ? "The network reverted this transaction. Check the details before trying again." : progress?.status === "indexing" ? "We’re preparing your room. Your coin already exists—don’t create it again." : "We’re confirming your launch and preparing its room automatically. You can refresh safely; we’ll recover this transaction."}</p>
     {!ready && !failed && <ol className="launch-steps"><li className="done">Wallet approval complete</li><li className={created ? "done" : ""}>{created ? "Coin created on testnet" : "Confirming transaction"}</li><li>{progress?.status === "confirming" ? `Preparing room · ${Math.min(progress.confirmations || 0, progress.requiredConfirmations || 12)} / ${progress.requiredConfirmations || 12} confirmations` : "Preparing your room"}</li></ol>}
@@ -250,7 +250,7 @@ export function LaunchpadPanel() {
   return (
     <section id="launch" className="launchpad-panel">
       <div className="launchpad-copy">
-        <span className="eyebrow">OPTIONAL · TESTNET COIN</span>
+        <span className="eyebrow">Optional · Testnet coin</span>
         <h2>Want a coin with your room?</h2>
         <p>Rooms don’t need one. If your community wants a coin to trade, name it and approve it in your wallet; it gets its own room with a chart and trading.</p>
         <p className="launch-testnet-note">You’re testing with free test ETH—not launching a real-money coin. Going live is a separate step.</p>
@@ -262,11 +262,11 @@ export function LaunchpadPanel() {
         {hasValidFactory && configStatus === "loading" && <div className="data-notice" role="status">Reading immutable launch configuration before enabling creation…</div>}
         {hasValidFactory && configStatus === "error" && <div className="data-notice" role="status">Factory configuration could not be read or does not match the reviewed HYPR V0 economics. Creation is disabled and sends no transaction.</div>}
         {config && <details className="launch-details"><summary>Supply, fees &amp; technical details</summary><span className="launch-config">Factory {shortAddress(factoryAddress)} · chain {expectedChainId}</span><div className="launch-preview" aria-label="Immutable launch configuration">
-          <div><span>SUPPLY</span><strong>{formatTokenAmount(config.totalSupply)} tokens</strong></div>
-          <div><span>TRADABLE</span><strong>{formatTokenAmount(config.tradableSupply)} tokens</strong></div>
-          <div><span>QUOTE / THRESHOLD</span><strong>{formatEther(config.virtualQuoteReserve)} / {formatEther(config.graduationThreshold)} ETH</strong></div>
-          <div><span>FEE SPLIT</span><strong>{(Number(config.totalFeeBps) / 100).toFixed(2)}% total</strong><small>{(Number(config.creatorFeeBps) / 100).toFixed(2)}% creator · {(Number(config.protocolFeeBps) / 100).toFixed(2)}% HYPR</small></div>
-          <div><span>PROTOCOL RECIPIENT</span><strong>{shortAddress(config.protocolRecipient)}</strong></div>
+          <div><span>Supply</span><strong>{formatTokenAmount(config.totalSupply)} tokens</strong></div>
+          <div><span>Tradable</span><strong>{formatTokenAmount(config.tradableSupply)} tokens</strong></div>
+          <div><span>Quote / Threshold</span><strong>{formatEther(config.virtualQuoteReserve)} / {formatEther(config.graduationThreshold)} ETH</strong></div>
+          <div><span>Fee split</span><strong>{(Number(config.totalFeeBps) / 100).toFixed(2)}% total</strong><small>{(Number(config.creatorFeeBps) / 100).toFixed(2)}% creator · {(Number(config.protocolFeeBps) / 100).toFixed(2)}% HYPR</small></div>
+          <div><span>Protocol recipient</span><strong>{shortAddress(config.protocolRecipient)}</strong></div>
         </div></details>}
       </div>
       {submission ? <LaunchResultCard submission={submission} progress={progress} notice={status} onCheck={() => setCheckVersion((version) => version + 1)} onNew={() => {

@@ -81,7 +81,7 @@ export function MediaCaptureControls({ roomId, host, tracks, registerStop, onRec
   }
   if (!uploads.available) return null;
   return <section className="media-capture" aria-label="Broadcast recording controls">
-    <div><span className="eyebrow">{host ? "KEEP THE MOMENT" : "CLIP THIS BROADCAST"}</span><h3>{recording ? `Recording ${recording} · ${mediaDuration(seconds)}` : host ? "Record a replay" : "Clips"}</h3></div>
+    <div><span className="eyebrow">{host ? "Keep the moment" : "Clip this broadcast"}</span><h3>{recording ? `Recording ${recording} · ${mediaDuration(seconds)}` : host ? "Record a replay" : "Clips"}</h3></div>
     {host && <label className="media-consent"><input type="checkbox" checked={library.state?.clipsAllowed || false} disabled={busy || !library.state?.live} onChange={event => void clipping(event.target.checked)} /> Allow viewers to record clips of this broadcast for your review.</label>}
     {host && <p className="accounting-copy">Off by default for each new broadcast. Turning it off also hides published viewer clips in this room. Previously downloaded copies cannot be recalled.</p>}
     {!host && !library.state ? (!library.error && <p className="accounting-copy">Checking clip availability…</p>) : !host && !library.state?.clipsAllowed ? <p className="accounting-copy">Clips aren’t enabled for this broadcast.</p> : <>

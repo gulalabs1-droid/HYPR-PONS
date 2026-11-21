@@ -17,13 +17,13 @@ export function RoomMediaLibrary({ roomId, library, showWhenEmpty }: { roomId: s
   }
   if (!showWhenEmpty && !library.state?.assets.length) return null;
   return <section className="media-library" aria-label="Room replays and clips">
-    <div className="panel-heading"><div><span className="eyebrow">WATCH AGAIN</span><h2>Replays & clips</h2></div>{Boolean(library.state?.assets.length) && <span>{library.state!.assets.length} {library.state!.assets.length === 1 ? "recording" : "recordings"}</span>}</div>
+    <div className="panel-heading"><div><span className="eyebrow">Watch again</span><h2>Replays & clips</h2></div>{Boolean(library.state?.assets.length) && <span>{library.state!.assets.length} {library.state!.assets.length === 1 ? "recording" : "recordings"}</span>}</div>
     <p className="accounting-copy">Published recordings are free to watch.</p>
     {!library.state && !library.error && <p role="status">Loading recordings…</p>}
     {library.error && <div className="live-notice" role="status"><p>{library.error}</p><button className="claim-link" type="button" onClick={() => void library.refresh()}>Retry video library</button></div>}
     {library.state && !library.state.assets.length && <div className="media-empty"><span aria-hidden="true">▷</span><h3>No recordings yet</h3><p>Replays and clips appear here when the creator publishes them.</p></div>}
     <div className="media-grid">{library.state?.assets.map(asset => <article className="media-card" key={asset.id}>
-      <span className="media-kind">{asset.kind === "clip" ? "VIDEO / AUDIO CLIP" : "SAVED REPLAY"} · {mediaDuration(Number(asset.durationSeconds))}</span>
+      <span className="media-kind">{asset.kind === "clip" ? "Video / Audio clip" : "Saved replay"} · {mediaDuration(Number(asset.durationSeconds))}</span>
       <h3>{asset.title}</h3><p>{asset.published ? "Published by the creator" : "Private · creator review required"}</p><time dateTime={asset.createdAt}>{new Date(asset.createdAt).toLocaleDateString()}</time>
       <div className="media-actions"><Link className="secondary-button" href={`/room/${roomId}/recording/${asset.id}`}>{asset.published ? "Watch recording" : "Preview draft"} ↗</Link>
         {asset.manageable && (asset.published ? <button type="button" className="claim-link" disabled={busy} onClick={() => void update("hide", asset)}>Hide from HYPR</button> : <button type="button" className="claim-link" disabled={busy} onClick={() => setPublish(asset)}>Review & publish</button>)}

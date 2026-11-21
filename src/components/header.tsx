@@ -10,7 +10,24 @@ import { resetCommunitySession, signInCommunity } from "@/lib/community-client";
 import { COMMUNITY_SIGNED_OUT_EVENT, COMMUNITY_UPDATED_EVENT } from "@/lib/growth";
 
 /** `compact` keeps phones to one header row so video starts near the top; the menu opens the links. */
-export function Header({ active, compact = false }: { active?: "watch" | "discover" | "protocol" | "following"; compact?: boolean }) {
+// Phone tab bar: thumb-reachable navigation on every page except rooms (rooms have their own tabs).
+const TABS = [
+  { key: "home", href: "/", label: "Home", icon: "M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" },
+  { key: "watch", href: "/watch", label: "Watch", icon: "M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zm6 3v6l5-3z" },
+  { key: "discover", href: "/discover", label: "Discover", icon: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm3.5 5.5-2 5-5 2 2-5z" },
+  { key: "following", href: "/following", label: "Following", icon: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" },
+  { key: "create", href: "/creators", label: "Create", icon: "M12 5v14M5 12h14" },
+] as const;
+
+function TabBar({ active }: { active?: string }) {
+  return <nav className="tab-bar" aria-label="Sections">
+    {TABS.map(tab => <Link key={tab.key} href={tab.href} className={active === tab.key ? "active" : ""} aria-current={active === tab.key ? "page" : undefined}>
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d={tab.icon} /></svg><span>{tab.label}</span>
+    </Link>)}
+  </nav>;
+}
+
+export function Header({ active, compact = false }: { active?: "home" | "watch" | "discover" | "protocol" | "following" | "create"; compact?: boolean }) {
   const wallet = useWalletStatus();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -82,7 +99,7 @@ export function Header({ active, compact = false }: { active?: "watch" | "discov
     catch { setMessage("Your wallet is disconnected, but HYPR sign-out did not finish. Reconnect or retry before using another wallet."); }
   }
 
-  return <header className={`site-header${compact ? " is-compact" : ""}${navOpen ? " nav-open" : ""}`}>
+  return <><header className={`site-header${compact ? " is-compact" : ""}${navOpen ? " nav-open" : ""}`}>
     <div className="header-inner">
       <Link href="/" className="brand" aria-label="HYPR home"><span className="brand-mark">H</span><span>HYPR</span></Link>
       {compact && <button type="button" className="nav-toggle" aria-expanded={navOpen} aria-controls="main-nav" aria-label={navOpen ? "Close menu" : "Open menu"} onClick={() => setNavOpen(open => !open)}><span aria-hidden="true">{navOpen ? "✕" : "☰"}</span></button>}
@@ -90,7 +107,7 @@ export function Header({ active, compact = false }: { active?: "watch" | "discov
         <Link className={active === "watch" ? "active" : ""} aria-current={active === "watch" ? "page" : undefined} href="/watch">Watch</Link>
         <Link className={active === "discover" ? "active" : ""} aria-current={active === "discover" ? "page" : undefined} href="/discover">Discover</Link>
         <Link className={active === "following" ? "active" : ""} aria-current={active === "following" ? "page" : undefined} href="/following">Following</Link>
-        <Link href="/creators">Create</Link>
+        <Link className={active === "create" ? "active" : ""} aria-current={active === "create" ? "page" : undefined} href="/creators">Create</Link>
         <Link href="/faq">How it works</Link>
       </nav>
       <div className="header-actions" ref={menuRef}>
@@ -117,5 +134,5 @@ export function Header({ active, compact = false }: { active?: "watch" | "discov
     {wrongChain && !message && !busy && <div className="wallet-banner"><span>Wallet connected · switch to Robinhood testnet before creating or trading.</span><button className="wallet-switch" onClick={() => void switchNetwork()} disabled={busy}>Switch to testnet</button></div>}
     {message && <div className="wallet-banner" role="status"><span>{message}</span><button onClick={() => setMessage("")} aria-label="Dismiss wallet message">×</button></div>}
     {pickerOpen && <WalletPicker onSelect={() => void connect()} onClose={() => setPickerOpen(false)} onMember={name => { setMember(name); setMessage(`Welcome, ${name}! You’re signed in with your passkey.`); }} />}
-  </header>;
+  </header>{!compact && <TabBar active={active} />}</>;
 }

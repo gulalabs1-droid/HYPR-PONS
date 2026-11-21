@@ -51,7 +51,7 @@ export function PilotInsights({ roomId }: { roomId?: string }) {
     <div className="page-shell">
       <nav className="insights-crumbs" aria-label="Breadcrumb">{roomId ? <Link href={`/room/${roomId}`}>← Back to room <code>{shortAddress(roomId)}</code></Link> : <Link href="/following">← Your communities</Link>}</nav>
       <section className="insights-hero">
-        <div><span className="eyebrow">PRIVATE PILOT INSIGHTS</span><h1>Measure return visits, <em>not hype.</em></h1><p>Creator-only room insights; founder-wide access requires a server-configured admin wallet. No wallet address, raw browser identifier or signature appears in these metrics.</p></div>
+        <div><span className="eyebrow">Private pilot insights</span><h1>Measure return visits, <em>not hype.</em></h1><p>Creator-only room insights; founder-wide access requires a server-configured admin wallet. No wallet address, raw browser identifier or signature appears in these metrics.</p></div>
         <div className="insights-hero-actions"><button className="primary-button" disabled={busy} onClick={() => void load()}>{busy ? "Loading…" : data ? "Refresh metrics" : "Sign in & load real metrics"}</button>{data && <span className="insights-scope">{String(data.scope)}</span>}</div>
       </section>
       {error && <p className="live-notice" role="alert">{error}</p>}

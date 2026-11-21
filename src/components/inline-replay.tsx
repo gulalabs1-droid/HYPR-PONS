@@ -22,7 +22,7 @@ export function InlineReplay({ roomId, asset }: { roomId: string; asset: MediaAs
     {url ? <video src={url} controls autoPlay playsInline aria-label={asset.title} onError={() => { setUrl(""); setError("The video link expired. Press play again."); }} />
       : <button type="button" className="inline-replay-poster" disabled={busy} onClick={() => void play()}>
         <span className="inline-replay-play" aria-hidden="true">▶</span>
-        <span className="inline-replay-label">{asset.kind === "clip" ? "LATEST CLIP" : "LATEST REPLAY"} · {mediaDuration(Number(asset.durationSeconds))}</span>
+        <span className="inline-replay-label">{asset.kind === "clip" ? "Latest clip" : "Latest replay"} · {mediaDuration(Number(asset.durationSeconds))}</span>
         <strong>{busy ? "Loading…" : asset.title}</strong>
         <small>The creator is offline—catch up while you wait.</small>
       </button>}

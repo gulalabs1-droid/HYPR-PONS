@@ -10,7 +10,7 @@ export default function ErrorPage({ reset }: { error: Error & { digest?: string 
       <div className="page-shell">
         <section className="status-page">
           <span className="status-code">!</span>
-          <span className="eyebrow">SOMETHING WENT WRONG</span>
+          <span className="eyebrow">Something went wrong</span>
           <h1>We couldn’t load this page.</h1>
           <p>The Robinhood Chain RPC may be slow or briefly unavailable. No transaction was sent. Try again in a moment.</p>
           <div className="hero-actions">

@@ -8,16 +8,27 @@ import { countOnce } from "@/lib/counts";
 export function RemindMe({ roomId, calendarHref }: { roomId: string; calendarHref?: string }) {
   const [on, setOn] = useState(false);
   const [support, setSupport] = useState<PushSupport>("unsupported");
+  const [available, setAvailable] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  useEffect(() => {
+    let active = true;
+    fetch("/api/push", { cache: "no-store", signal: AbortSignal.timeout(8000) })
+      .then(response => response.ok ? response.json() : null)
+      .then((config: { enabled?: boolean; publicKey?: string | null } | null) => {
+        if (active) setAvailable(Boolean(config?.enabled && config.publicKey));
+      })
+      .catch(() => { if (active) setAvailable(false); });
+    return () => { active = false; };
+  }, []);
   useEffect(() => {
     const refresh = () => setOn(pushRooms().includes(roomId.toLowerCase()));
     setSupport(pushSupport()); refresh();
     // A new follower is the best moment to offer alerts.
-    const followed = (event: Event) => { if ((event as CustomEvent<{ roomId?: string }>).detail?.roomId === roomId.toLowerCase() && !pushRooms().includes(roomId.toLowerCase()) && pushSupport() === "supported") setNotice("Want a heads-up when they go live? Tap Notify me."); };
+    const followed = (event: Event) => { if (available && (event as CustomEvent<{ roomId?: string }>).detail?.roomId === roomId.toLowerCase() && !pushRooms().includes(roomId.toLowerCase()) && pushSupport() === "supported") setNotice("Want a heads-up when they go live? Tap Notify me."); };
     window.addEventListener(PUSH_ROOMS_EVENT, refresh); window.addEventListener(FOLLOWED_ROOM_EVENT, followed);
     return () => { window.removeEventListener(PUSH_ROOMS_EVENT, refresh); window.removeEventListener(FOLLOWED_ROOM_EVENT, followed); };
-  }, [roomId]);
+  }, [roomId, available]);
 
   async function toggle() {
     if (busy) return;
@@ -29,6 +40,8 @@ export function RemindMe({ roomId, calendarHref }: { roomId: string; calendarHre
     catch (error) { setNotice(error instanceof Error ? error.message : "Alerts couldn’t be changed."); setSupport(pushSupport()); }
     finally { setBusy(false); }
   }
+
+  if (!available) return calendarHref ? <a className="secondary-button" href={calendarHref}>Add to calendar ↓</a> : null;
 
   return <div className="remind-me">
     <button type="button" className={`secondary-button${on ? " is-on" : ""}`} aria-pressed={on} disabled={busy} onClick={() => void toggle()}>{on ? "🔔 Alerts on" : "🔔 Notify me"}</button>

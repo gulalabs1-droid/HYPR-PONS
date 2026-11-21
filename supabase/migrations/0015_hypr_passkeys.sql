@@ -12,7 +12,9 @@ create table public.hypr_passkey_accounts (
   created_at timestamptz not null default now()
 );
 create table public.hypr_passkey_credentials (
-  credential_id text primary key check (credential_id ~ '^[A-Za-z0-9_-]{16,1400}$'),
+  -- PostgreSQL's regular-expression repetition bounds cannot exceed 255.
+  -- Check the allowed characters and the WebAuthn ID length separately.
+  credential_id text primary key check (credential_id ~ '^[A-Za-z0-9_-]+$' and char_length(credential_id) between 16 and 1400),
   account_id uuid not null references public.hypr_passkey_accounts(account_id) on delete cascade,
   public_key text not null check (char_length(public_key) between 40 and 2000),
   counter bigint not null default 0 check (counter >= 0),

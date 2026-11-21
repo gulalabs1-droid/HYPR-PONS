@@ -1,5 +1,23 @@
 # HYPR cloud setup status
 
+## 2026-11-20 community update
+
+The production HYPR Supabase project received migrations `0008` through `0015`
+in one transaction through the SQL editor. These were applied manually rather
+than through the Supabase CLI migration history; inspect the existing functions
+and tables before attempting to apply them again. Before installation, the same
+changes passed a rollback-only database test of a coinless room, guest message,
+reaction, poll, passkey storage and service-only function permissions. The
+passkey credential constraint was corrected to avoid PostgreSQL's regex
+repetition limit, and `supabase/tests/audience_features.sql` preserves that
+regression check. A real browser passkey enrollment has not yet been verified.
+
+On this date the production push configuration endpoint reported notifications
+disabled, and the reminder workflow had no repository secrets. The interface
+therefore hides its notification button until push is configured; scheduled
+shows can still offer a calendar link. Do not claim alerts are operational
+without configuring and testing delivery.
+
 Verified on 2026-10-12.
 
 Historical setup record. The repository subsequently became public with founder

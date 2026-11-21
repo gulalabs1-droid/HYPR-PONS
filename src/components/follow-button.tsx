@@ -33,14 +33,16 @@ export function FollowButton({ roomId, growth, className = "" }: { roomId: strin
     setBusy(true); setNotice("");
     try {
       saveRoomOnDevice(roomId, next);
-      if (signedIn && room && room.following !== next) {
+      let accountSynced = Boolean(signedIn && room && room.following === next);
+      if (signedIn && (!room || room.following !== next)) {
         const response = await fetch("/api/community", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomId, action: "follow", following: next }) });
         if (!response.ok) throw new Error("sync");
+        accountSynced = true;
         window.dispatchEvent(new Event(COMMUNITY_UPDATED_EVENT));
         growth?.refresh();
       }
       if (next) { countOnce("follow", roomId); window.dispatchEvent(new CustomEvent(FOLLOWED_ROOM_EVENT, { detail: { roomId: roomId.toLowerCase() } })); }
-      setNotice(next ? signedIn ? "Following on all your devices." : "Following. Find it in Following—sign in anytime to sync devices." : "Unfollowed.");
+      setNotice(next ? accountSynced ? "Following on all your devices." : "Following. Find it in Following—sign in anytime to sync devices." : "Unfollowed.");
     } catch (failure) {
       setNotice(failure instanceof Error && failure.message === "sync" ? "Saved on this device. Syncing to your account failed; it will retry when you sign in again." : "This browser can’t save follows. Bookmark the room link instead.");
     } finally { setBusy(false); }

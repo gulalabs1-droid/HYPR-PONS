@@ -16,6 +16,8 @@ import "./live-stage.css";
 import "./watch.css";
 // Brand layer: loaded last so the HYPR design system wins over older page layers.
 import "./brand.css";
+// Platform layer: rail, channel layout, chat and cards. Loaded after the brand tokens.
+import "./platform.css";
 
 const sans = Manrope({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const display = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-display", display: "swap", weight: ["600", "700", "800"] });

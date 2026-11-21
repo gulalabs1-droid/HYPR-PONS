@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Launch } from "@/lib/types";
 import type { CombinedLaunchDataSource } from "@/lib/launch-data";
@@ -31,6 +30,7 @@ import { isThrowawayRoom } from "@/lib/discovery";
 import { useWalletStatus } from "@/lib/use-wallet-status";
 import { NativeMarketChart } from "./native-market-chart";
 import { RoomPulse } from "./room-pulse";
+import { TipCreator } from "./tip-creator";
 
 // Viewers come for the person: chat and replays first, the optional coin last.
 type RoomSection = "chat" | "videos" | "about" | "coin";
@@ -103,24 +103,27 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
   return <main className="room-page">
     <Header compact />
     <div className="room-shell room-aura" style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
-      <Link href="/discover" className="back-link">← Discover rooms</Link>
-      <section className="room-header room-header-compact">
-        <div className="room-token-identity"><span className="room-logo" aria-hidden="true"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} /></span><div>
-          <span className="eyebrow">Community room</span>
-          <h1>{roomName}</h1>
-        </div></div>
-        <div className="share-controls"><FollowButton roomId={token.address} growth={growth} />{isNative && <RemindMe roomId={token.address} calendarHref={creatorProfile?.show ? `/api/community/calendar?roomId=${token.address}&showId=${creatorProfile.show.id}` : undefined} />}<ShareRoom roomId={token.address} name={roomName} /></div>
-      </section>
-      <div className="room-modes" role="group" aria-label="Room view">{(Object.keys(modeLabels) as RoomMode[]).filter(key => key !== "trade" || hasCoin).map(key => <button key={key} type="button" aria-pressed={mode === key} onClick={() => setMode(key)}>{key === "trade" ? `Trade $${token.symbol}` : modeLabels[key]}</button>)}</div>
-      {(liveNow || creatorProfile?.show) && <div className={`room-now is-${phase}${lobbyOpen ? " is-lobby" : ""}`}>
-        <span className="room-now-badge">{liveNow ? <><span className="pulse" />Live now</> : lobbyOpen ? "Pre-show" : phase === "upcoming" ? "Next show" : phase === "awaiting-creator" ? "Starting soon" : "Scheduled"}</span>
-        {creatorProfile?.show && <><strong>{creatorProfile.show.title}</strong>{phase === "upcoming" && <ShowCountdown startsAt={creatorProfile.show.startsAt} />}{phase !== "live" && <ShowTime iso={creatorProfile.show.startsAt} />}</>}
-        {lobbyOpen && <button type="button" className="room-now-action" onClick={() => chooseSection("chat")}>Chat is open—say hi →</button>}
-      </div>}
       {!isNative && <p className="room-safety-note">{token.dataStatus === "demo" ? "Demo room · Sample launch data, not a verified live market." : "Indexed Pons room · Trading availability depends on the launch’s network."}</p>}
       {liveData.error && <p className="live-notice" role="status">{liveData.error} Last successful data is kept visible; it may be out of date.</p>}
       <div className={`room-experience${hasCoin?" has-market":""}`} ref={sectionsRef} data-mode={hasCoin || mode !== "trade" ? mode : "watch"} data-chatting={liveNow && (section === "chat" || section === "coin")}>
-        <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} showTitle={creatorProfile?.show?.title} nextShow={creatorProfile?.show?.status === "scheduled" ? creatorProfile.show : undefined} latestReplay={latestReplay} otherLive={otherLive} /></div>
+        <div className="room-watch" id="room-watch"><LiveLaunchSurface token={token} onOpenChat={() => chooseSection("chat")} showTitle={creatorProfile?.show?.title} nextShow={creatorProfile?.show?.status === "scheduled" ? creatorProfile.show : undefined} latestReplay={latestReplay} otherLive={otherLive} hostName={roomName} /></div>
+        <section className="channel-bar" aria-label="Creator">
+          <div className="channel-id">
+            <span className={`channel-avatar${liveNow ? " is-live" : ""}`} aria-hidden="true"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} />{liveNow && <span className="channel-live-tag">Live</span>}</span>
+            <div className="channel-text">
+              <h1>{roomName}</h1>
+              <p className={`channel-status is-${liveNow ? "live" : lobbyOpen ? "lobby" : phase}`}>
+                {liveNow ? <span className="live-pill"><span className="live-pill-dot" />Live</span> : lobbyOpen ? <span className="soon-pill">Pre-show</span> : creatorProfile?.show && phase === "upcoming" ? <span className="soon-pill">Next show</span> : creatorProfile?.show ? <span className="idle-pill">{phase === "awaiting-creator" ? "Starting soon" : "Scheduled"}</span> : <span className="idle-pill">Offline</span>}
+                {creatorProfile?.show ? <><strong>{creatorProfile.show.title}</strong>{phase === "upcoming" && <ShowCountdown startsAt={creatorProfile.show.startsAt} />}{phase !== "live" && <ShowTime iso={creatorProfile.show.startsAt} />}</> : <span>{liveNow ? "Streaming now" : "The room stays open between shows"}</span>}
+                {liveNow && token.viewerCount !== undefined && <span className="channel-viewers">{token.viewerCount.toLocaleString()} watching</span>}
+                {lobbyOpen && <button type="button" className="room-now-action" onClick={() => chooseSection("chat")}>Chat is open—say hi →</button>}
+              </p>
+              <ul className="channel-tags" aria-label="Good to know"><li>Free to watch</li>{(creatorProfile?.followers || 0) >= 10 && <li>{creatorProfile!.followers.toLocaleString()} followers</li>}{hasCoin ? <li><button type="button" onClick={() => { setMode("trade"); chooseSection("coin"); }}>${token.symbol} coin · optional</button></li> : token.coinless ? <li>No coin</li> : null}</ul>
+            </div>
+          </div>
+          <div className="channel-actions"><FollowButton roomId={token.address} growth={growth} />{isNative && <RemindMe roomId={token.address} calendarHref={creatorProfile?.show ? `/api/community/calendar?roomId=${token.address}&showId=${creatorProfile.show.id}` : undefined} />}<ShareRoom roomId={token.address} name={roomName} />{isNative && !ownsRoom && <TipCreator roomId={token.address} creator={token.deployer} creatorName={roomName} compact />}</div>
+          <div className="room-modes" role="group" aria-label="Room view">{(Object.keys(modeLabels) as RoomMode[]).filter(key => key !== "trade" || hasCoin).map(key => <button key={key} type="button" aria-pressed={mode === key} onClick={() => setMode(key)}>{key === "trade" ? `Trade $${token.symbol}` : modeLabels[key]}</button>)}</div>
+        </section>
         <nav className="room-section-nav" aria-label="Room sections" data-native={isNative}>
           <button type="button" aria-label="Watch broadcast" aria-controls="room-watch" onClick={() => sectionsRef.current?.querySelector("#room-watch")?.scrollIntoView({ behavior: "instant", block: "start" })}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m10 8 6 4-6 4Z" /></svg><span>Watch</span></button>
           {(Object.keys(sectionLabels) as RoomSection[]).filter(key => (isNative || key !== "videos") && (key !== "videos" || hasReplays || ownsRoom) && (key !== "coin" || !token.coinless)).map((key) => <button key={key} type="button" aria-pressed={section === key} aria-controls={key === "coin" ? (isNative ? "room-chart room-trade" : "room-trade") : `room-${key}`} onClick={() => chooseSection(key)}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{sectionIcons[key]}</svg><span>{sectionLabels[key]}</span></button>)}

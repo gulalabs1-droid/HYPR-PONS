@@ -8,6 +8,7 @@ import { useWalletStatus } from "@/lib/use-wallet-status";
 import { WalletPicker } from "./wallet-picker";
 import { resetCommunitySession, signInCommunity } from "@/lib/community-client";
 import { COMMUNITY_SIGNED_OUT_EVENT, COMMUNITY_UPDATED_EVENT } from "@/lib/growth";
+import { SideRail } from "./side-rail";
 
 /** `compact` keeps phones to one header row so video starts near the top; the menu opens the links. */
 // Phone tab bar: thumb-reachable navigation on every page except rooms (rooms have their own tabs).
@@ -110,7 +111,9 @@ export function Header({ active, compact = false }: { active?: "home" | "watch" 
         <Link className={active === "create" ? "active" : ""} aria-current={active === "create" ? "page" : undefined} href="/creators">Create</Link>
         <Link href="/faq">How it works</Link>
       </nav>
+      <form className="header-search" action="/discover" role="search"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg><input type="search" name="q" maxLength={200} placeholder="Search creators and shows" aria-label="Search creators and shows" /></form>
       <div className="header-actions" ref={menuRef}>
+        <Link href="/creators" className="header-golive"><span aria-hidden="true" className="header-golive-dot" />Go live</Link>
         <button className={`wallet-button${wrongChain ? " is-warning" : wallet.account ? " is-connected" : ""}`} onClick={() => wallet.account || member ? setMenuOpen(!menuOpen) : setPickerOpen(true)} disabled={busy} aria-expanded={wallet.account || member ? menuOpen : undefined} aria-controls={wallet.account || member ? "wallet-account-panel" : undefined} aria-label={busy ? "Waiting for wallet" : wallet.account ? `Wallet ${shortAddress(wallet.account)}${wrongChain ? ", switch to testnet needed" : ""}` : undefined}>
           <span className={wallet.account && !wrongChain ? "status-dot" : "status-dot inactive"} aria-hidden="true" />
           {busy ? "Check your wallet…" : wallet.account ? `${shortAddress(wallet.account)} ▾` : member ? `👤 ${member} ▾` : "Sign in"}
@@ -134,5 +137,5 @@ export function Header({ active, compact = false }: { active?: "home" | "watch" 
     {wrongChain && !message && !busy && <div className="wallet-banner"><span>Wallet connected · switch to Robinhood testnet before creating or trading.</span><button className="wallet-switch" onClick={() => void switchNetwork()} disabled={busy}>Switch to testnet</button></div>}
     {message && <div className="wallet-banner" role="status"><span>{message}</span><button onClick={() => setMessage("")} aria-label="Dismiss wallet message">×</button></div>}
     {pickerOpen && <WalletPicker onSelect={() => void connect()} onClose={() => setPickerOpen(false)} onMember={name => { setMember(name); setMessage(`Welcome, ${name}! You’re signed in with your passkey.`); }} />}
-  </header>{!compact && <TabBar active={active} />}</>;
+  </header><SideRail active={active} />{!compact && <TabBar active={active} />}</>;
 }

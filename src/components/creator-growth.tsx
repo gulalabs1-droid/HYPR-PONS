@@ -8,9 +8,6 @@ import { signInCommunity } from "@/lib/community-client";
 import { useWalletStatus } from "@/lib/use-wallet-status";
 import { walletErrorMessage } from "@/lib/wallet-discovery";
 import { ShareRoom } from "./share-room";
-import { CreatorAvatar } from "./token-art";
-import { FollowButton } from "./follow-button";
-import { TipCreator } from "./tip-creator";
 import { ObsSetup } from "./obs-setup";
 
 export function ShowTime({ iso }: { iso: string }) {
@@ -21,7 +18,8 @@ export function ShowTime({ iso }: { iso: string }) {
 
 export function UpcomingShow({ room, live = false }: { room: GrowthRoom; live?: boolean }) {
   const show = room.show;
-  if (!show) return <p className="accounting-copy">No next show announced. Follow this room and find it again in Following.</p>;
+  // No show yet: the channel bar already says the room stays open; an empty card adds nothing.
+  if (!show) return null;
   const phase = showPhase(show, live);
   return <div className="upcoming-show"><span className="eyebrow">{phase === "live" ? "Creator live now" : phase === "upcoming" ? "Next show" : "Scheduled time has passed"}</span><h3>{show.title}</h3><ShowTime iso={show.startsAt} />{show.description && <p>{show.description}</p>}
     <p className="accounting-copy">{phase === "awaiting-creator" ? "Waiting for the creator. A scheduled time does not mean the broadcast started." : "Scheduled by the creator. Times are shown in your timezone; watching is free."}</p>
@@ -213,14 +211,6 @@ export function CreatorGrowth({ roomId, creator, live, growth }: { roomId: strin
     {growth.error && <p className="live-notice" role="status">{growth.error} <button className="claim-link" onClick={growth.refresh}>Retry</button></p>}
     {!room && !growth.error && <p className="accounting-copy">Checking creator and next show…</p>}
     {room && <>
-      <div className="creator-card">
-        <div className="creator-profile"><CreatorAvatar seed={room.address} avatar={room.avatar} name={room.displayName || room.name} /><div><span className="eyebrow">Creator community</span><h2>{room.displayName || room.name}</h2>{room.bio && <p>{room.bio}</p>}</div></div>
-        <div className="creator-card-side">
-          {room.followers >= 10 && <div className="creator-stat"><strong>{room.followers.toLocaleString()}</strong><span>followers</span></div>}
-          <div className="growth-actions"><FollowButton roomId={roomId} growth={growth} /><Link className="secondary-button" href="/following">Following →</Link></div>
-          {!ownsWallet && <TipCreator roomId={roomId} creator={creator} creatorName={room.displayName || room.name} />}
-        </div>
-      </div>
       <UpcomingShow room={room} live={live} />
       {room.moment && <div className="moment-share"><span className="eyebrow">Moment share card · Not video</span><h3>{room.moment}</h3><div className="growth-actions"><Link className="secondary-button" href={`/room/${room.address}/moment`}>Open share card →</Link><ShareRoom roomId={room.address} name={room.displayName || room.name} moment /></div></div>}
     </>}

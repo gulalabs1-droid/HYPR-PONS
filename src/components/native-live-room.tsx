@@ -29,7 +29,7 @@ function signedHostMessage(roomId: string, address: string, timestamp: number) {
   return ["HYPR native live host authorization", `Room: hypr-${roomId.toLowerCase()}`, `Wallet: ${address.toLowerCase()}`, `Timestamp: ${timestamp}`].join("\n");
 }
 
-export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestReplay, otherLive = [] }: { token: Launch; onOpenChat?: () => void; nextShow?: { id: string; title: string; startsAt: string }; latestReplay?: MediaAsset; otherLive?: { address: string; name: string }[]; showTitle?: string }) {
+export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestReplay, otherLive = [], hostName }: { token: Launch; onOpenChat?: () => void; nextShow?: { id: string; title: string; startsAt: string }; latestReplay?: MediaAsset; otherLive?: { address: string; name: string }[]; showTitle?: string; hostName?: string }) {
   const [status, setStatus] = useState<BroadcastStatus | null>(null);
   const [statusError, setStatusError] = useState(false);
   const [seenLive, setSeenLive] = useState(false);
@@ -38,6 +38,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestR
   const [studioOpen, setStudioOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [newsHidden, setNewsHidden] = useState(false);
   const [shareVideo, setShareVideo] = useState(false);
   const [shareAudio, setShareAudio] = useState(false);
   const [saveReplay, setSaveReplay] = useState(false);
@@ -160,7 +161,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestR
   const copy = broadcastCopy(phase);
   const phaseLabel = phase === "live" && status?.viewerCount !== undefined ? `Live · ${status.viewerCount} viewer${status.viewerCount === 1 ? "" : "s"}` : copy.label;
   return <section className="native-live-surface native-live-watch-first" aria-label="Broadcast player">
-    {latestReplay && !status?.live && phase !== "checking" && !studioOpen ? <InlineReplay roomId={token.address} asset={latestReplay} /> : showDemoNews(token, phase) ? <DemoNewsFeed /> : <div className={`live-viewport native-live-placeholder stage-poster is-${phase}`} style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
+    {latestReplay && !status?.live && phase !== "checking" && !studioOpen ? <InlineReplay roomId={token.address} asset={latestReplay} /> : showDemoNews(token, phase) && !newsHidden ? <DemoNewsFeed hostName={hostName || token.name} onHide={() => setNewsHidden(true)} /> : <div className={`live-viewport native-live-placeholder stage-poster is-${phase}`} style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
       <div className="stage-backdrop" aria-hidden="true"><TokenArt seed={token.address} /></div>
       <div className="native-live-mark"><span className="stage-avatar" aria-hidden="true"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} /></span>
       <span className="broadcast-phase-label">{phase === "live" && <span className="pulse" />}{phaseLabel}</span>
@@ -172,6 +173,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestR
       {phase === "unavailable" && <button className="secondary-button" onClick={() => void refreshStatus()}>Retry broadcast status</button>}
       {!status?.live && nextShow && Date.parse(nextShow.startsAt) > Date.now() - 60 * 60_000 && <div className="stage-next-show"><span>Next show</span><strong>{nextShow.title}</strong><ShowCountdown startsAt={nextShow.startsAt} /><RemindMe roomId={token.address} calendarHref={`/api/community/calendar?roomId=${token.address}&showId=${nextShow.id}`} /></div>}
       {!status?.live && !nextShow && phase !== "unavailable" && onOpenChat && <button type="button" className="secondary-button" onClick={onOpenChat}>Say hi in chat</button>}
+      {newsHidden && showDemoNews(token, phase) && <button type="button" className="claim-link" onClick={() => setNewsHidden(false)}>Watch NBC News while you wait</button>}
     </div></div>}
     <div className="native-live-copy native-live-viewer-footer">
       <span className="live-state broadcast-status-announcement" role="status">{phaseLabel}</span>

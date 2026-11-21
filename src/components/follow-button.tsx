@@ -26,6 +26,12 @@ export function FollowButton({ roomId, growth, className = "" }: { roomId: strin
     window.addEventListener(SAVED_ROOMS_EVENT, refresh); window.addEventListener("storage", refresh);
     return () => { window.removeEventListener(SAVED_ROOMS_EVENT, refresh); window.removeEventListener("storage", refresh); };
   }, [roomId]);
+  // Confirmation is a brief toast, not text that lingers beside the button and reads like a second state.
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(""), 5000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   async function toggle() {
     if (busy) return;
@@ -42,7 +48,7 @@ export function FollowButton({ roomId, growth, className = "" }: { roomId: strin
         growth?.refresh();
       }
       if (next) { countOnce("follow", roomId); window.dispatchEvent(new CustomEvent(FOLLOWED_ROOM_EVENT, { detail: { roomId: roomId.toLowerCase() } })); }
-      setNotice(next ? accountSynced ? "Following on all your devices." : "Following. Find it in Following—sign in anytime to sync devices." : "Unfollowed.");
+      setNotice(next ? accountSynced ? "Following on all your devices." : "Following. Find it in Following—sign in anytime to sync devices." : "Unfollowed. You can follow again anytime.");
     } catch (failure) {
       setNotice(failure instanceof Error && failure.message === "sync" ? "Saved on this device. Syncing to your account failed; it will retry when you sign in again." : "This browser can’t save follows. Bookmark the room link instead.");
     } finally { setBusy(false); }
@@ -50,6 +56,6 @@ export function FollowButton({ roomId, growth, className = "" }: { roomId: strin
 
   return <div className="follow-control">
     <button type="button" className={`${following ? "secondary-button is-following" : "primary-button"} ${className}`.trim()} aria-pressed={following} disabled={busy} onClick={() => void toggle()}>{following ? "✓ Following" : "+ Follow"}</button>
-    {notice && <span role="status">{notice}</span>}
+    <span className="follow-toast" role="status" data-shown={Boolean(notice)}>{notice}</span>
   </div>;
 }

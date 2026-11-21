@@ -50,6 +50,19 @@ re-introduce values that fight it.
 | Phone tab bar | `.tab-bar` | Home, Watch, Discover, Following, Create. Hidden on rooms (they have their own tabs). |
 | Footer | `.site-footer*` | Three link columns + fine print. |
 
+## Platform layer (`src/app/platform.css`, loaded after `brand.css`)
+
+The streaming-app frame, inspired by the way Twitch, Kick and YouTube organise a session, in HYPR's own look:
+
+| Piece | Class / file | Notes |
+|---|---|---|
+| Room rail (desktop ≥1100px) | `.side-rail`, `side-rail.tsx` | Main links plus real rooms from `/api/launches` (followed first, live first). Icon-only below 1320px. Test-named rooms stay out, except HYPR's demo room. |
+| Header search + Go live | `.header-search`, `.header-golive` | Search goes to `/discover?q=`. Hidden on phones (tab bar instead). |
+| Creator bar | `.channel-bar` in `room-client.tsx` | Under the player: avatar (spinning ring only when live), status, follow, alerts, share, tip, view switch. Replaces the old room header and creator card. |
+| Full-height chat | `.room-chat-section` | Sticky column beside the player in Watch view. Compact lines, a stable colour per speaker, composer with an explicit "Ask a question" toggle. |
+| Offline room with outside news | `.demo-news.is-hosting` | First line says whose room it is and that it's offline; "Hide news" falls back to the offline card. |
+| Magic gradient | `--magic`, `@keyframes hypr-spin` | Volt → cyan → violet → rose. Only on live rings, the featured screen border and "Start your room". Off with reduced motion. |
+
 ## Motion
 
 - 150–350ms with `--ease`. Lift cards by 4px on hover, never more.

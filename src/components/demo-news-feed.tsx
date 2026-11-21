@@ -5,13 +5,13 @@ import { NBC_NEWS_CHANNEL_URL } from "@/lib/nbc-news";
 import { ABC_NEWS_CHANNEL_URL } from "@/lib/abc-news";
 
 /** Keep the broadcaster's own player and controls intact, and never count this as a HYPR broadcast. */
-export function DemoNewsFeed({ source = "nbc", standalone = false }: { source?: "nbc" | "abc"; standalone?: boolean }) {
-  return <NewsFeed key={source} source={source} standalone={standalone} />;
+export function DemoNewsFeed({ source = "nbc", standalone = false, hostName, onHide }: { source?: "nbc" | "abc"; standalone?: boolean; hostName?: string; onHide?: () => void }) {
+  return <NewsFeed key={source} source={source} standalone={standalone} hostName={hostName} onHide={onHide} />;
 }
 
 const PLAY_RATIO = 0.3;
 
-function NewsFeed({ source, standalone }: { source: "nbc" | "abc"; standalone: boolean }) {
+function NewsFeed({ source, standalone, hostName, onHide }: { source: "nbc" | "abc"; standalone: boolean; hostName?: string; onHide?: () => void }) {
   const broadcaster = source === "abc" ? "ABC News" : "NBC News";
   const sourceUrl = source === "abc" ? ABC_NEWS_CHANNEL_URL : NBC_NEWS_CHANNEL_URL;
   const frameArea = useRef<HTMLDivElement>(null);
@@ -77,11 +77,15 @@ function NewsFeed({ source, standalone }: { source: "nbc" | "abc"; standalone: b
   function playNow() { hasBeenShown.current = true; shownNow.current = true; setAutoplay(true); setVisible(true); }
   const embed = `https://www.youtube-nocookie.com/embed/${videoId}?playsinline=1&autoplay=${autoplay ? "1" : "0"}&mute=1`;
   const watchUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : sourceUrl;
-  return <div className="demo-news">
-    <div className="demo-news-heading"><span className="eyebrow">External news · YouTube</span><strong>{broadcaster}</strong><p>{standalone ? "Independent news, streamed by the broadcaster on YouTube." : "The HYPR creator is offline. Watch an independent news stream while you’re here."}</p></div>
+  // In a room, say plainly whose room this is and that the news is a stand-in while they're away.
+  const heading = standalone
+    ? <div className="demo-news-heading"><span className="eyebrow">External news · YouTube</span><strong>{broadcaster}</strong><p>Independent news, streamed by the broadcaster on YouTube.</p></div>
+    : <div className="demo-news-hosting"><p><strong>{`${hostName || "The creator"} is offline.`}</strong> <span>While you wait, here’s {broadcaster} live from YouTube.</span></p>{onHide && <button type="button" className="demo-news-hide" onClick={onHide}>Hide news</button>}</div>;
+  return <div className={`demo-news${standalone ? "" : " is-hosting"}`}>
+    {heading}
     <div className="demo-news-player" ref={frameArea}>
       {!newsChecked ? <p>Finding {broadcaster}…</p> : !videoId ? <p>{broadcaster} is temporarily unavailable here. <button className="claim-link" onClick={() => { setNewsChecked(false); setRetry(value => value + 1); }}>Try again</button></p> : visible ? <iframe src={embed} title={`${broadcaster} — independent YouTube player`} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /> : <p className="demo-news-paused"><button type="button" className="demo-news-play" onClick={playNow}><span aria-hidden="true">▶</span> {hasBeenShown.current ? `Resume ${broadcaster}` : `Play ${broadcaster}`}</button><small>{hasBeenShown.current ? "Paused while the player was out of view." : "Plays muted. Unmute in the player."}</small></p>}
     </div>
-    <div className="demo-news-note"><p>YouTube may ask you to sign in, show ads, collect playback data, or limit availability. This feed is provided by {broadcaster}; HYPR is independent.</p><a href={watchUrl} target="_blank" rel="noopener noreferrer">{videoId ? "Can’t play? Open this broadcast on YouTube ↗" : `Open ${broadcaster} ↗`}</a></div>
+    <div className="demo-news-note"><p>Provided by {broadcaster} on YouTube, which may show ads or ask you to sign in. HYPR isn’t affiliated.</p><a href={watchUrl} target="_blank" rel="noopener noreferrer">{videoId ? "Open on YouTube ↗" : `Open ${broadcaster} ↗`}</a></div>
   </div>;
 }

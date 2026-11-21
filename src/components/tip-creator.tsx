@@ -10,7 +10,7 @@ import { COMMUNITY_UPDATED_EVENT } from "@/lib/growth";
 const config = getHyprClientConfig();
 
 /** Send test ETH straight from your wallet to the creator's wallet, then announce it in chat. */
-export function TipCreator({ roomId, creator, creatorName }: { roomId: string; creator: string; creatorName: string }) {
+export function TipCreator({ roomId, creator, creatorName, compact = false }: { roomId: string; creator: string; creatorName: string; compact?: boolean }) {
   const [open, setOpen] = useState(false), [amount, setAmount] = useState<string>(TIP_AMOUNTS[1]);
   const [busy, setBusy] = useState(false), [notice, setNotice] = useState(""), [hash, setHash] = useState("");
   if (!config.enabled) return null;
@@ -39,8 +39,8 @@ export function TipCreator({ roomId, creator, creatorName }: { roomId: string; c
     } catch (error) { setNotice(walletErrorMessage(error)); }
     finally { setBusy(false); }
   }
-  return <div className="tip-creator">
-    {!open ? <button type="button" className="secondary-button" onClick={() => setOpen(true)}>💸 Tip {creatorName}</button> : <div className="tip-panel">
+  return <div className={`tip-creator${compact ? " is-compact" : ""}`}>
+    {!open ? <button type="button" className="secondary-button" onClick={() => setOpen(true)} aria-label={`Tip ${creatorName}`}>{compact ? "Tip" : `💸 Tip ${creatorName}`}</button> : <div className="tip-panel">
       <strong>Tip {creatorName}</strong>
       <p>Goes straight from your wallet to theirs ({shortAddress(creator)}). Testnet only—test ETH has no real value. Network fee extra.</p>
       <div className="tip-amounts" role="group" aria-label="Tip amount">{TIP_AMOUNTS.map(value => <button key={value} type="button" aria-pressed={amount === value} onClick={() => setAmount(value)} disabled={busy}>{value} ETH</button>)}</div>

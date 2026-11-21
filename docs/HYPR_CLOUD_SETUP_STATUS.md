@@ -1,5 +1,14 @@
 # HYPR cloud setup status
 
+## 2026-11-21 Pulse update
+
+Migration `0016_hypr_room_pulse.sql` was applied to the production HYPR
+Supabase project through the SQL editor after a rollback-only rehearsal. The
+rehearsal checked the real demo room, an unknown room, and server-only function
+privileges. The deployed Pulse API subsequently returned live aggregates. This
+manual application is not recorded in Supabase CLI migration history; check the
+existing function before reapplying it.
+
 ## 2026-11-20 community update
 
 The production HYPR Supabase project received migrations `0008` through `0015`

@@ -35,15 +35,16 @@ export const metadata: Metadata = {
   applicationName: "HYPR",
   appleWebApp: { capable: true, title: "HYPR", statusBarStyle: "black-translucent" },
   openGraph: {
-    title: "HYPR — discover what is moving",
-    description: "Find the rooms where Robinhood Chain communities are gathering.",
+    title: "HYPR — watch live, stay for the community",
+    description: "Watch live creators free, chat with just a nickname and follow for the next show. Trading is optional. Robinhood Chain testnet preview.",
     type: "website",
     siteName: "HYPR",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "HYPR — discover what is moving",
-    description: "Find the rooms where Robinhood Chain communities are gathering.",
+    title: "HYPR — watch live, stay for the community",
+    description: "Watch live creators free, chat with just a nickname and follow for the next show. Trading is optional. Robinhood Chain testnet preview.",
   },
 };
 

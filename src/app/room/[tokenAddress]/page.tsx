@@ -29,12 +29,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: live ? `Watch ${name} live now. No wallet needed. This is a live session, not a saved replay.` : `${room?.bio || `Watch ${name}, join the conversation and return for the next show.`} Watching needs no wallet. Trading is optional; testnet assets have no real value.`,
     alternates: { canonical: url },
     openGraph: {
-      title: `${name} on HYPR`,
-      description: "Watch creators. Join a lasting community. Open the room for current live status; this preview does not promise a live broadcast or replay.",
+      title: live ? `${name} is live on HYPR` : `${name} on HYPR`,
+      description: live ? "Live now. Watch free, no wallet needed, and say hi in chat." : "Watch free, chat with just a nickname and follow to hear about the next show. Testnet preview.",
       type: "website",
       url, images: [{ url: image, width:1200, height:630 }],
     },
-    twitter: { card: "summary_large_image", title: `${name} on HYPR`, description: "Watching needs no wallet. Trading is optional. Testnet preview.", images: [image] },
+    twitter: { card: "summary_large_image", title: live ? `${name} is live on HYPR` : `${name} on HYPR`, description: live ? "Live now. Watch free, no wallet needed." : "Watch free, no wallet needed. Trading is optional. Testnet preview.", images: [image] },
   };
 }
 

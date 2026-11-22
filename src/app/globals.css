@@ -2,6 +2,9 @@
    Tokens
    ========================================================================== */
 :root {
+  --font-sans: 'Manrope Variable';
+  --font-display: 'Bricolage Grotesque Variable';
+  --font-mono: 'JetBrains Mono Variable';
   --bg: #0a0b0d;
   --surface: #111317;
   --surface-2: #171a1f;

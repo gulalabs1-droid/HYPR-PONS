@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, JetBrains_Mono, Manrope } from "next/font/google";
+import "@fontsource-variable/manrope";
+import "@fontsource-variable/bricolage-grotesque";
+import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
 import "./trade.css";
 import "./discover.css";
@@ -20,10 +22,6 @@ import "./brand.css";
 import "./platform.css";
 // Go live setup and the creator's on-air deck.
 import "./go-live.css";
-
-const sans = Manrope({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
-const display = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-display", display: "swap", weight: ["600", "700", "800"] });
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
@@ -57,7 +55,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
+    <html lang="en">
       <body>
         <a className="skip-link" href="#content">Skip to content</a>
         <NavigationProgress />

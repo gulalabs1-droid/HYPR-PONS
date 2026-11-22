@@ -138,7 +138,7 @@ function SetupChecklist({ room, roomId, live, onOpen }: { room: GrowthRoom; room
     { done: Boolean(room.displayName || room.bio), label: "Name your community", action: <button type="button" className="claim-link" onClick={() => onOpen("profile")}>Edit profile</button> },
     { done: Boolean(room.show), label: "Schedule your first show", action: <button type="button" className="claim-link" onClick={() => onOpen("show")}>Schedule</button> },
     { done: Boolean(room.moment), label: "Make a share card", action: <button type="button" className="claim-link" onClick={() => onOpen("moment")}>Create</button> },
-    { done: wentLive, label: "Go live once", action: <a className="claim-link" href="#room-watch">Open studio</a> },
+    { done: wentLive, label: "Go live once", action: <a className="claim-link" href="#go-live">Go live</a> },
     { done: room.followers >= 10, label: `Reach 10 followers (${Math.min(room.followers, 10)}/10)`, action: <ShareRoom roomId={roomId} name={room.displayName || room.name} /> },
   ];
   const done = steps.filter(step => step.done).length;
@@ -158,12 +158,22 @@ const hubTabs: { key: HubTab; label: string }[] = [{ key: "stats", label: "Stats
 
 function CreatorHub({ room, roomId, live, onSave }: { room: GrowthRoom; roomId: string; live: boolean; onSave: (action: string, payload: Record<string, unknown>) => Promise<void> }) {
   const [tab, setTab] = useState<HubTab>(room.show ? "stats" : "show");
+  // "Use OBS instead" in the go-live setup lands here with the OBS tab open.
+  useEffect(() => {
+    function fromHash() {
+      if (window.location.hash !== "#stream-from-obs") return;
+      setTab("obs");
+      window.requestAnimationFrame(() => document.getElementById("creator-dashboard")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
+    fromHash(); window.addEventListener("hashchange", fromHash);
+    return () => window.removeEventListener("hashchange", fromHash);
+  }, []);
   return <details className="creator-hub" open>
     <summary><span className="hub-title"><span className="hub-badge">Only you see this</span><strong>Creator dashboard</strong><small>Shows, profile, share card & reports</small></span><span className="hub-chevron" aria-hidden="true" /></summary>
     <div className="hub-body">
       <SetupChecklist room={room} roomId={roomId} live={live} onOpen={setTab} />
       <div className="hub-actions">
-        <a className="hub-action" href="#room-watch"><span aria-hidden="true">◉</span><strong>Go live</strong><small>Open the broadcast studio</small></a>
+        <a className="hub-action" href="#go-live"><span aria-hidden="true">◉</span><strong>Go live</strong><small>Check your camera, then start</small></a>
         <button type="button" className="hub-action" onClick={() => setTab("stats")}><span aria-hidden="true">↗</span><strong>Stats</strong><small>Visits, plays, follows & peak viewers</small></button>
         <div className="hub-action is-share"><span aria-hidden="true">⇪</span><strong>Share room</strong><ShareRoom roomId={roomId} name={room.displayName || room.name} /></div>
       </div>
@@ -178,7 +188,7 @@ function CreatorHub({ room, roomId, live, onSave }: { room: GrowthRoom; roomId: 
         {tab === "moment" && <MomentForm room={room} onSave={onSave} />}
         {tab === "reports" && <CreatorReports room={room} onSave={onSave} />}
       </div>
-      <p className="creator-fineprint">These controls edit only your community and schedule. Start and end broadcasts in the player’s studio.</p>
+      <p className="creator-fineprint">These controls edit only your community and schedule. Start and end broadcasts from the player: tap Go live.</p>
     </div>
   </details>;
 }

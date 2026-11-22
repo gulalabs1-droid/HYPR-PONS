@@ -62,7 +62,7 @@ test("ending requires confirmation, cancellation keeps the session, and confirme
     const button = (label: string) => renderer!.root.findAllByType("button").find((node) => node.props.children === label)!;
     await act(async () => button("End broadcast").props.onClick());
     assert.equal(disconnects.length, 0); assert.equal(exits.length, 0);
-    assert.match(JSON.stringify(renderer!.toJSON()), /does not close your community room/);
+    assert.match(JSON.stringify(renderer!.toJSON()), /Your room, chat and followers stay/);
     await act(async () => button("Keep broadcasting").props.onClick());
     assert.equal(renderer!.root.findAllByType("dialog").length, 0); assert.equal(disconnects.length, 0);
     await act(async () => button("End broadcast").props.onClick());
@@ -135,6 +135,7 @@ test("a failed end action preserves the session and allows retry instead of clai
 test("studio HUD names the live session without a second chat control", () => {
   const source = readFileSync(new URL("../src/components/native-live-connected.tsx", import.meta.url), "utf8");
   assert.match(source, /You.re live ·/);
+  assert.doesNotMatch(source, /<ControlBar/, "the creator uses HYPR's own on-air deck");
   assert.match(source, /recording a private draft/);
   assert.match(source, /await stopCapture.current\?\.\(\)/);
   assert.doesNotMatch(source, /aria-label="Open room chat"/);

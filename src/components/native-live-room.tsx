@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import type { Launch } from "@/lib/types";
 import { getEthereum, personalSignHex, ROBINHOOD_TESTNET_CHAIN_ID, switchToRobinhoodTestnet } from "@/lib/wallet";
 import { creatorAccessProblem, streamingErrorMessage } from "@/lib/creator-access";
-import type { Session } from "./native-live-connected";
+import type { BroadcastRecap, Session } from "./native-live-connected";
 import { useWalletStatus } from "@/lib/use-wallet-status";
 import { OPEN_WALLET_EVENT } from "@/lib/wallet-discovery";
 import { broadcastCopy, broadcastExitNotice, publicBroadcastPhase, type BroadcastExit, type BroadcastStatus } from "@/lib/broadcast-lifecycle";
@@ -18,6 +18,13 @@ import { InlineReplay } from "./inline-replay";
 import { ShowCountdown } from "./show-countdown";
 import { RemindMe } from "./remind-me";
 import { DemoNewsFeed } from "./demo-news-feed";
+import { GoLiveSetup, type GoLiveChoice } from "./go-live-setup";
+import { LiveIcon, formatClock } from "./live-icons";
+import { ShareRoom } from "./share-room";
+
+/** Anything on the page can open the go-live setup: a #go-live link or this event. */
+export const OPEN_GO_LIVE_EVENT = "hypr:open-go-live";
+const COUNTDOWN_SECONDS = 3;
 
 // LiveKit is large; load it only once a viewer joins or a creator starts broadcasting.
 const ConnectedRoom = dynamic(() => import("./native-live-connected-styled"), {
@@ -39,40 +46,31 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestR
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [newsHidden, setNewsHidden] = useState(false);
-  const [shareVideo, setShareVideo] = useState(false);
-  const [shareAudio, setShareAudio] = useState(false);
-  const [saveReplay, setSaveReplay] = useState(false);
   const [oneTimeAvailable, setOneTimeAvailable] = useState(false);
-  const [preview, setPreview] = useState<MediaStream | null>(null);
-  const previewStream = useRef<MediaStream | null>(null);
-  const previewVideo = useRef<HTMLVideoElement>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [recap, setRecap] = useState<BroadcastRecap | null>(null);
+  const pendingSession = useRef<Session | null>(null);
   const wallet = useWalletStatus();
   const mounted = useRef(true);
   const statusPending = useRef(false);
   const statusGeneration = useRef(0);
   const sawCurrentMedia = useRef(false);
+  const surface = useRef<HTMLElement>(null);
 
-  const stopPreview = useCallback(() => {
-    previewStream.current?.getTracks().forEach((track) => track.stop());
-    previewStream.current = null; setPreview(null);
-  }, []);
+  const closeStudio = useCallback(() => { pendingSession.current = null; setCountdown(null); setStudioOpen(false); setNotice(""); setOneTimeAvailable(false); }, []);
 
-  useEffect(() => { stopPreview(); }, [shareVideo, shareAudio, stopPreview]);
+  // A short countdown after the wallet approves, so the creator is ready when the first frame goes out.
   useEffect(() => {
-    if (previewVideo.current) previewVideo.current.srcObject = preview;
-  }, [preview]);
-
-  async function preparePreview() {
-    setBusy(true); setNotice("");
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) throw new Error("Device preview needs a secure browser with camera/microphone support. Try the latest Safari or Chrome on HTTPS.");
-      const stream = await navigator.mediaDevices.getUserMedia({ video: shareVideo, audio: shareAudio });
-      if (!mounted.current) { stream.getTracks().forEach((track) => track.stop()); return; }
-      previewStream.current?.getTracks().forEach((track) => track.stop());
-      previewStream.current = stream; setPreview(stream);
-    } catch (error) { setNotice(streamingErrorMessage(error)); }
-    finally { if (mounted.current) setBusy(false); }
-  }
+    if (countdown === null) return;
+    if (countdown <= 0) {
+      const next = pendingSession.current; pendingSession.current = null;
+      setCountdown(null);
+      if (next) { setLastExit(null); sawCurrentMedia.current = false; setSeenLive(false); setSession(next); setStudioOpen(false); void refreshStatusRef.current?.(); }
+      return;
+    }
+    const timer = window.setTimeout(() => setCountdown(value => value === null ? null : value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [countdown]);
 
   const refreshStatus = useCallback(async () => {
     if (statusPending.current) return;
@@ -93,12 +91,13 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestR
     } catch { if (mounted.current && generation === statusGeneration.current) { setStatus(null); setStatusError(true); } }
     finally { statusPending.current = false; }
   }, [token.address]);
+  const refreshStatusRef = useRef(refreshStatus); refreshStatusRef.current = refreshStatus;
 
   useEffect(() => {
     mounted.current = true;
     void refreshStatus();
     const timer = window.setInterval(() => { if (document.visibilityState !== "hidden") void refreshStatus(); }, 5000);
-    return () => { mounted.current = false; window.clearInterval(timer); previewStream.current?.getTracks().forEach((track) => track.stop()); previewStream.current = null; };
+    return () => { mounted.current = false; window.clearInterval(timer); };
   }, [refreshStatus]);
 
   async function joinViewer() {
@@ -113,12 +112,12 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestR
     finally { setBusy(false); }
   }
 
-  async function startHost(oneTime = false) {
+  async function startHost(choice: GoLiveChoice, oneTime = false) {
+    if (busy || countdown !== null) return;
     setBusy(true); setNotice("");
     try {
       const ethereum = getEthereum();
-      if (!shareVideo && !shareAudio) throw new Error("Choose a camera or microphone to broadcast. Audio-only is supported.");
-      if (!previewStream.current) throw new Error("Preview your selected devices first. You are not broadcasting yet.");
+      if (!choice.video && !choice.audio) throw new Error("Turn on your camera or mic to go live. Audio-only is supported.");
       if (!ethereum) { window.dispatchEvent(new Event(OPEN_WALLET_EVENT)); throw new Error("Choose the wallet that created this room, then try starting again."); }
       let accounts = await ethereum.request({ method: "eth_accounts" }) as string[];
       if (!accounts[0]) accounts = await ethereum.request({ method: "eth_requestAccounts" }) as string[];
@@ -127,7 +126,7 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestR
       if (chainId !== ROBINHOOD_TESTNET_CHAIN_ID && await switchToRobinhoodTestnet(ethereum)) chainId = Number(await ethereum.request({ method: "eth_chainId" }));
       const accessProblem = creatorAccessProblem(address, chainId, token.deployer);
       if (accessProblem) throw new Error(accessProblem);
-      if (oneTime && saveReplay) throw new Error("Turn off the private replay option to use one-time authorization. You can record later after HYPR sign-in is available.");
+      if (oneTime && choice.saveReplay) throw new Error("Turn off the private replay option to use one-time authorization. You can record later after HYPR sign-in is available.");
       let signedInWallet = address, signature: `0x${string}` | undefined, timestamp: number | undefined;
       if (oneTime) {
         timestamp = Date.now();
@@ -139,31 +138,66 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestR
       const data = await response.json() as Session & { error?: string };
       if (!response.ok) throw new Error(data.error || "The creator wallet could not be authorized.");
       if (!mounted.current) return;
-      stopPreview(); setOneTimeAvailable(false); setLastExit(null); sawCurrentMedia.current = false; setSeenLive(false); setSession({ ...data, roomId: token.address, video: shareVideo, audio: shareAudio, showTitle, recordReplay: saveReplay }); setStudioOpen(false); await refreshStatus();
+      setOneTimeAvailable(false);
+      pendingSession.current = { ...data, roomId: token.address, video: choice.video, audio: choice.audio, videoDeviceId: choice.videoDeviceId, audioDeviceId: choice.audioDeviceId, showTitle, recordReplay: choice.saveReplay };
+      setCountdown(COUNTDOWN_SECONDS);
     } catch (error) { if (!oneTime && error instanceof CommunitySignInError && error.status >= 500) setOneTimeAvailable(true); setNotice(streamingErrorMessage(error)); }
     finally { setBusy(false); }
   }
 
-  const leaveRoom = useCallback((reason: BroadcastExit) => {
+  const leaveRoom = useCallback((reason: BroadcastExit, stats?: BroadcastRecap) => {
     statusGeneration.current++;
-    setLastExit(reason); setNotice(broadcastExitNotice(reason)); setSession(null); setStudioOpen(false);
+    setLastExit(reason); setSession(null); setStudioOpen(false);
+    // A creator who ends their own show gets a wrap-up card instead of a status sentence.
+    if (reason === "host-ended" && stats) { setRecap(stats); setNotice(""); } else setNotice(broadcastExitNotice(reason));
     if (reason === "host-ended" || reason === "creator-offline" || reason === "session-ended") {
       sawCurrentMedia.current = false; setSeenLive(false);
       setStatus((current) => current ? { ...current, live: false, hostConnected: false, viewerCount: undefined } : null);
     }
-    stopPreview(); setShareVideo(false); setShareAudio(false); setSaveReplay(false); void refreshStatus();
-  }, [refreshStatus, stopPreview]);
+    void refreshStatus();
+  }, [refreshStatus]);
+
+  const creatorConnected = wallet.account?.toLowerCase() === token.deployer.toLowerCase();
+  const openStudio = useCallback(() => {
+    setRecap(null); setNotice(""); setStudioOpen(true);
+    window.requestAnimationFrame(() => surface.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }));
+  }, []);
+  useEffect(() => {
+    if (!creatorConnected || session) return;
+    function fromHash() {
+      if (window.location.hash !== "#go-live") return;
+      window.history.replaceState?.(null, "", window.location.pathname + window.location.search);
+      openStudio();
+    }
+    fromHash();
+    window.addEventListener("hashchange", fromHash);
+    window.addEventListener(OPEN_GO_LIVE_EVENT, openStudio);
+    return () => { window.removeEventListener("hashchange", fromHash); window.removeEventListener(OPEN_GO_LIVE_EVENT, openStudio); };
+  }, [creatorConnected, openStudio, session]);
 
   if (session) return <section aria-label="Broadcast player"><ConnectedRoom key={session.token} session={session} onLeave={leaveRoom} onError={setNotice} onSessionChange={setSession} />{notice && <div className="live-notice" role="alert">{notice}</div>}</section>;
 
-  const creatorConnected = wallet.account?.toLowerCase() === token.deployer.toLowerCase();
   const phase = publicBroadcastPhase(status, statusError, seenLive, lastExit);
   const copy = broadcastCopy(phase);
   const phaseLabel = phase === "live" && status?.viewerCount !== undefined ? `Live · ${status.viewerCount} viewer${status.viewerCount === 1 ? "" : "s"}` : copy.label;
-  return <section className="native-live-surface native-live-watch-first" aria-label="Broadcast player">
-    {latestReplay && !status?.live && phase !== "checking" && !studioOpen ? <InlineReplay roomId={token.address} asset={latestReplay} /> : showDemoNews(token, phase) && !newsHidden ? <DemoNewsFeed hostName={hostName || token.name} onHide={() => setNewsHidden(true)} /> : <div className={`live-viewport native-live-placeholder stage-poster is-${phase}`} style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
+  // The creator's own offline room is their launch pad: show the poster with Go live, not the replay or outside news.
+  const creatorStage = creatorConnected && !status?.live;
+  const canGoLive = status?.configured === true;
+  const goLiveButton = <button type="button" className="golive-cta" onClick={openStudio} disabled={!canGoLive}><span className="golive-start-dot" aria-hidden="true" />Go live</button>;
+  return <section ref={surface} className="native-live-surface native-live-watch-first" aria-label="Broadcast player" id="go-live">
+    {studioOpen ? <GoLiveSetup showTitle={showTitle} configured={canGoLive} busy={busy} countdown={countdown} notice={notice} oneTimeAvailable={oneTimeAvailable}
+      onStart={choice => void startHost(choice)} onOneTime={choice => void startHost(choice, true)} onCancelCountdown={() => { pendingSession.current = null; setCountdown(null); }} onClose={closeStudio} />
+    : recap && creatorConnected ? <BroadcastWrap recap={recap} roomId={token.address} name={hostName || token.name} onAgain={openStudio} onDone={() => setRecap(null)} canGoLive={canGoLive} />
+    : latestReplay && !status?.live && phase !== "checking" && !creatorStage ? <InlineReplay roomId={token.address} asset={latestReplay} /> : showDemoNews(token, phase) && !newsHidden && !creatorStage ? <DemoNewsFeed hostName={hostName || token.name} onHide={() => setNewsHidden(true)} /> : <div className={`live-viewport native-live-placeholder stage-poster is-${phase}`} style={{ "--hue": roomHue(token.address) } as React.CSSProperties}>
       <div className="stage-backdrop" aria-hidden="true"><TokenArt seed={token.address} /></div>
       <div className="native-live-mark"><span className="stage-avatar" aria-hidden="true"><TokenArt seed={token.address} glyph={tokenGlyph(token.logo, token.symbol)} /></span>
+      {creatorStage ? <>
+        <span className="broadcast-phase-label">Your room · offline</span>
+        {showTitle && <em className="stage-show">{showTitle}</em>}
+        <strong>Ready when you are</strong>
+        <small>{canGoLive ? "Check your camera and mic, then go live in one tap. Your followers get an alert." : status ? "Live video isn’t switched on for HYPR right now." : "Checking the live service…"}</small>
+        {goLiveButton}
+      </> : <>
       <span className="broadcast-phase-label">{phase === "live" && <span className="pulse" />}{phaseLabel}</span>
       {showTitle && phase !== "live" && <em className="stage-show">{showTitle}</em>}
       <strong>{copy.title}</strong>
@@ -174,28 +208,33 @@ export function NativeLiveRoom({ token, onOpenChat, showTitle, nextShow, latestR
       {!status?.live && nextShow && Date.parse(nextShow.startsAt) > Date.now() - 60 * 60_000 && <div className="stage-next-show"><span>Next show</span><strong>{nextShow.title}</strong><ShowCountdown startsAt={nextShow.startsAt} /><RemindMe roomId={token.address} calendarHref={`/api/community/calendar?roomId=${token.address}&showId=${nextShow.id}`} /></div>}
       {!status?.live && !nextShow && phase !== "unavailable" && onOpenChat && <button type="button" className="secondary-button" onClick={onOpenChat}>Say hi in chat</button>}
       {newsHidden && showDemoNews(token, phase) && <button type="button" className="claim-link" onClick={() => setNewsHidden(false)}>Watch NBC News while you wait</button>}
+      </>}
     </div></div>}
     <div className="native-live-copy native-live-viewer-footer">
       <span className="live-state broadcast-status-announcement" role="status">{phaseLabel}</span>
-      {!studioOpen && creatorConnected && <button className="secondary-button" onClick={() => setStudioOpen(true)} disabled={!status?.configured}>Open creator studio</button>}
-      {studioOpen && <div className="live-studio-card"><strong>Creator studio · not live yet</strong>
-        <ol className="studio-steps"><li>Choose your devices.</li><li>Preview privately on this device.</li><li>Sign in if needed, then start broadcasting.</li></ol>
-        <span>Preview requests access but does not publish or record. “Start broadcast” shares your selected devices live through LiveKit. Your HYPR sign-in also works for chat and creator tools; it is a free signature, not a transaction.</span>
-        <p className="studio-retention-note">Recording starts off. Once live, choose Record replay to save up to 10 minutes, or enable viewer clips of up to 30 seconds. Captures finish as private drafts for your review; keeping this tab open is required. Ending the broadcast does not close your room.</p>
-        <div className="studio-device-options"><label><input type="checkbox" checked={shareVideo} onChange={(event) => setShareVideo(event.target.checked)} disabled={busy} /> Camera</label><label><input type="checkbox" checked={shareAudio} onChange={(event) => setShareAudio(event.target.checked)} disabled={busy} /> Microphone</label></div>
-        <label className="media-consent"><input type="checkbox" checked={saveReplay} disabled={busy} onChange={event => setSaveReplay(event.target.checked)} />Save a private replay when I go live. I have rights to record and upload my published media. Up to 10 min / 40 MB; keep this tab open until upload finishes.</label>
-        <small>{!shareVideo && !shareAudio ? "Both devices are off. Choose at least one to preview; microphone-only is supported." : "You are not live. Preview first, then choose whether to broadcast."}</small>
-        {preview && <div className="studio-preview">{shareVideo ? <video ref={previewVideo} autoPlay playsInline muted aria-label="Private camera preview" /> : <strong>Microphone ready · private preview</strong>}<span>Only on this device · not broadcasting</span><button className="secondary-button" onClick={stopPreview} disabled={busy}>Stop preview</button></div>}
-        <button className="secondary-button" onClick={() => void preparePreview()} disabled={busy || (!shareVideo && !shareAudio)}>{busy ? "Preparing…" : preview ? "Refresh private preview" : "Preview selected devices"}</button>
-        <button className="primary-button" onClick={() => void startHost()} disabled={busy || !preview}>{busy ? "Check your wallet…" : "Start broadcast"}</button>
-        {oneTimeAvailable && <div className="live-notice"><p>HYPR sign-in is unavailable. You can still start live with a separate free creator signature. Private replay recording needs sign-in.</p><button className="secondary-button" disabled={busy || !preview} onClick={() => void startHost(true)}>Use one-time creator authorization</button></div>}
-        <button className="claim-link" disabled={busy} onClick={() => { stopPreview(); setStudioOpen(false); setNotice(""); }}>Close studio</button>
-      </div>}
-      {notice && <div className="live-notice" role="status">{notice}</div>}
-      {lastExit && !status?.live && <UpNext roomId={token.address} nextShow={nextShow} latestReplay={latestReplay} otherLive={otherLive} onOpenChat={onOpenChat} />}
+      {notice && !studioOpen && <div className="live-notice" role="status">{notice}</div>}
+      {lastExit && !status?.live && !recap && !creatorConnected && <UpNext roomId={token.address} nextShow={nextShow} latestReplay={latestReplay} otherLive={otherLive} onOpenChat={onOpenChat} />}
     </div>
-    
   </section>;
+}
+
+/** The creator just ended their show: what happened, and the two things worth doing next. */
+function BroadcastWrap({ recap, roomId, name, onAgain, onDone, canGoLive }: { recap: BroadcastRecap; roomId: string; name: string; onAgain: () => void; onDone: () => void; canGoLive: boolean }) {
+  return <div className="golive-wrap" role="status">
+    <span className="golive-wrap-badge">Show ended</span>
+    <h2>That’s a wrap</h2>
+    <dl className="golive-wrap-stats">
+      <div><dt>Live for</dt><dd>{formatClock(recap.seconds)}</dd></div>
+      <div><dt>Peak viewers</dt><dd>{recap.peakViewers.toLocaleString()}</dd></div>
+      <div><dt>Replay</dt><dd>{recap.recorded ? "Uploading" : "Not saved"}</dd></div>
+    </dl>
+    <p>Your room, chat and followers stay right here.{recap.recorded ? " Keep this tab open until the replay finishes uploading, then publish it from Replays." : ""}</p>
+    <div className="golive-wrap-actions">
+      <button type="button" className="golive-cta" onClick={onAgain} disabled={!canGoLive}><span className="golive-start-dot" aria-hidden="true" />Go live again</button>
+      <ShareRoom roomId={roomId} name={name} />
+      <button type="button" className="claim-link" onClick={onDone}><LiveIcon name="close" size={14} /> Close</button>
+    </div>
+  </div>;
 }
 
 /** After a show ends: the next show, the replay, or another room that's live right now. */

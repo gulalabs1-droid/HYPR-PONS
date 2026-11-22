@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ControlBar, LiveKitRoom, ParticipantTile, StartAudio, useConnectionState, useParticipants, useRoomContext, useTracks } from "@livekit/components-react";
+import { LiveKitRoom, ParticipantTile, StartAudio, useConnectionState, useParticipants, useRoomContext, useTracks } from "@livekit/components-react";
 import { ConnectionState, DisconnectReason, RoomEvent, Track, type Room } from "livekit-client";
 import { decodeLiveSignal, encodeLiveSignal, LIVE_CHAT_PING_EVENT, LIVE_SIGNAL_SEND_EVENT, LIVE_SIGNAL_TOPIC, REACTIONS, SenderThrottle, sendLiveSignal, type LiveSignal } from "@/lib/live-signals";
 import { streamingErrorMessage } from "@/lib/creator-access";
@@ -18,6 +18,8 @@ import { shortAddress } from "@/lib/wallet";
 import { LivePlaybackAudio, LivePlaybackControls, useViewerPlayback } from "./live-playback-controls";
 import { MobileMiniPlayer, useMobileMiniPlayer } from "./mobile-mini-player";
 import { countOnce } from "@/lib/counts";
+import { HostDevicePanel, HostLiveDeck, type HostPanel } from "./host-live-deck";
+import { LiveIcon, formatClock } from "./live-icons";
 
 type Floating = { id: number; reaction: number; x: number; mine: boolean };
 
@@ -64,7 +66,9 @@ function LiveReactions({ roomId, live }: { roomId?: string; live: boolean }) {
   </>;
 }
 
-export type Session = { token: string; serverUrl: string; role: "host" | "viewer"; video?: boolean; audio?: boolean; roomId?: string; showTitle?: string; recordReplay?: boolean; authenticated?: boolean; autoRequest?: boolean };
+export type Session = { token: string; serverUrl: string; role: "host" | "viewer"; video?: boolean; audio?: boolean; videoDeviceId?: string; audioDeviceId?: string; roomId?: string; showTitle?: string; recordReplay?: boolean; authenticated?: boolean; autoRequest?: boolean };
+/** What a creator sees when they end their show. */
+export type BroadcastRecap = { seconds: number; peakViewers: number; recorded: boolean };
 
 function isHost(metadata?: string) {
   try { return JSON.parse(metadata || "{}").role === "host"; } catch { return false; }
@@ -72,7 +76,7 @@ function isHost(metadata?: string) {
 
 type ExitAction = (reason: BroadcastExit, room: Room) => Promise<void>;
 
-function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Session; onExit: ExitAction; onSignInAndRequest: (room: Room) => Promise<void> }) {
+function BroadcastStage({ session, onExit, onSignInAndRequest, stats }: { session: Session; onExit: ExitAction; onSignInAndRequest: (room: Room) => Promise<void>; stats: React.MutableRefObject<BroadcastRecap | null> }) {
   const { role, roomId, showTitle, recordReplay } = session;
   const room = useRoomContext();
   const connection = useConnectionState();
@@ -111,6 +115,25 @@ function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Sess
   const viewerPlayback = { ...playback, togglePause: () => { if (!playback.paused && recording) void stopCapture.current?.(); playback.togglePause(); } };
   const [playing, setPlaying] = useState(false);
   const [measurement, setMeasurement] = useState(false);
+  const [panel, setPanel] = useState<HostPanel>(null);
+  const [liveSince, setLiveSince] = useState<number | null>(null);
+  const [clock, setClock] = useState(0);
+  const peakViewers = useRef(0), everRecorded = useRef(false);
+  const isLiveHost = role === "host" && phase === "live";
+  const guestRequests = role === "host" ? participants.filter(participant => { const info = guestMetadata(participant.metadata); return info?.guestState === "requested" && info.hostSid === room.localParticipant.sid; }).length : 0;
+  useEffect(() => { if (isLiveHost && liveSince === null) setLiveSince(Date.now()); }, [isLiveHost, liveSince]);
+  useEffect(() => {
+    if (!isLiveHost) return;
+    const timer = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [isLiveHost]);
+  useEffect(() => {
+    if (role !== "host") return;
+    peakViewers.current = Math.max(peakViewers.current, viewers);
+    if (recording) everRecorded.current = true;
+    stats.current = liveSince === null ? null : { seconds: Math.round((Date.now() - liveSince) / 1000), peakViewers: peakViewers.current, recorded: everRecorded.current };
+  }, [role, viewers, recording, liveSince, clock, stats]);
+  const elapsed = liveSince === null ? 0 : Math.max(0, ((clock || Date.now()) - liveSince) / 1000);
   const measured = useRef(false), seconds = useRef(0), threshold = useRef(false);
   useEffect(() => {
     const choice = () => setMeasurement(analyticsAllowed());
@@ -146,14 +169,11 @@ function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Sess
     catch { setEnding(false); }
   }
   return <><div onPlayingCapture={() => setPlaying(true)} onPauseCapture={() => setPlaying(false)} onWaitingCapture={() => setPlaying(false)}>
-    <div className="native-live-toolbar" aria-live="polite">
+    {role === "viewer" && <div className="native-live-toolbar" aria-live="polite">
       <span><span className={phase === "live" ? "pulse" : "status-dot inactive"} /> {phase === "live" ? `LIVE · ${viewers} viewer${viewers === 1 ? "" : "s"}` : copy.label}</span>
-      {role === "host" && phase === "live" && <span className="studio-live-hud">You’re live · {recording ? "recording a private draft" : "live only"}{showTitle ? ` · ${showTitle}` : ""}</span>}
-      <button type="button" className="live-control-button" onClick={() => {
-        if (role === "host") setEndOpen(true);
-        else void (async () => { await stopCapture.current?.(); await onExit("viewer-left", room); })().catch(() => undefined);
-      }}>{role === "host" ? "End broadcast" : "Leave live"}</button>
-    </div>
+      <button type="button" className="live-control-button" onClick={() => { void (async () => { await stopCapture.current?.(); await onExit("viewer-left", room); })().catch(() => undefined); }}>Leave live</button>
+    </div>}
+    {role === "host" && <p className="sr-only" aria-live="polite">{phase === "live" ? `You’re live · ${recording ? "recording a private draft" : "live only"}${showTitle ? ` · ${showTitle}` : ""}` : copy.label}</p>}
     <div ref={stageRef} tabIndex={-1} role="group" aria-label="Live broadcast" className={`hypr-broadcast-stage${phase === "live" && !viewerPaused && approvedGuests.length ? " has-guests" : ""}`}>
       {phase === "live" && !viewerPaused && primaryVideo ? <div className="live-stage-host"><ParticipantTile trackRef={primaryVideo} />{creatorCamera && <div className="live-stage-pip" aria-label="Creator camera"><ParticipantTile trackRef={creatorCamera} /></div>}</div> : <div className="native-live-placeholder live-stage-host"><div className="native-live-mark"><span aria-hidden="true">H</span><strong>{viewerPaused && phase === "live" ? "Playback paused" : phase === "live" ? "Audio broadcast" : copy.title}</strong><small>{viewerPaused && phase === "live" ? "The show continues. Resume jumps back to live; the missed part is not saved here." : phase === "live" ? "The creator is sharing audio. Video is off." : copy.detail}</small></div></div>}
       {phase === "live" && !viewerPaused && approvedGuests.length > 0 && <div className="live-stage-guests" data-many={approvedGuests.length > 1} aria-label="Guests on stage">{approvedGuests.map(participant => {
@@ -161,25 +181,33 @@ function BroadcastStage({ session, onExit, onSignInAndRequest }: { session: Sess
         return <div className="live-stage-guest" key={participant.sid}>{video ? <ParticipantTile trackRef={video} /> : <div className="live-stage-audio"><span aria-hidden="true">✦</span><strong>{info ? shortAddress(info.wallet) : "Guest"}</strong><small>Guest on stage · camera off</small></div>}</div>;
       })}</div>}
       <LiveReactions roomId={roomId} live={phase === "live" && !viewerPaused} />
+      {role === "host" && <div className="host-hud" aria-hidden="true">
+        {phase === "live" ? <><span className="host-hud-live">Live</span><span className="host-hud-chip is-time">{formatClock(elapsed)}</span><span className="host-hud-chip"><LiveIcon name="eye" size={14} />{viewers.toLocaleString()}</span>{recording && <span className="host-hud-chip is-rec"><span className="host-hud-rec" />Rec</span>}</>
+          : <span className="host-hud-chip is-pending"><span className="status-dot inactive" />{phase === "connecting" ? "Going live…" : copy.label}</span>}
+        {showTitle && <span className="host-hud-chip is-title">{showTitle}</span>}
+      </div>}
+      {role === "host" && guestRequests > 0 && panel !== "guests" && <button type="button" className="host-hud-requests" onClick={() => setPanel("guests")}>✋ {guestRequests} want{guestRequests === 1 ? "s" : ""} to join · Review</button>}
     </div>
     {role === "viewer" && <LivePlaybackControls playback={viewerPlayback} live={phase === "live"} miniPlayer={miniPlayer} />}
     {viewerPaused && localGuestOnStage && <p className="live-notice" role="status">Your playback is paused, but you are still on stage. Your camera and microphone stay as you set them.</p>}
-    {role === "host" ? <ControlBar controls={{ microphone: true, camera: true, screenShare: true, chat: false, leave: false }} saveUserChoices={false} /> : <p className="live-viewing-note">Watching is free. Your camera and microphone stay off until you choose to share.</p>}
+    {role === "host" ? <HostLiveDeck panel={panel} onPanel={setPanel} requests={guestRequests} recording={recording} onEnd={() => setEndOpen(true)} /> : <p className="live-viewing-note">Watching is free. Your camera and microphone stay off until you choose to share.</p>}
+    {role === "host" && panel === "devices" && <HostDevicePanel />}
     {(role === "host" || (!playback.muted && !viewerPaused && playback.volume > 0)) && <StartAudio label="Tap to hear the broadcast" />}
     {phase === "live" && <div style={{ display: "none" }}>{audioTracks.map(track => <LivePlaybackAudio key={`${track.participant.identity}-${track.publication.trackSid}`} trackRef={track} volume={role === "viewer" ? playback.volume : undefined} muted={role === "viewer" && (playback.muted || viewerPaused || playback.volume === 0)} />)}</div>}
-    {roomId && <LiveGuestControls roomId={roomId} role={role} live={phase === "live"} hostSid={hostSid} authenticated={session.authenticated} autoRequest={session.autoRequest} onSignInAndRequest={() => onSignInAndRequest(room)} onWalletChange={() => onExit("wallet-changed", room)} />}
-    {roomId && <MediaCaptureControls roomId={roomId} host={role === "host"} tracks={recordingTracks} registerStop={registerStop} onRecordingChange={setRecording} autoRecord={recordReplay === true && role === "host"} />}
+    {/* The creator's guest and replay tools stay mounted (recording keeps running) but only open from the deck. */}
+    {roomId && <div className="host-panel-slot" hidden={role === "host" && panel !== "guests"}><LiveGuestControls roomId={roomId} role={role} live={phase === "live"} hostSid={hostSid} authenticated={session.authenticated} autoRequest={session.autoRequest} onSignInAndRequest={() => onSignInAndRequest(room)} onWalletChange={() => onExit("wallet-changed", room)} /></div>}
+    {roomId && <div className="host-panel-slot" hidden={role === "host" && panel !== "record"}><MediaCaptureControls roomId={roomId} host={role === "host"} tracks={recordingTracks} registerStop={registerStop} onRecordingChange={setRecording} autoRecord={recordReplay === true && role === "host"} /></div>}
     {role === "host" && endOpen && <Modal title="End this broadcast?" onClose={() => { if (!ending) setEndOpen(false); }}>
-      <p className="dialog-copy">This stops your camera, microphone and screen share for this session. It does not close your community room or change the token.</p>
-      <p className="dialog-copy">The same link, saved chat and follows remain. If you started recording, it will finish as a private draft. Keep HYPR open until its upload completes; nothing is published without your review.</p>
+      <p className="dialog-copy">Your camera, mic and screen share stop. Your room, chat and followers stay.{recording ? " Your replay finishes as a private draft; keep HYPR open until it uploads." : ""}</p>
       <div className="dialog-actions"><button type="button" className="secondary-button" disabled={ending} onClick={() => setEndOpen(false)}>Keep broadcasting</button><button type="button" className="primary-button" disabled={ending} onClick={() => void endBroadcast()}>{ending ? "Stopping your devices…" : "End broadcast now"}</button></div>
     </Modal>}
   </div>{miniPlayer.visible && typeof document !== "undefined" && createPortal(<MobileMiniPlayer playback={viewerPlayback} live={phase === "live"} status={copy.title} onStage={localGuestOnStage} primaryVideo={primaryVideo} creatorCamera={creatorCamera} guests={approvedGuests.map(participant => ({ id: participant.sid, video: guestVideos.find(track => track.participant.identity === participant.identity) }))} onReturn={() => { document.querySelector("#room-watch")?.scrollIntoView({ behavior: "instant", block: "start" }); stageRef.current?.focus({ preventScroll: true }); }} onClose={() => { miniPlayer.setEnabled(false); document.querySelector<HTMLButtonElement>('.room-section-nav button[aria-pressed="true"]')?.focus({ preventScroll: true }); }} />, document.body)}</>;
 }
 
 export function ConnectedRoom({ session, onLeave, onError, onSessionChange, connect = true, room }: {
-  session: Session; onLeave: (reason: BroadcastExit) => void; onError: (message: string) => void; onSessionChange?: (next: Session) => void; connect?: boolean; room?: Room;
+  session: Session; onLeave: (reason: BroadcastExit, recap?: BroadcastRecap) => void; onError: (message: string) => void; onSessionChange?: (next: Session) => void; connect?: boolean; room?: Room;
 }) {
+  const stats = useRef<BroadcastRecap | null>(null);
   const [failed, setFailed] = useState(false);
   const left = useRef(false);
   const requestedExit = useRef<BroadcastExit | null>(null);
@@ -187,7 +215,7 @@ export function ConnectedRoom({ session, onLeave, onError, onSessionChange, conn
   const upgrading = useRef(false);
   const finish = useCallback((reason: BroadcastExit) => {
     if (left.current) return;
-    left.current = true; onLeave(reason);
+    left.current = true; onLeave(reason, session.role === "host" && stats.current ? stats.current : undefined);
     if (reason === "host-ended" && session.role === "host" && session.roomId) window.dispatchEvent(new CustomEvent(BROADCAST_ENDED_EVENT, { detail: { roomId:session.roomId } }));
   }, [onLeave, session.role, session.roomId]);
   const exit = useCallback(async (reason: BroadcastExit, activeRoom: Room) => {
@@ -228,14 +256,16 @@ export function ConnectedRoom({ session, onLeave, onError, onSessionChange, conn
   }, [session.role, session.roomId, session.showTitle, onSessionChange]);
   const connected = useCallback(() => { setFailed(false); onError(""); }, [onError]);
   const failedConnection = useCallback((error: Error) => { setFailed(true); onError(streamingErrorMessage(error)); }, [onError]);
-  const deviceFailure = useCallback(() => onError("Camera or microphone unavailable. Allow access in your browser, then use the studio controls to retry. You are not live until a track is publishing."), [onError]);
+  const deviceFailure = useCallback(() => onError("Camera or microphone unavailable. Allow access in your browser, then use the camera and mic buttons to retry. You are not live until a track is publishing."), [onError]);
   const disconnected = useCallback((reason?: DisconnectReason) => {
     if (!upgrading.current) finish(requestedExit.current || (reason === DisconnectReason.ROOM_DELETED ? "session-ended" : reason === DisconnectReason.PARTICIPANT_REMOVED && session.role === "viewer" ? "guest-removed" : "connection-lost"));
   }, [finish, session.role]);
   return <div className="native-live-connected" data-lk-theme="default">
-    <LiveKitRoom room={room} token={session.token} serverUrl={session.serverUrl} connect={connect} video={session.role === "host" && session.video === true} audio={session.role === "host" && session.audio === true}
+    <LiveKitRoom room={room} token={session.token} serverUrl={session.serverUrl} connect={connect}
+      video={session.role === "host" && session.video === true ? (session.videoDeviceId ? { deviceId: session.videoDeviceId } : true) : false}
+      audio={session.role === "host" && session.audio === true ? (session.audioDeviceId ? { deviceId: session.audioDeviceId, echoCancellation: true, noiseSuppression: true } : true) : false}
       onConnected={connected} onError={failedConnection} onMediaDeviceFailure={deviceFailure} onDisconnected={disconnected}>
-      <BroadcastStage session={session} onExit={exit} onSignInAndRequest={signInAndRequest} />
+      <BroadcastStage session={session} onExit={exit} onSignInAndRequest={signInAndRequest} stats={stats} />
       {failed && <button type="button" className="secondary-button" onClick={() => finish("connection-lost")}>Return to room and retry</button>}
     </LiveKitRoom>
   </div>;

@@ -31,6 +31,7 @@ import { useWalletStatus } from "@/lib/use-wallet-status";
 import { NativeMarketChart } from "./native-market-chart";
 import { RoomPulse } from "./room-pulse";
 import { TipCreator } from "./tip-creator";
+import { OPEN_GO_LIVE_EVENT } from "./native-live-room";
 
 // Viewers come for the person: chat and replays first, the optional coin last.
 type RoomSection = "chat" | "videos" | "about" | "coin";
@@ -121,7 +122,7 @@ export function RoomClient({ token: initialToken, source }: { token: Launch; sou
               <ul className="channel-tags" aria-label="Good to know"><li>Free to watch</li>{(creatorProfile?.followers || 0) >= 10 && <li>{creatorProfile!.followers.toLocaleString()} followers</li>}{hasCoin ? <li><button type="button" onClick={() => { setMode("trade"); chooseSection("coin"); }}>${token.symbol} coin · optional</button></li> : token.coinless ? <li>No coin</li> : null}</ul>
             </div>
           </div>
-          <div className="channel-actions"><FollowButton roomId={token.address} growth={growth} />{isNative && <RemindMe roomId={token.address} calendarHref={creatorProfile?.show ? `/api/community/calendar?roomId=${token.address}&showId=${creatorProfile.show.id}` : undefined} />}<ShareRoom roomId={token.address} name={roomName} />{isNative && !ownsRoom && <TipCreator roomId={token.address} creator={token.deployer} creatorName={roomName} compact />}</div>
+          <div className="channel-actions">{isNative && ownsRoom && !liveNow && <button type="button" className="golive-cta is-compact" onClick={() => window.dispatchEvent(new Event(OPEN_GO_LIVE_EVENT))}><span className="golive-start-dot" aria-hidden="true" />Go live</button>}<FollowButton roomId={token.address} growth={growth} />{isNative && <RemindMe roomId={token.address} calendarHref={creatorProfile?.show ? `/api/community/calendar?roomId=${token.address}&showId=${creatorProfile.show.id}` : undefined} />}<ShareRoom roomId={token.address} name={roomName} />{isNative && !ownsRoom && <TipCreator roomId={token.address} creator={token.deployer} creatorName={roomName} compact />}</div>
           <div className="room-modes" role="group" aria-label="Room view">{(Object.keys(modeLabels) as RoomMode[]).filter(key => key !== "trade" || hasCoin).map(key => <button key={key} type="button" aria-pressed={mode === key} onClick={() => setMode(key)}>{key === "trade" ? `Trade $${token.symbol}` : modeLabels[key]}</button>)}</div>
         </section>
         <nav className="room-section-nav" aria-label="Room sections" data-native={isNative}>

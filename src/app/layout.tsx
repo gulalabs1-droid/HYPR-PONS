@@ -18,6 +18,8 @@ import "./watch.css";
 import "./brand.css";
 // Platform layer: rail, channel layout, chat and cards. Loaded after the brand tokens.
 import "./platform.css";
+// Go live setup and the creator's on-air deck.
+import "./go-live.css";
 
 const sans = Manrope({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const display = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-display", display: "swap", weight: ["600", "700", "800"] });

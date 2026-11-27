@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HYPR film engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@500;700&family=Manrope:wght@400;500;600;700;800&display=block" rel="stylesheet">
+<style>
+  /* Brand tokens (src/app/brand.css). Sizes are in vmin so 9:16 and 16:9 share one scale. */
+  :root {
+    --bg: #08080c; --surface: #111117; --surface-2: #17171f; --surface-3: #1f1f29;
+    --line: rgba(255,255,255,.08); --text: #f6f6f8; --soft: #d3d3dc; --muted: #a6a6b4;
+    --volt: #d3fb5a; --live: #ff3b5c; --violet: #a596ff; --cyan: #6ee7f9; --rose: #ff5c8a;
+    --magic: linear-gradient(120deg, var(--volt), var(--cyan), var(--violet), var(--rose));
+    --display: "Bricolage Grotesque", system-ui, sans-serif; --sans: "Manrope", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+  body { font-family: var(--sans); color: var(--text); -webkit-font-smoothing: antialiased; }
+  #frame { position: absolute; inset: 0; overflow: hidden; background: var(--bg); }
+  #world { position: absolute; inset: 0; transform-origin: 50% 45%; }
+  .layer { position: absolute; inset: 0; }
+  .glow { position: absolute; border-radius: 50%; filter: blur(9vmin); pointer-events: none; }
+  #grain { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .07; mix-blend-mode: overlay; image-rendering: pixelated; }
+  #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, transparent 45%, rgba(0,0,0,.65) 100%); }
+  #fade { position: absolute; inset: 0; background: #000; opacity: 0; }
+  #label { position: absolute; left: 4vmin; bottom: 3.4vmin; font: 600 1.7vmin var(--sans); letter-spacing: .04em; color: rgba(246,246,248,.5); opacity: 0; }
+
+  /* Kinetic captions */
+  .cap { position: absolute; display: flex; flex-direction: column; gap: 1.2vmin; font-family: var(--display); font-weight: 700; letter-spacing: -.035em; line-height: 1.04; }
+  .cap .line { display: block; }
+  .cap .w { display: inline-block; white-space: pre; will-change: transform, opacity, filter; }
+  .cap .accent { color: var(--volt); }
+  .cap .dim { color: var(--muted); }
+  .v .cap { left: 7vmin; right: 7vmin; top: 12vh; font-size: 8.4vmin; }
+  .h .cap { left: 6vmin; width: 34vw; top: 50%; transform: translateY(-50%); font-size: 6vmin; }
+  .cap.center { left: 8vmin; right: 8vmin; top: 50%; width: auto; transform: translateY(-50%); text-align: center; align-items: center; }
+  .v .cap.center { font-size: 10vmin; }
+  .h .cap.center { font-size: 8.4vmin; }
+  .cap.small { font-family: var(--sans); font-weight: 600; letter-spacing: -.01em; color: var(--soft); }
+  .v .cap.small { font-size: 4.4vmin; }
+  .h .cap.small { font-size: 3.4vmin; }
+
+  /* UI stage: where the product fragments sit */
+  .stage { position: absolute; display: flex; gap: 2.4vmin; }
+  .v .stage { left: 6vmin; right: 6vmin; top: 35vh; flex-direction: column; }
+  .h .stage { right: 4vmin; width: 58vw; top: 17vh; flex-direction: row; align-items: center; height: 66vh; }
+
+  .player { position: relative; border-radius: 3.2vmin; overflow: hidden; background: #0d0d13; aspect-ratio: 16 / 9; border: 1px solid var(--line); }
+  .h .player { flex: 1.55; }
+  .player .scene { position: absolute; inset: 0; }
+  .player .pill { position: absolute; left: 2.4vmin; top: 2.4vmin; }
+  .player .host { position: absolute; left: 50%; top: 44%; width: 16vmin; height: 16vmin; margin: -8vmin 0 0 -8vmin; border-radius: 50%; padding: .6vmin; }
+  .player .host i { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; border-radius: 50%; border: .5vmin solid #0d0d13; font: 800 7vmin var(--display); font-style: normal; color: rgba(255,255,255,.92); }
+  .player .wave { position: absolute; left: 50%; bottom: 15%; transform: translateX(-50%); display: flex; gap: .7vmin; align-items: center; height: 6vmin; }
+  .player .wave b { display: block; width: .9vmin; border-radius: 1vmin; background: rgba(246,246,248,.85); }
+  .player .ended { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.2vmin; background: #050507; font: 700 3.6vmin var(--display); letter-spacing: -.02em; color: var(--muted); }
+  .player .ended small { font: 500 2vmin var(--sans); color: #6c6c78; letter-spacing: 0; }
+
+  .pill { display: inline-flex; align-items: center; gap: .9vmin; padding: .8vmin 1.8vmin; border-radius: 99vmin; font: 800 1.9vmin var(--sans); letter-spacing: .02em; }
+  .pill.live { background: var(--live); color: #fff; }
+  .pill.live::before { content: ""; width: 1vmin; height: 1vmin; border-radius: 50%; background: #fff; }
+  .pill.idle { background: var(--surface-3); color: var(--soft); }
+  .pill.next { background: var(--violet); color: var(--bg); }
+
+  .chat { position: relative; display: flex; flex-direction: column; border-radius: 3.2vmin; background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
+  .v .chat { height: 30vh; }
+  .h .chat { flex: 1; height: 100%; }
+  .chat header { display: flex; align-items: center; justify-content: space-between; padding: 2vmin 2.6vmin; border-bottom: 1px solid var(--line); font: 700 2.5vmin var(--sans); }
+  .chat header span { font: 600 1.8vmin var(--sans); color: var(--muted); }
+  .chat .list { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 1.3vmin; padding: 2vmin 2.4vmin; overflow: hidden; }
+  .chat .empty { position: absolute; left: 0; right: 0; top: 46%; text-align: center; font: 600 2.1vmin var(--sans); color: #6c6c78; }
+  .msg { font: 500 2.9vmin/1.38 var(--sans); color: var(--text); }
+  .msg b { font-weight: 800; margin-right: .8vmin; }
+  .msg time { float: right; font: 500 1.6vmin var(--mono); color: #6c6c78; margin-left: 1vmin; padding-top: .5vmin; }
+  .msg.host b::after { content: "host"; margin-left: .8vmin; padding: .1vmin .8vmin; border-radius: .8vmin; background: rgba(211,251,90,.16); color: var(--volt); font: 700 1.4vmin var(--sans); vertical-align: .3vmin; }
+  .msg.day { align-self: center; font: 700 1.6vmin var(--sans); color: var(--muted); letter-spacing: .06em; text-transform: uppercase; padding: .5vmin 1.6vmin; border-radius: 99vmin; background: var(--surface-3); }
+  .composer { margin: 0 2vmin 2vmin; display: flex; align-items: center; gap: 1.2vmin; padding: 1.5vmin 2vmin; border-radius: 99vmin; background: var(--surface-2); border: 1px solid var(--line); font: 500 2.1vmin var(--sans); color: #6c6c78; }
+  .composer .typed { color: var(--text); }
+  .composer .caret { display: inline-block; width: .25vmin; height: 2.6vmin; background: var(--volt); vertical-align: middle; }
+  .composer .send { margin-left: auto; width: 4.2vmin; height: 4.2vmin; border-radius: 50%; background: var(--volt); }
+
+  .card { border-radius: 3vmin; background: var(--surface-2); border: 1px solid var(--line); padding: 2.4vmin; display: flex; align-items: center; gap: 2vmin; }
+  .card .ava { width: 7vmin; height: 7vmin; border-radius: 50%; padding: .45vmin; flex: none; }
+  .card .ava i { display: block; width: 100%; height: 100%; border-radius: 50%; border: .45vmin solid var(--surface-2); }
+  .card .t { flex: 1; display: flex; flex-direction: column; gap: .4vmin; }
+  .card .t strong { font: 800 2.8vmin var(--sans); }
+  .card .t small { font: 500 2vmin var(--sans); color: var(--muted); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: .8vmin; padding: 1.4vmin 2.8vmin; border-radius: 99vmin; font: 800 2.2vmin var(--sans); background: var(--volt); color: var(--bg); white-space: nowrap; }
+  .btn.ghost { background: var(--surface-3); color: var(--text); }
+  .btn.done { background: transparent; color: var(--volt); box-shadow: inset 0 0 0 .3vmin var(--volt); }
+
+  .brand { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 3vmin; }
+  .brand .mark { display: flex; align-items: center; gap: 2vmin; }
+  .brand .mark i { width: 10vmin; height: 10vmin; border-radius: 2.8vmin; background: var(--volt); color: var(--bg); display: flex; align-items: center; justify-content: center; font: 800 6vmin var(--display); font-style: normal; }
+  .brand .mark span { font: 800 7vmin var(--display); letter-spacing: .14em; }
+  .brand h2 { font: 800 8vmin/1.02 var(--display); letter-spacing: -.04em; }
+  .h .brand h2 { font-size: 7.4vmin; }
+  .brand h2 em { font-style: normal; color: var(--volt); }
+  .brand p { font: 600 3.2vmin var(--sans); color: var(--soft); }
+  .brand .url { font: 700 3vmin var(--mono); color: var(--text); padding: 1.6vmin 3.2vmin; border-radius: 99vmin; position: relative; }
+  .brand .url::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: .35vmin; background: var(--magic); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+  .brand small { font: 600 2vmin var(--sans); color: var(--muted); letter-spacing: .02em; }
+  .ring { position: absolute; border-radius: 50%; }
+  .big-mono { position: absolute; left: 0; right: 0; text-align: center; font: 700 22vmin var(--mono); letter-spacing: -.04em; color: var(--text); }
+  .h .big-mono { font-size: 24vmin; }
+</style>
+</head>
+<body>
+<div id="frame">
+  <div id="world"></div>
+  <canvas id="grain" width="270" height="480"></canvas>
+  <div id="vignette"></div>
+  <div id="label">Dramatization</div>
+  <div id="fade"></div>
+</div>
+<script>
+// ---------- helpers shared by every story ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const E = {
+  out: t => 1 - Math.pow(1 - t, 3),
+  inOut: t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+  back: t => { const c = 1.6; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); },
+  lin: t => t,
+};
+/** 0→1 progress of [start, start+dur]. */
+const P = (t, start, dur, e = E.out) => e(clamp((t - start) / dur));
+/** Visible between a and b with fade in/out. */
+const W = (t, a, b, fi = .6, fo = .6) => Math.min(P(t, a, fi), 1 - P(t, b - fo, fo, E.inOut));
+const mix = (a, b, k) => a + (b - a) * k;
+
+function h(tag, cls, html, parent) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (html !== undefined) node.innerHTML = html;
+  (parent || document.getElementById("world")).appendChild(node);
+  return node;
+}
+function style(node, o, { x = 0, y = 0, s = 1, blur, extra = "" } = {}) {
+  node.style.opacity = o;
+  node.style.visibility = o <= 0.001 ? "hidden" : "visible";
+  node.style.transform = `translate(${x}vmin, ${y}vmin) scale(${s}) ${extra}`;
+  if (blur !== undefined) node.style.filter = blur > 0.05 ? `blur(${blur}vmin)` : "none";
+}
+const hue = (h, s = 88, l = 60) => `hsl(${h} ${s}% ${l}%)`;
+const avatar = (h1) => `linear-gradient(135deg, ${hue(h1, 88, 62)}, ${hue((h1 + 70) % 360, 75, 30)})`;
+
+/** Caption whose words rise in one by one. lines: string[]; "*word*" marks the accent colour. */
+function caption(lines, cls = "") {
+  const node = h("div", `cap ${cls}`);
+  const words = [];
+  lines.forEach(line => {
+    const row = h("span", "line", undefined, node);
+    if (typeof line === "object") { row.classList.add(line.cls); line = line.text; }
+    let accent = false;
+    line.split(/(\s+)/).forEach(part => {
+      if (!part) return;
+      if (part.startsWith("*")) accent = true;
+      const w = h("span", `w${accent ? " accent" : ""}`, part.replace(/\*/g, ""), row);
+      if (part.endsWith("*")) accent = false;
+      if (part.trim()) words.push(w);
+    });
+  });
+  return {
+    node,
+    /** Words appear from `a`, one every `step`s; everything leaves by `b`. */
+    at(t, a, b, step = .09) {
+      const out = 1 - P(t, b - .55, .55, E.inOut);
+      node.style.visibility = t < a - .1 || out <= 0 ? "hidden" : "visible";
+      words.forEach((w, i) => {
+        const k = P(t, a + i * step, .7);
+        style(w, k * out, { y: (1 - k) * 2.2, blur: (1 - k) * 1.2 + (1 - out) * .8 });
+      });
+    },
+  };
+}
+
+function message(list, name, text, h1, { host = false, time = "" } = {}) {
+  const node = h("div", `msg${host ? " host" : ""}`, `${time ? `<time>${time}</time>` : ""}<b style="color:${hue(h1, 90, 70)}">${name}</b>${text}`, list);
+  return node;
+}
+function dayMarker(list, text) { return h("div", "msg day", text, list); }
+/** Message slides up and fades in at time a. */
+function pop(node, t, a, out = 1) { const k = P(t, a, .45, E.back); const o = P(t, a, .3); style(node, o * out, { y: (1 - k) * 3 }); node.style.display = t < a ? "none" : ""; }
+
+function player(parent, { h1 = 200, initial = "" } = {}) {
+  const node = h("div", "player", undefined, parent);
+  const scene = h("div", "scene", undefined, node);
+  scene.style.background = `radial-gradient(circle at 30% 30%, ${hue(h1, 80, 45)}55, transparent 60%), radial-gradient(circle at 80% 85%, ${hue((h1 + 120) % 360, 80, 50)}44, transparent 55%), #0d0d13`;
+  const host = h("div", "host", "<i></i>", node);
+  host.style.background = "var(--magic)";
+  host.firstChild.style.background = avatar(h1);
+  host.firstChild.textContent = initial;
+  const wave = h("div", "wave", undefined, node);
+  const bars = Array.from({ length: 13 }, () => h("b", "", undefined, wave));
+  const pill = h("span", "pill live", "LIVE", node);
+  const ended = h("div", "ended", "Stream ended<small>Thanks for watching</small>", node);
+  style(ended, 0);
+  return {
+    node, pill, ended, host, scene,
+    voice(t, level = 1) { bars.forEach((b, i) => { const v = .25 + .75 * Math.abs(Math.sin(t * 7.3 + i * .9) * Math.sin(t * 2.1 + i * 1.7)); b.style.height = `${(.9 + v * 5) * level + .6}vmin`; }); },
+  };
+}
+function chat(parent, title = "Room chat", sub = "") {
+  const node = h("div", "chat", `<header>${title}<span>${sub}</span></header>`, parent);
+  const list = h("div", "list", undefined, node);
+  const empty = h("div", "empty", "Chat is quiet. Say hi.", node);
+  const composer = h("div", "composer", `<span class="ph">Send a message</span><span class="typed"></span><span class="caret"></span><span class="send"></span>`, node);
+  return {
+    node, list, empty, composer,
+    type(t, a, text, cps = 14) {
+      const n = Math.floor(clamp((t - a) * cps, 0, text.length));
+      composer.querySelector(".typed").textContent = t >= a ? text.slice(0, n) : "";
+      composer.querySelector(".ph").style.display = t >= a && n > 0 ? "none" : "";
+      composer.querySelector(".caret").style.opacity = Math.floor(t * 2.2) % 2 ? .2 : 1;
+    },
+  };
+}
+
+// ---------- frame plumbing ----------
+const params = new URLSearchParams(location.search);
+const FORMAT = params.get("format") === "h" ? "h" : "v";
+document.documentElement.classList.add(FORMAT);
+document.body.classList.add(FORMAT);
+const grain = document.getElementById("grain"), g = grain.getContext("2d"), noise = g.createImageData(270, 480);
+function drawGrain(frame) {
+  let seed = (frame * 2654435761) >>> 0;
+  for (let i = 0; i < noise.data.length; i += 4) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const v = seed >>> 24;
+    noise.data[i] = noise.data[i + 1] = noise.data[i + 2] = v; noise.data[i + 3] = 255;
+  }
+  g.putImageData(noise, 0, 0);
+}
+window.STORY = null;
+window.defineStory = story => { window.STORY = story; };
+window.seek = (t, fps = 30) => {
+  const s = window.STORY;
+  s.update(t);
+  document.getElementById("world").style.transform = `scale(${1 + .035 * (t / s.duration)})`;
+  const label = s.dramatization ? W(t, s.dramatization[0], s.dramatization[1], .8, .8) : 0;
+  document.getElementById("label").style.opacity = label;
+  document.getElementById("fade").style.opacity = Math.max(1 - P(t, 0, .8, E.lin), P(t, s.duration - .9, .9, E.lin));
+  drawGrain(Math.round(t * fps));
+};
+const name = params.get("story") || "room-stays";
+const script = document.createElement("script");
+script.src = `stories/${name}.js`;
+script.onload = async () => { await document.fonts.ready; window.READY = true; window.seek(Number(params.get("t") || 0)); };
+document.body.appendChild(script);
+</script>
+</body>
+</html>
